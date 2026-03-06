@@ -8,8 +8,6 @@ const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
 const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing"};
 const fT=(t,ct=[])=>{const f=[...DT,...ct].find(x=>x.l===t);return f?`${f.p}- ${f.l}`:t;};
-const TR=["Plumbing","Electrical","HVAC","Structural","Roofing","General"];
-const PR=["Critical","Major","Minor"];
 const SD="Ashley|Pompano Beach|2921 NW 8 ST|0|0|W,E|⚠ REVISION: CGI NOA now PGT by Sparta;Barrant|Sunrise|4008 Del Rio Way|0|1|W,R,E|In permitting;Beckles|Pembroke Pines|12017 NW 11 ST|0|1|W,S,E,P|In permitting;Bryan|Sunrise|11701 NW 30 PL|R-STRT-003473|0|R,S,E,P|Pending building final - work done;Burke|Margate|7708 Margate Blvd Apt C3-6|0|1||CLOSED;Bursztyn|Davie|3745 SW 59 AVE|2025-7435|1|W,S,E,P|Pending finals - job done;Camacho|Plantation|7501 NW 16 ST Unit 3305|P25-1025|0|W,S,E,P|Need appliances AC kitchen sink then finals;Campbell|Margate|1835 Vista Way|0|1|R,S,E|Roof permit in review - other permits issued;Ceasar|Margate|6130 SW 3 ST|0|0|W,R|CLOSED;Clover|Deerfield Beach|516 SW Natura AVE|0|1|R|Roof permit in review;Courts|Deerfield Beach|225 Ventor Q|0|1|W,S,E,P|About to commence;Cox|Deerfield Beach|330 NW 1 AVE|0|0|W,R,S,E,P|Roof in progress - rest about to commence;Davila|Pembroke Pines|1026 NW 159 AVE|0|1|W,R,S,P|Window permit issued - roof in review;Davilsaint|Ft Lauderdale||0|0|R|On pause - insurance issue;Derek-Towriss|Ft Lauderdale|1649 NE 3 CT|0|0||Pending final inspections;Goberdhan|Plantation|7820 NW 14 ST|0|0|W,S,E,P|Win+elec+AC done - bath drywall+appliances+doors left;Gonzalez|Sunrise|9801 Sunrise Lakes Blvd Unit 207|0|1|W,S,E,P|Permit to be issued within 2 weeks;Knight|Pompano Beach|1570 NW 4 AVE|0|0|E|Exterior paint last thing - permits closed;Ledgister|Plantation|103 NW 68 AVE|B25-04632|0|W,S,E,P|All done besides appliances;Mel|Miami||0|0|R|On pause - insurance issue;Mistler|Plantation|5301 SW 8 ST|B25-04835|0|S|Roof work commenced;Morgan|Pembroke Pines|1000 Colony Point Cir #420|0|1|S,E,P|Permit in progress;Moye-Barnett|Davie|7520 NW 31st Place|0|1|W,R,S,E,P|CLOSED;Nora Sanchez|Deerfield Beach|222 Prescott L|0|1|W,S,E,P|About to commence;NSP Swap Shop|Ft Lauderdale|3090 NW 11 ST|18-00205|0|W,R,S,E,P|In progress - big job;NSP WP|West Park|28 Allen RD|WP25-000446|0|W,R,S,E,P|In progress - big job;Phillips|Pembroke Pines|7347 NW 22 DR|0|1|W,R,S,E,P|In permitting;Pifalo|Plantation|8536 NW 10 ST Unit D78|B25-05040|1|W,S,E,P|⚠ REVISION: NOA wrong on window+door - missing plmb permit for WH;Qatar|Sunrise|13800 NW 14 ST Suite 160|0|0|S,E,P|Insurance issue - working to start;Rhoda|Plantation|501 N Pine Island Rd Unit 1|0|0|W,S,E,P|Very active - lots of work to do;Soto|Sunrise|11301 NW 17 ST|0|0|W,R|In review;Stone|Davie|4791 SW 55 AVE|0|0|W,R,S,P|Permit to be closed soon";
 const uid=()=>Math.random().toString(36).substr(2,9);
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
@@ -58,7 +56,7 @@ export default function App(){
 
 function AppMain(){
   const[pg,setPg]=useState("dashboard");
-  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[punch,setPu]=useState([]);const[ct,setCt]=useState([]);
+  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
@@ -66,7 +64,7 @@ function AppMain(){
   const lastFs=useRef({});
 
   useEffect(()=>{
-    const keys=[["sYp",setP],["sYi",setI],["sYu",setPu],["sYc",setCt]];
+    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt]];
     let loaded=0;
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
@@ -86,12 +84,10 @@ function AppMain(){
   },[]);
   useEffect(()=>{if(ok){const j=JSON.stringify(proj);if(j!==lastFs.current.sYp){lastFs.current.sYp=j;svFs("sYp",proj);localStorage.setItem("sYp",j);}}},[proj,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(insp);if(j!==lastFs.current.sYi){lastFs.current.sYi=j;svFs("sYi",insp);localStorage.setItem("sYi",j);}}},[insp,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(punch);if(j!==lastFs.current.sYu){lastFs.current.sYu=j;svFs("sYu",punch);localStorage.setItem("sYu",j);}}},[punch,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(ct);if(j!==lastFs.current.sYc){lastFs.current.sYc=j;svFs("sYc",ct);localStorage.setItem("sYc",j);}}},[ct,ok]);
 
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
-  const oP=punch.filter(p=>p.status==="open").length;
   const ovd=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
 
   return(
@@ -102,10 +98,9 @@ function AppMain(){
           <div><div style={{fontSize:12,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:8,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"4px 8px"}}>
-          {[["dashboard","Dashboard"],["sheet","Inspection Sheet"],["projects","Projects"],["punch","Punch List"]].map(([id,lb])=>
+          {[["dashboard","Dashboard"],["sheet","Inspection Sheet"],["projects","Projects"]].map(([id,lb])=>
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {lb}
-              {id==="punch"&&oP>0&&<span style={{...S.bg(C.rd,"#fff"),marginLeft:"auto"}}>{oP}</span>}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
             </button>)}
         </div>
@@ -113,7 +108,7 @@ function AppMain(){
           <span>Broward County, FL</span>
           {!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
           <div style={{display:"flex",gap:4}}>
-            <button onClick={async()=>{const p=mkSeed();setP(p);setI([]);setPu([]);setCt([]);setResetting(false);}} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4,fontWeight:600}}>Yes, reset all</button>
+            <button onClick={async()=>{const p=mkSeed();setP(p);setI([]);setCt([]);setResetting(false);}} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4,fontWeight:600}}>Yes, reset all</button>
             <button onClick={()=>setResetting(false)} style={{background:"none",border:`1px solid ${C.bd}`,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4}}>Cancel</button>
           </div>}
         </div>
@@ -238,16 +233,10 @@ function AppMain(){
           {pi.map(i=><div key={i.id} style={S.rw}><div style={{width:6,height:6,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{fT(i.type,ct)}</div><div style={{fontSize:10,color:C.w3}}>{fmt(i.date)} · {i.permitNum||"—"}</div></div><span style={S.bg(i.completed?C.grl:C.orb,i.completed?C.gr:C.or)}>{i.completed?"Done":"Open"}</span></div>)}
         </>;})()}
 
-        {pg==="punch"&&(()=>{const f=punch.filter(p=>p.status==="open").sort((a,b)=>({Critical:0,Major:1,Minor:2}[a.priority]-{Critical:0,Major:1,Minor:2}[b.priority]));return <>
-          <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>Punch List</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{oP} open</p></div><button style={S.btn} onClick={()=>sM("punch")}>+ New</button></div>
-          {!f.length?<p style={{textAlign:"center",padding:40,color:C.w3}}>All clear ✓</p>:f.map(i=>{const p=proj.find(x=>x.id===i.projectId);return <div key={i.id} style={{...S.fx,background:C.b2,borderRadius:8,border:`1px solid ${C.bd}`,marginBottom:6,overflow:"hidden"}}><div style={{width:3,background:i.priority==="Critical"?C.rd:i.priority==="Major"?C.or:C.w3}}/><div style={{flex:1,padding:"10px 14px"}}><div style={S.fxsb}><div><div style={{fontSize:12,fontWeight:600}}>{i.description}</div><div style={{fontSize:11,color:C.w3,marginTop:1}}>{p?.clientName} · {i.trade}</div></div><span style={S.bg(i.priority==="Critical"?C.rdb:C.orb,i.priority==="Critical"?C.rd:C.or)}>{i.priority}</span></div><div style={{...S.fx,gap:6,marginTop:8}}><button style={{...S.btn,background:C.gr,color:C.bg,padding:"3px 10px",fontSize:10}} onClick={()=>setPu(v=>v.map(x=>x.id===i.id?{...x,status:"closed"}:x))}>✓</button><button style={{...S.bs,color:C.rd,padding:"3px 10px",fontSize:10}} onClick={()=>setPu(v=>v.filter(x=>x.id!==i.id))}>Del</button></div></div></div>;})}
-        </>})()}
-
         {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:14,padding:24,width:"100%",maxWidth:460,maxHeight:"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
-          <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspection":modal==="proj"?"New Project":"New Punch Item"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
-          {modal==="insp"&&<InspF pr={proj} ok={i=>{setI(v=>[...v,{...i,id:uid(),createdAt:td(),completed:false}]);sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
+          <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
+          {modal==="insp"&&<InspF pr={proj} ok={items=>{setI(v=>[...v,...items.map(i=>({...i,id:uid(),createdAt:td(),completed:false}))]);sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
           {modal==="proj"&&<PF ok={p=>{setP(v=>[...v,{...p,id:uid(),comments:[],createdAt:td()}]);sM(null);}}/>}
-          {modal==="punch"&&<PuF pr={proj} ok={p=>{setPu(v=>[...v,{...p,id:uid(),createdAt:td(),status:"open"}]);sM(null);}}/>}
         </div></div>}
         {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:14,padding:24,width:"100%",maxWidth:460,maxHeight:"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Edit Project</h2><button onClick={()=>sEP(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
@@ -260,25 +249,47 @@ function AppMain(){
 }
 
 function InspF({pr,ok,ct=[],aC,pre}){
-  const[f,s]=useState({projectId:pre||"",type:"",date:td(),permitNum:"",notes:""});
-  const[ts,sTs]=useState("");const[sh,sSh]=useState(false);
-  const all=[...DT,...ct];const fl=all.filter(t=>(`${t.p}- ${t.l}`).toLowerCase().includes(ts.toLowerCase())||t.l.toLowerCase().includes(ts.toLowerCase())||t.p.toLowerCase()===ts.toLowerCase());
-  const gr={};fl.forEach(t=>{const g=PN[t.p]||"Other";if(!gr[g])gr[g]=[];gr[g].push(t);});
+  const blank=()=>({type:"",date:td(),permitNum:"",notes:""});
+  const[pid,sPid]=useState(pre||"");
+  const[rows,sRows]=useState([blank()]);
+  const[searches,sSr]=useState([""]);
+  const[openDd,sOd]=useState(-1);
+  const all=[...DT,...ct];
+  const addRow=()=>{if(rows.length<5){sRows([...rows,blank()]);sSr([...searches,""]);}};
+  const rmRow=(i)=>{if(rows.length>1){sRows(rows.filter((_,j)=>j!==i));sSr(searches.filter((_,j)=>j!==i));}};
+  const updRow=(i,upd)=>sRows(rows.map((r,j)=>j===i?{...r,...upd}:r));
+  const updSr=(i,v)=>sSr(searches.map((s,j)=>j===i?v:s));
+  const valid=pid&&rows.every(r=>r.type&&r.date);
+  const submit=()=>{if(valid)ok(rows.map(r=>({...r,projectId:pid})));};
   return <div>
     <div style={S.lb}>Project *</div>
-    <select style={S.inp} value={f.projectId} onChange={e=>s({...f,projectId:e.target.value})}><option value="">Select...</option>{[...pr].sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=><option key={p.id} value={p.id}>{p.clientName} — {p.city}</option>)}</select>
-    <div style={S.lb}>Type *</div>
-    <div style={{position:"relative",marginBottom:10}}>
-      <input style={{...S.inp,marginBottom:0}} value={f.type?fT(f.type,ct):ts} onChange={e=>{sTs(e.target.value);s({...f,type:""});sSh(true);}} onFocus={()=>sSh(true)} placeholder="Search... (S, plumb, rough)"/>
-      {sh&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:C.b2,border:`1px solid ${C.bd}`,borderRadius:7,maxHeight:200,overflow:"auto",zIndex:100,marginTop:3,boxShadow:"0 8px 20px rgba(0,0,0,.5)"}}>
-        {Object.entries(gr).map(([g,items])=><div key={g}><div style={{padding:"4px 12px",fontSize:9,fontWeight:700,color:C.w3,background:C.b3,borderBottom:`1px solid ${C.bd}`}}>{g}</div>
-        {items.map(t=><div key={t.l} onClick={()=>{s({...f,type:t.l});sTs("");sSh(false);}} style={{padding:"6px 12px",fontSize:12,cursor:"pointer",borderBottom:`1px solid ${C.bd}`}}><span style={{fontWeight:700,color:C.bl,marginRight:6}}>{t.p}-</span>{t.l}</div>)}</div>)}
-      </div>}
+    <select style={S.inp} value={pid} onChange={e=>sPid(e.target.value)}><option value="">Select...</option>{[...pr].sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=><option key={p.id} value={p.id}>{p.clientName} — {p.city}</option>)}</select>
+    {rows.map((r,i)=>{
+      const ts=searches[i]||"";
+      const fl=all.filter(t=>(`${t.p}- ${t.l}`).toLowerCase().includes(ts.toLowerCase())||t.l.toLowerCase().includes(ts.toLowerCase())||t.p.toLowerCase()===ts.toLowerCase());
+      const gr={};fl.forEach(t=>{const g=PN[t.p]||"Other";if(!gr[g])gr[g]=[];gr[g].push(t);});
+      return <div key={i} style={{background:C.bg,borderRadius:8,padding:10,marginBottom:8,border:`1px solid ${C.bd}`}}>
+        <div style={{...S.fxsb,marginBottom:6}}><span style={{fontSize:11,fontWeight:700,color:C.bl}}>Inspection {i+1}</span>{rows.length>1&&<button onClick={()=>rmRow(i)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11}}>Remove</button>}</div>
+        <div style={S.lb}>Type *</div>
+        <div style={{position:"relative",marginBottom:6}}>
+          <input style={{...S.inp,marginBottom:0}} value={r.type?fT(r.type,ct):ts} onChange={e=>{updSr(i,e.target.value);updRow(i,{type:""});sOd(i);}} onFocus={()=>sOd(i)} placeholder="Search... (S, plumb, rough)"/>
+          {openDd===i&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:C.b2,border:`1px solid ${C.bd}`,borderRadius:7,maxHeight:180,overflow:"auto",zIndex:100,marginTop:3,boxShadow:"0 8px 20px rgba(0,0,0,.5)"}}>
+            {Object.entries(gr).map(([g,items])=><div key={g}><div style={{padding:"4px 12px",fontSize:9,fontWeight:700,color:C.w3,background:C.b3,borderBottom:`1px solid ${C.bd}`}}>{g}</div>
+            {items.map(t=><div key={t.l} onClick={()=>{updRow(i,{type:t.l});updSr(i,"");sOd(-1);}} style={{padding:"6px 12px",fontSize:12,cursor:"pointer",borderBottom:`1px solid ${C.bd}`}}><span style={{fontWeight:700,color:C.bl,marginRight:6}}>{t.p}-</span>{t.l}</div>)}</div>)}
+          </div>}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <div><div style={S.lb}>Date *</div><input style={S.inp} type="date" value={r.date} onChange={e=>updRow(i,{date:e.target.value})}/></div>
+          <div><div style={S.lb}>Permit #</div><input style={S.inp} value={r.permitNum} onChange={e=>updRow(i,{permitNum:e.target.value})} placeholder="B25-05040"/></div>
+        </div>
+        <div style={S.lb}>Notes</div><input style={S.inp} value={r.notes} onChange={e=>updRow(i,{notes:e.target.value})} placeholder="framing, screw"/>
+      </div>;
+    })}
+    <div style={{...S.fx,justifyContent:"space-between",marginTop:4}}>
+      {rows.length<5?<button style={S.bs} onClick={addRow}>+ Add Another ({rows.length}/5)</button>:<span style={{fontSize:10,color:C.w3}}>Max 5 inspections</span>}
+      <button style={{...S.btn,opacity:valid?1:0.5}} onClick={submit}>Schedule {rows.length>1?`(${rows.length})`:""}
+      </button>
     </div>
-    <div style={S.lb}>Permit #</div><input style={S.inp} value={f.permitNum} onChange={e=>s({...f,permitNum:e.target.value})} placeholder="B25-05040"/>
-    <div style={S.lb}>Date *</div><input style={S.inp} type="date" value={f.date} onChange={e=>s({...f,date:e.target.value})}/>
-    <div style={S.lb}>Notes</div><input style={S.inp} value={f.notes} onChange={e=>s({...f,notes:e.target.value})} placeholder="framing, screw"/>
-    <div style={{...S.fx,justifyContent:"flex-end",marginTop:4}}><button style={S.btn} onClick={()=>f.projectId&&f.date&&f.type&&ok(f)}>Schedule</button></div>
   </div>;
 }
 function PF({ok}){
@@ -317,18 +328,6 @@ function EF({p,ok}){
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>ok(f)}>Save</button></div>
   </div>;
 }
-function PuF({pr,ok}){
-  const[f,s]=useState({projectId:"",description:"",trade:"Plumbing",priority:"Major"});
-  return <div>
-    <div style={S.lb}>Project *</div><select style={S.inp} value={f.projectId} onChange={e=>s({...f,projectId:e.target.value})}><option value="">Select...</option>{[...pr].sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=><option key={p.id} value={p.id}>{p.clientName} — {p.city}</option>)}</select>
-    <div style={S.lb}>Description *</div><textarea style={{...S.inp,minHeight:50,resize:"vertical"}} value={f.description} onChange={e=>s({...f,description:e.target.value})}/>
-    <div style={S.lb}>Trade</div><select style={S.inp} value={f.trade} onChange={e=>s({...f,trade:e.target.value})}>{TR.map(t=><option key={t}>{t}</option>)}</select>
-    <div style={S.lb}>Priority</div>
-    <div style={{...S.fx,gap:6,marginBottom:10}}>{PR.map(p=><button key={p} onClick={()=>s({...f,priority:p})} style={{flex:1,padding:7,borderRadius:6,border:`1px solid ${C.bd}`,background:f.priority===p?(p==="Critical"?C.rd:p==="Major"?C.or:C.w3):C.bg,fontSize:12,fontWeight:600,cursor:"pointer",color:f.priority===p?C.bg:C.w2,textAlign:"center"}}>{p}</button>)}</div>
-    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>f.projectId&&f.description&&ok(f)}>Add</button></div>
-  </div>;
-}
-
 function LinksSection({links,onAdd,onDel,projectId}){
   const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
