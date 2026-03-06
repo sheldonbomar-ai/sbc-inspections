@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { db } from "./firebase";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
@@ -12,8 +14,8 @@ const uid=()=>Math.random().toString(36).substr(2,9);
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
 const fDay=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"long"}).toUpperCase():"";
 const td=()=>new Date().toISOString().split("T")[0];
-const ld=async(k,f)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):f;}catch{return f;}};
-const sv=async(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+const svFs=async(k,v)=>{try{await setDoc(doc(db,"data",k),{value:JSON.stringify(v)});}catch(e){console.error("Firestore save error:",e);}};
+const ldLocal=(k,f)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):f;}catch{return f;}};
 const mkSeed=()=>SD.split(";").map(r=>{const p=r.split("|");return{id:uid(),clientName:p[0],city:p[1],address:p[2]||"TBD",permitNum:p[3]==="0"?"":p[3],hoa:p[4]==="1",scopes:p[5]?p[5].split(",").map(x=>SM[x]).filter(Boolean):[],scopeNotes:"",status:p[6]||"",assignee:"",comments:[],createdAt:td()};});
 const S={
   app:{display:"flex",height:"100vh",fontFamily:"system-ui,sans-serif",background:C.bg,color:C.w,overflow:"hidden"},
@@ -60,15 +62,30 @@ function AppMain(){
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
   const[resetting,setResetting]=useState(false);
+  const skip=useRef({sYp:false,sYi:false,sYu:false,sYc:false});
 
-  useEffect(()=>{(async()=>{
-    let p=await ld("sYp",null);if(!p){p=mkSeed();await sv("sYp",p);}
-    setP(p);setI(await ld("sYi",[]));setPu(await ld("sYu",[]));setCt(await ld("sYc",[]));setOk(true);
-  })();},[]);
-  useEffect(()=>{if(ok)sv("sYp",proj);},[proj,ok]);
-  useEffect(()=>{if(ok)sv("sYi",insp);},[insp,ok]);
-  useEffect(()=>{if(ok)sv("sYu",punch);},[punch,ok]);
-  useEffect(()=>{if(ok)sv("sYc",ct);},[ct,ok]);
+  useEffect(()=>{
+    const keys=[["sYp",setP],["sYi",setI],["sYu",setPu],["sYc",setCt]];
+    let loaded=0;
+    const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
+      const d=snap.data();
+      let val=d?JSON.parse(d.value):null;
+      if(k==="sYp"&&!val){val=mkSeed();svFs(k,val);}
+      if(!val)val=[];
+      localStorage.setItem(k,JSON.stringify(val));
+      if(!skip.current[k])setter(val); else skip.current[k]=false;
+      loaded++;if(loaded>=keys.length)setOk(true);
+    },(err)=>{
+      console.error("Firestore listen error:",err);
+      const val=ldLocal(k,k==="sYp"?mkSeed():[]);
+      setter(val);loaded++;if(loaded>=keys.length)setOk(true);
+    }));
+    return ()=>unsubs.forEach(u=>u());
+  },[]);
+  useEffect(()=>{if(ok){skip.current.sYp=true;svFs("sYp",proj);localStorage.setItem("sYp",JSON.stringify(proj));}},[proj,ok]);
+  useEffect(()=>{if(ok){skip.current.sYi=true;svFs("sYi",insp);localStorage.setItem("sYi",JSON.stringify(insp));}},[insp,ok]);
+  useEffect(()=>{if(ok){skip.current.sYu=true;svFs("sYu",punch);localStorage.setItem("sYu",JSON.stringify(punch));}},[punch,ok]);
+  useEffect(()=>{if(ok){skip.current.sYc=true;svFs("sYc",ct);localStorage.setItem("sYc",JSON.stringify(ct));}},[ct,ok]);
 
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
@@ -94,7 +111,7 @@ function AppMain(){
           <span>Broward County, FL</span>
           {!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
           <div style={{display:"flex",gap:4}}>
-            <button onClick={async()=>{try{localStorage.removeItem("xd-p");localStorage.removeItem("xd-i");localStorage.removeItem("xd-u");localStorage.removeItem("xd-c");}catch(e){}const p=mkSeed();await sv("xd-p",p);setP(p);setI([]);setPu([]);setCt([]);setResetting(false);}} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4,fontWeight:600}}>Yes, reset all</button>
+            <button onClick={async()=>{const p=mkSeed();setP(p);setI([]);setPu([]);setCt([]);setResetting(false);}} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4,fontWeight:600}}>Yes, reset all</button>
             <button onClick={()=>setResetting(false)} style={{background:"none",border:`1px solid ${C.bd}`,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4}}>Cancel</button>
           </div>}
         </div>
