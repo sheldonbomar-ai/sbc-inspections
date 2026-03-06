@@ -62,7 +62,7 @@ function AppMain(){
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
   const[resetting,setResetting]=useState(false);
-  const skip=useRef({sYp:false,sYi:false,sYu:false,sYc:false});
+  const lastFs=useRef({});
 
   useEffect(()=>{
     const keys=[["sYp",setP],["sYi",setI],["sYu",setPu],["sYc",setCt]];
@@ -72,8 +72,9 @@ function AppMain(){
       let val=d?JSON.parse(d.value):null;
       if(k==="sYp"&&!val){val=mkSeed();svFs(k,val);}
       if(!val)val=[];
-      localStorage.setItem(k,JSON.stringify(val));
-      if(!skip.current[k])setter(val); else skip.current[k]=false;
+      const json=JSON.stringify(val);
+      localStorage.setItem(k,json);
+      if(json!==lastFs.current[k]){lastFs.current[k]=json;setter(val);}
       loaded++;if(loaded>=keys.length)setOk(true);
     },(err)=>{
       console.error("Firestore listen error:",err);
@@ -82,10 +83,10 @@ function AppMain(){
     }));
     return ()=>unsubs.forEach(u=>u());
   },[]);
-  useEffect(()=>{if(ok){skip.current.sYp=true;svFs("sYp",proj);localStorage.setItem("sYp",JSON.stringify(proj));}},[proj,ok]);
-  useEffect(()=>{if(ok){skip.current.sYi=true;svFs("sYi",insp);localStorage.setItem("sYi",JSON.stringify(insp));}},[insp,ok]);
-  useEffect(()=>{if(ok){skip.current.sYu=true;svFs("sYu",punch);localStorage.setItem("sYu",JSON.stringify(punch));}},[punch,ok]);
-  useEffect(()=>{if(ok){skip.current.sYc=true;svFs("sYc",ct);localStorage.setItem("sYc",JSON.stringify(ct));}},[ct,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(proj);if(j!==lastFs.current.sYp){lastFs.current.sYp=j;svFs("sYp",proj);localStorage.setItem("sYp",j);}}},[proj,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(insp);if(j!==lastFs.current.sYi){lastFs.current.sYi=j;svFs("sYi",insp);localStorage.setItem("sYi",j);}}},[insp,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(punch);if(j!==lastFs.current.sYu){lastFs.current.sYu=j;svFs("sYu",punch);localStorage.setItem("sYu",j);}}},[punch,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(ct);if(j!==lastFs.current.sYc){lastFs.current.sYc=j;svFs("sYc",ct);localStorage.setItem("sYc",j);}}},[ct,ok]);
 
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
