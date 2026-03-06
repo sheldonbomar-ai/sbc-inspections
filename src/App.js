@@ -330,23 +330,25 @@ function PuF({pr,ok}){
 }
 
 function LinksSection({links,onAdd,onDel,projectId}){
-  const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");
+  const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
   const handleUpload=async(e)=>{
     const files=e.target.files;if(!files||!files.length)return;
-    setUploading(true);
+    setUploading(true);setUploadErr("");
     for(let i=0;i<files.length;i++){
       const file=files[i];
       const path=`projects/${projectId}/${Date.now()}_${file.name}`;
       const sRef=ref(storage,path);
-      const task=uploadBytesResumable(sRef,file);
-      await new Promise((resolve,reject)=>{
-        task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>{console.error("Upload error:",err);reject(err);},async()=>{
-          const dlUrl=await getDownloadURL(task.snapshot.ref);
-          onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size});
-          resolve();
+      try{
+        const task=uploadBytesResumable(sRef,file);
+        await new Promise((resolve,reject)=>{
+          task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>{reject(err);},async()=>{
+            const dlUrl=await getDownloadURL(task.snapshot.ref);
+            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size});
+            resolve();
+          });
         });
-      });
+      }catch(err){setUploadErr(err.code+": "+err.message);}
     }
     setUploading(false);setProg(0);e.target.value="";
   };
@@ -377,6 +379,7 @@ function LinksSection({links,onAdd,onDel,projectId}){
         {uploading?<span style={{color:C.bl}}>Uploading... {progress}%</span>:<span>Click to choose files (permits, photos, plans)</span>}
       </label>
       {uploading&&<div style={{height:3,background:C.bd,borderRadius:2,marginTop:6,overflow:"hidden"}}><div style={{height:"100%",background:C.bl,borderRadius:2,width:`${progress}%`,transition:"width 0.2s"}}/></div>}
+      {uploadErr&&<div style={{fontSize:11,color:C.rd,marginTop:6,padding:8,background:C.rdb,borderRadius:6,wordBreak:"break-all"}}>{uploadErr}</div>}
     </div>}
     {mode==="link"&&<div style={{...S.fx,gap:6}}>
       <input style={{...S.inp,marginBottom:0,flex:1}} value={label} onChange={e=>sL(e.target.value)} placeholder="Label (e.g. Building Permit)"/>
