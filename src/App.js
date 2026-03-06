@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { db } from "./firebase";
+import { db, storage } from "./firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
@@ -232,7 +233,7 @@ function AppMain(){
             {!(p.comments||[]).length&&<p style={{fontSize:11,color:C.w3}}>No notes yet</p>}
             <div style={{...S.fx,gap:6,marginTop:8}}><input id="cm" style={{...S.inp,marginBottom:0,flex:1}} placeholder="Add note..." onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:e.target.value.trim(),date:td()}]}:x));e.target.value="";}}} /><button style={S.btn} onClick={()=>{const el=document.getElementById("cm");if(el?.value.trim()){setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:el.value.trim(),date:td()}]}:x));el.value="";}}}>Add</button></div>
           </div>
-          <LinksSection links={p.links||[]} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))}/>
+          <LinksSection links={p.links||[]} projectId={selP} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))}/>
           <h4 style={{fontSize:13,fontWeight:700,margin:"12px 0 8px"}}>Inspections ({pi.length})</h4>
           {pi.map(i=><div key={i.id} style={S.rw}><div style={{width:6,height:6,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{fT(i.type,ct)}</div><div style={{fontSize:10,color:C.w3}}>{fmt(i.date)} · {i.permitNum||"—"}</div></div><span style={S.bg(i.completed?C.grl:C.orb,i.completed?C.gr:C.or)}>{i.completed?"Done":"Open"}</span></div>)}
         </>;})()}
@@ -328,22 +329,59 @@ function PuF({pr,ok}){
   </div>;
 }
 
-function LinksSection({links,onAdd,onDel}){
-  const[label,sL]=useState("");const[url,sU]=useState("");
-  const icon=l=>{const k=l.toLowerCase();return k.includes("photo")?"📷":k.includes("plan")?"📐":k.includes("permit")?"📋":"📄";};
+function LinksSection({links,onAdd,onDel,projectId}){
+  const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");
+  const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
+  const handleUpload=async(e)=>{
+    const files=e.target.files;if(!files||!files.length)return;
+    setUploading(true);
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      const path=`projects/${projectId}/${Date.now()}_${file.name}`;
+      const sRef=ref(storage,path);
+      const task=uploadBytesResumable(sRef,file);
+      await new Promise((resolve,reject)=>{
+        task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>{console.error("Upload error:",err);reject(err);},async()=>{
+          const dlUrl=await getDownloadURL(task.snapshot.ref);
+          onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size});
+          resolve();
+        });
+      });
+    }
+    setUploading(false);setProg(0);e.target.value="";
+  };
+  const handleDel=async(lk)=>{
+    if(lk.storagePath){try{await deleteObject(ref(storage,lk.storagePath));}catch(e){console.error("Delete error:",e);}}
+    onDel(lk.id);
+  };
   const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim()});sL("");sU("");}};
-  return <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>📎 Files & Links</h4>
+  const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
+  return <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>Files & Links</h4>
     {links.map(lk=><div key={lk.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}>
       <span style={{fontSize:14}}>{icon(lk.label)}</span>
-      <span onClick={()=>window.open(lk.url,"_blank")} style={{fontSize:12,color:C.bl,fontWeight:600,cursor:"pointer",flex:1,textDecoration:"underline"}}>{lk.label}</span>
-      <span style={{fontSize:9,color:C.w3}}>{fmt(lk.date)}</span>
-      <button onClick={()=>onDel(lk.id)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 6px"}}>✕</button>
+      <div style={{flex:1,minWidth:0}}>
+        <span onClick={()=>window.open(lk.url,"_blank")} style={{fontSize:12,color:C.bl,fontWeight:600,cursor:"pointer",textDecoration:"underline",wordBreak:"break-all"}}>{lk.label}</span>
+        {lk.fileSize&&<span style={{fontSize:9,color:C.w3,marginLeft:6}}>{fmtSize(lk.fileSize)}</span>}
+      </div>
+      <span style={{fontSize:9,color:C.w3,whiteSpace:"nowrap"}}>{fmt(lk.date)}</span>
+      <button onClick={()=>handleDel(lk)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 6px"}}>✕</button>
     </div>)}
-    {!links.length&&<p style={{fontSize:11,color:C.w3}}>No files linked yet</p>}
-    <div style={{...S.fx,gap:6,marginTop:8}}>
-      <input style={{...S.inp,marginBottom:0,flex:1}} value={label} onChange={e=>sL(e.target.value)} placeholder="Label (e.g. Building Permit)"/>
-      <input style={{...S.inp,marginBottom:0,flex:2}} value={url} onChange={e=>sU(e.target.value)} placeholder="Paste link (Google Drive, Dropbox, etc.)" onKeyDown={e=>{if(e.key==="Enter")add();}}/>
-      <button style={S.btn} onClick={add}>Add</button>
+    {!links.length&&<p style={{fontSize:11,color:C.w3}}>No files yet</p>}
+    <div style={{...S.fx,gap:6,marginTop:10,marginBottom:6}}>
+      <button onClick={()=>setMode("upload")} style={{...S.bs,fontSize:10,padding:"4px 10px",background:mode==="upload"?C.bll:"transparent",color:mode==="upload"?C.bl:C.w3,border:`1px solid ${mode==="upload"?C.bl:C.bd}`}}>Upload File</button>
+      <button onClick={()=>setMode("link")} style={{...S.bs,fontSize:10,padding:"4px 10px",background:mode==="link"?C.bll:"transparent",color:mode==="link"?C.bl:C.w3,border:`1px solid ${mode==="link"?C.bl:C.bd}`}}>Paste Link</button>
     </div>
+    {mode==="upload"&&<div>
+      <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:14,borderRadius:8,border:`2px dashed ${C.bd}`,cursor:uploading?"default":"pointer",color:C.w3,fontSize:12,background:C.bg}}>
+        <input type="file" multiple style={{display:"none"}} onChange={handleUpload} disabled={uploading}/>
+        {uploading?<span style={{color:C.bl}}>Uploading... {progress}%</span>:<span>Click to choose files (permits, photos, plans)</span>}
+      </label>
+      {uploading&&<div style={{height:3,background:C.bd,borderRadius:2,marginTop:6,overflow:"hidden"}}><div style={{height:"100%",background:C.bl,borderRadius:2,width:`${progress}%`,transition:"width 0.2s"}}/></div>}
+    </div>}
+    {mode==="link"&&<div style={{...S.fx,gap:6}}>
+      <input style={{...S.inp,marginBottom:0,flex:1}} value={label} onChange={e=>sL(e.target.value)} placeholder="Label (e.g. Building Permit)"/>
+      <input style={{...S.inp,marginBottom:0,flex:2}} value={url} onChange={e=>sU(e.target.value)} placeholder="Paste link (Google Drive, etc.)" onKeyDown={e=>{if(e.key==="Enter")add();}}/>
+      <button style={S.btn} onClick={add}>Add</button>
+    </div>}
   </div>;
 }
