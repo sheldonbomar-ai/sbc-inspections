@@ -4,6 +4,7 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
+const useMobile=()=>{const[m,sM]=useState(window.innerWidth<768);useEffect(()=>{const h=()=>sM(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m;};
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
 const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing"};
@@ -61,6 +62,7 @@ function AppMain(){
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
   const[resetting,setResetting]=useState(false);
+  const mob=useMobile();
   const lastFs=useRef({});
 
   useEffect(()=>{
@@ -90,15 +92,17 @@ function AppMain(){
 
   const ovd=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
 
+  const navItems=[["dashboard","Dashboard"],["sheet","Inspections"],["projects","Projects"]];
+
   return(
-    <div style={S.app}>
-      <div style={S.side}>
+    <div style={{...S.app,flexDirection:mob?"column":"row"}}>
+      {!mob&&<div style={S.side}>
         <div style={{...S.fxc,gap:8,padding:"0 14px 16px",borderBottom:`1px solid ${C.bd}`,marginBottom:6}}>
           <svg width="24" height="24" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
           <div><div style={{fontSize:12,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:8,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"4px 8px"}}>
-          {[["dashboard","Dashboard"],["sheet","Inspection Sheet"],["projects","Projects"]].map(([id,lb])=>
+          {navItems.map(([id,lb])=>
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
@@ -112,9 +116,9 @@ function AppMain(){
             <button onClick={()=>setResetting(false)} style={{background:"none",border:`1px solid ${C.bd}`,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4}}>Cancel</button>
           </div>}
         </div>
-      </div>
+      </div>}
 
-      <div style={{flex:1,overflow:"auto"}}><div style={{padding:"20px 24px",maxWidth:1050}}>
+      <div style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"20px 24px",maxWidth:1050}}>
 
         {pg==="dashboard"&&(()=>{
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
@@ -126,7 +130,7 @@ function AppMain(){
           const isRev=s=>(s||"").includes("REVISION");
           const revCount=active.filter(p=>isRev(p.status)).length;
           return <>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:16}}>
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
                 <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`}}><div style={{fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:C.w3}}>{l}</div></div>)}
             </div>
@@ -166,7 +170,7 @@ function AppMain(){
             {(()=>{
               const psc={issued:0,review:0,none:0};proj.forEach(p=>{const ps=(p.permitStatus||"").toLowerCase();if(ps==="issued")psc.issued++;else if(ps==="in review")psc.review++;else psc.none++;});
               const phases={permitting:0,progress:0,done:0,paused:0,commence:0};active.forEach(p=>{const st=(p.status||"").toLowerCase();if(st.includes("permit")||st.includes("review"))phases.permitting++;else if(st.includes("progress")||st.includes("active")||st.includes("commenced")||st.includes("work"))phases.progress++;else if(st.includes("done")||st.includes("final")||st.includes("closed soon"))phases.done++;else if(st.includes("pause")||st.includes("insurance")||st.includes("waiting"))phases.paused++;else if(st.includes("commence"))phases.commence++;else phases.progress++;});
-              return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+              return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12}}>
                 <div style={S.cd}><h3 style={{fontSize:13,fontWeight:700,marginBottom:10}}>By City</h3>
                   {Object.entries(cc).sort((a,b)=>b[1]-a[1]).map(([c,n])=><div key={c} style={{...S.fxsb,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:12}}>{c}</span><span style={{fontSize:14,fontWeight:700,color:C.bl}}>{n}</span></div>)}
                 </div>
@@ -188,19 +192,31 @@ function AppMain(){
           return <>
             <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div><button style={S.btn} onClick={()=>sM("insp")}>+ Schedule</button></div>
             <div style={{...S.fx,gap:6,marginBottom:12}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
-            <div style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>
+            {!mob&&<div style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>}
             {days.map(d=>{const di=insp.filter(i=>i.date===d);const isT=d===td();return <div key={d}>
               <div style={{...S.fxc,gap:6,background:isT?C.bll:C.b3,padding:"6px 14px",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:11,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}<span style={{fontSize:10,color:C.w3,marginLeft:"auto"}}>{di.length}</span></div>
               {di.length===0?<div style={{padding:"8px 14px",color:C.w3,fontSize:11,background:C.b2,borderBottom:`1px solid ${C.bd}`}}>—</div>:
-              di.map(i=>{const p=proj.find(x=>x.id===i.projectId);const isOv=!i.completed&&i.date<td();return <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{...S.hdr,background:isOv?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</div><div style={{fontSize:11,color:C.w2}}>{p?.city}</div><div style={{fontSize:10,color:C.bl,fontWeight:600}}>{i.permitNum||"—"}</div><div style={{...S.fxc,gap:4}}><div style={{width:5,height:5,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><span style={{fontSize:11}}>{fT(i.type,ct)}</span></div><div style={{fontSize:11,color:C.w2}}>{p?.address!=="TBD"?p?.address:"—"}</div></div>;})}
+              di.map(i=>{const p=proj.find(x=>x.id===i.projectId);const isOv=!i.completed&&i.date<td();return mob?
+                <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{padding:"10px 14px",background:isOv?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}>
+                  <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><div style={{...S.fxc,gap:4}}><div style={{width:6,height:6,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><span style={{fontSize:10,color:i.completed?C.gr:C.or}}>{i.completed?"Done":"Open"}</span></div></div>
+                  <div style={{fontSize:11,color:C.bl}}>{fT(i.type,ct)}</div>
+                  <div style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · ${i.permitNum}`:""}</div>
+                </div>:
+                <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{...S.hdr,background:isOv?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</div><div style={{fontSize:11,color:C.w2}}>{p?.city}</div><div style={{fontSize:10,color:C.bl,fontWeight:600}}>{i.permitNum||"—"}</div><div style={{...S.fxc,gap:4}}><div style={{width:5,height:5,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><span style={{fontSize:11}}>{fT(i.type,ct)}</span></div><div style={{fontSize:11,color:C.w2}}>{p?.address!=="TBD"?p?.address:"—"}</div></div>;})}
             </div>;})}
-            {pend.length>0&&<><div style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{...S.hdr,background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</div><div style={{fontSize:11,color:C.w2}}>{p?.city}</div><div style={{fontSize:10,color:C.bl}}>{i.permitNum||"—"}</div><div style={{fontSize:11,color:C.or}}>{fT(i.type,ct)}</div><div style={{fontSize:11,color:C.w2}}>{p?.address!=="TBD"?p?.address:""}</div></div>;})}</>}
+            {pend.length>0&&<><div style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return mob?
+              <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{padding:"10px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}>
+                <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><span style={{fontSize:10,color:C.or}}>Pending</span></div>
+                <div style={{fontSize:11,color:C.or}}>{fT(i.type,ct)}</div>
+                <div style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{i.permitNum?` · ${i.permitNum}`:""}</div>
+              </div>:
+              <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{...S.hdr,background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</div><div style={{fontSize:11,color:C.w2}}>{p?.city}</div><div style={{fontSize:10,color:C.bl}}>{i.permitNum||"—"}</div><div style={{fontSize:11,color:C.or}}>{fT(i.type,ct)}</div><div style={{fontSize:11,color:C.w2}}>{p?.address!=="TBD"?p?.address:""}</div></div>;})}</>}
           </>;
         })()}
 
         {pg==="detail"&&selI&&(()=>{const i=insp.find(x=>x.id===selI);if(!i)return null;const p=proj.find(x=>x.id===i.projectId);return <>
           <button style={{...S.bs,marginBottom:14}} onClick={()=>{sSI(null);setPg("sheet");}}>← Back</button>
-          <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>{fT(i.type,ct)}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p?.clientName} · {p?.city} · {fmt(i.date)}</p>{i.permitNum&&<p style={{fontSize:11,color:C.bl,marginTop:3}}>Permit: {i.permitNum}</p>}</div><div style={{...S.fx,gap:6}}>{!i.completed&&<button style={{...S.btn,background:C.gr,color:C.bg}} onClick={()=>setI(v=>v.map(x=>x.id===i.id?{...x,completed:true,completedAt:td()}:x))}>✓ Complete</button>}<button style={{...S.bs,color:C.rd}} onClick={()=>{setI(v=>v.filter(x=>x.id!==i.id));sSI(null);setPg("sheet");}}>Delete</button></div></div>
+          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{fT(i.type,ct)}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p?.clientName} · {p?.city} · {fmt(i.date)}</p>{i.permitNum&&<p style={{fontSize:11,color:C.bl,marginTop:3}}>Permit: {i.permitNum}</p>}</div><div style={{...S.fx,gap:6}}>{!i.completed&&<button style={{...S.btn,background:C.gr,color:C.bg}} onClick={()=>setI(v=>v.map(x=>x.id===i.id?{...x,completed:true,completedAt:td()}:x))}>✓ Complete</button>}<button style={{...S.bs,color:C.rd}} onClick={()=>{setI(v=>v.filter(x=>x.id!==i.id));sSI(null);setPg("sheet");}}>Delete</button></div></div>
           <div style={S.cd}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><span style={{fontSize:13,fontWeight:600}}>{i.completed?"COMPLETED":"SCHEDULED"}</span></div>{i.notes&&<p style={{fontSize:12,color:C.w2,marginTop:6}}>Notes: {i.notes}</p>}</div>
         </>;})()}
 
@@ -220,7 +236,7 @@ function AppMain(){
 
         {pg==="projects"&&selP&&(()=>{const p=proj.find(x=>x.id===selP);if(!p)return null;const pi=insp.filter(i=>i.projectId===selP);return <>
           <button style={{...S.bs,marginBottom:14}} onClick={()=>sSP(null)}>← Back</button>
-          <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</p></div><div style={{...S.fx,gap:6}}><button style={S.bs} onClick={()=>sEP(p)}>Edit</button><button style={S.btn} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd}} onClick={()=>{setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
+          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</p></div><div style={{...S.fx,gap:6}}><button style={S.bs} onClick={()=>sEP(p)}>Edit</button><button style={S.btn} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd}} onClick={()=>{setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
           <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
           {p.scopeNotes&&<div style={S.cd}><p style={{margin:0,fontSize:12,color:C.w2,lineHeight:1.5}}>{p.scopeNotes}</p></div>}
           <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>Notes</h4>
@@ -233,17 +249,24 @@ function AppMain(){
           {pi.map(i=><div key={i.id} style={S.rw}><div style={{width:6,height:6,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{fT(i.type,ct)}</div><div style={{fontSize:10,color:C.w3}}>{fmt(i.date)} · {i.permitNum||"—"}</div></div><span style={S.bg(i.completed?C.grl:C.orb,i.completed?C.gr:C.or)}>{i.completed?"Done":"Open"}</span></div>)}
         </>;})()}
 
-        {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:14,padding:24,width:"100%",maxWidth:460,maxHeight:"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+        {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
           {modal==="insp"&&<InspF pr={proj} ok={items=>{setI(v=>[...v,...items.map(i=>({...i,id:uid(),createdAt:td(),completed:false}))]);sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
           {modal==="proj"&&<PF ok={p=>{setP(v=>[...v,{...p,id:uid(),comments:[],createdAt:td()}]);sM(null);}}/>}
         </div></div>}
-        {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:14,padding:24,width:"100%",maxWidth:460,maxHeight:"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+        {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Edit Project</h2><button onClick={()=>sEP(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
           <EF p={editP} ok={u=>{setP(v=>v.map(p=>p.id===editP.id?{...p,...u}:p));sEP(null);}}/>
         </div></div>}
 
       </div></div>
+      {mob&&<div style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
+        {navItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
+          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="sheet"?"📋":"🏗"}</span>
+          <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
+          {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
+        </button>;})}
+      </div>}
     </div>
   );
 }
