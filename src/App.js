@@ -27,7 +27,7 @@ const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
 const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing"};
 const CREWS=[
-{id:"robin",name:"Robin",color:"#4ADE80"},{id:"robinjr",name:"Robin Jr",color:"#3B8BF5"},{id:"onel",name:"Onel",color:"#2DD4BF"},{id:"alfredo",name:"Alfredo",color:"#818CF8"},{id:"renee",name:"Renee",color:"#C084FC"},
+{id:"robin",name:"Robin",color:"#4ADE80"},{id:"robinjr",name:"Robin Jr",color:"#3B8BF5"},{id:"onel",name:"Onel",color:"#2DD4BF"},{id:"alfredo",name:"Alfredo",color:"#818CF8"},{id:"renee",name:"Rene",color:"#C084FC"},
 {id:"marcos",name:"Marcos Roofing",color:"#FB923C"},{id:"jose",name:"Jose Roofing",color:"#FBBF24"},
 {id:"bob",name:"Bob Windows",color:"#A78BFA"},
 {id:"manny",name:"Manny",color:"#F472B6"},{id:"roger",name:"Roger",color:"#38BDF8"},{id:"rudy",name:"Rudy",color:"#34D399"},{id:"john",name:"John (Gutters)",color:"#E879F9"},{id:"mary",name:"Marbely",color:"#FB7185"},
