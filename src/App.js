@@ -407,10 +407,15 @@ function SchedTab({proj,sched,setSched,week,sWk,mob}){
         <div style={{background:C.b2,borderRadius:"0 0 8px 8px",overflow:"hidden",border:`1px solid ${C.bd}`,borderTop:"none"}}>
           {crewsWithWork.map(cr=>{const assigns=getAssign(cr.id,d);return <div key={cr.id} style={{padding:"8px 12px",borderBottom:`1px solid ${C.bd}`}}>
             <div style={{...S.fxc,gap:6,marginBottom:4}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{fontSize:11,fontWeight:700,color:cr.color}}>{cr.name}</span></div>
-            {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return <div key={a.id} style={{background:cr.color+"14",border:`1px solid ${cr.color}33`,borderRadius:6,padding:"6px 10px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div><div style={{fontSize:12,fontWeight:600}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:10,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:10,color:cr.color,marginTop:2}}>{a.notes}</div>}</div>
-              <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:12,padding:"4px"}} onClick={()=>rmAssign(a.id)}>✕</button>
-            </div>;})}
+            {assigns.map(a=>{const p=a.projectId==="OFF"?null:proj.find(x=>x.id===a.projectId);return a.projectId==="OFF"?
+              <div key={a.id} style={{background:C.w3+"22",border:`1px solid ${C.w3}44`,borderRadius:6,padding:"6px 10px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div><div style={{fontSize:12,fontWeight:700,color:C.w3}}>NO WORK</div>{a.notes&&<div style={{fontSize:10,color:C.w3,marginTop:2}}>{a.notes}</div>}</div>
+                <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:12,padding:"4px"}} onClick={()=>rmAssign(a.id)}>✕</button>
+              </div>:
+              <div key={a.id} style={{background:cr.color+"14",border:`1px solid ${cr.color}33`,borderRadius:6,padding:"6px 10px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div><div style={{fontSize:12,fontWeight:600}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:10,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:10,color:cr.color,marginTop:2}}>{a.notes}</div>}</div>
+                <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:12,padding:"4px"}} onClick={()=>rmAssign(a.id)}>✕</button>
+              </div>;})}
           </div>;})}
           {!crewsWithWork.length&&<div style={{padding:"12px 14px",color:C.w3,fontSize:11}}>No crews assigned</div>}
           <button style={{width:"100%",padding:"10px",border:"none",borderTop:`1px solid ${C.bd}`,background:"transparent",color:C.bl,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setAssignCrew({crewId:null,date:d})}>+ Assign Crew</button>
@@ -427,11 +432,19 @@ function SchedTab({proj,sched,setSched,week,sWk,mob}){
             {CREWS.map(cr=><tr key={cr.id} style={{borderBottom:`1px solid ${C.bd}`}}>
               <td style={{padding:"10px 14px",fontWeight:600,whiteSpace:"nowrap",position:"sticky",left:0,background:C.b2,borderRight:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{color:cr.color}}>{cr.name}</span></div></td>
               {days.map(d=>{const assigns=getAssign(cr.id,d);const isT=d===td();return <td key={d} style={{padding:"6px 8px",verticalAlign:"top",background:isT?"rgba(59,139,245,0.05)":"transparent",borderRight:`1px solid ${C.bd}`,minHeight:50}}>
-                {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return <div key={a.id} style={{background:cr.color+"18",border:`1px solid ${cr.color}44`,borderRadius:6,padding:"4px 8px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:9,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:9,color:cr.color,marginTop:1}}>{a.notes}</div>}</div>
-                  <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
-                </div>;})}
-                <button style={{background:"none",border:`1px dashed ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:10,padding:"4px 8px",width:"100%",fontFamily:"inherit"}} onClick={()=>setAssignCrew({crewId:cr.id,date:d})}>+ Assign</button>
+                {assigns.map(a=>{const p=a.projectId==="OFF"?null:proj.find(x=>x.id===a.projectId);return a.projectId==="OFF"?
+                  <div key={a.id} style={{background:C.w3+"22",border:`1px solid ${C.w3}44`,borderRadius:6,padding:"4px 8px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div><div style={{fontSize:11,fontWeight:700,color:C.w3}}>NO WORK</div>{a.notes&&<div style={{fontSize:9,color:C.w3,marginTop:1}}>{a.notes}</div>}</div>
+                    <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
+                  </div>:
+                  <div key={a.id} style={{background:cr.color+"18",border:`1px solid ${cr.color}44`,borderRadius:6,padding:"4px 8px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:9,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:9,color:cr.color,marginTop:1}}>{a.notes}</div>}</div>
+                    <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
+                  </div>;})}
+                <div style={{display:"flex",gap:4}}>
+                  <button style={{background:"none",border:`1px dashed ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:10,padding:"4px 8px",flex:1,fontFamily:"inherit"}} onClick={()=>setAssignCrew({crewId:cr.id,date:d})}>+ Assign</button>
+                  <button style={{background:"none",border:`1px dashed ${C.w3}44`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:10,padding:"4px 8px",fontFamily:"inherit"}} onClick={()=>addAssign(cr.id,d,"OFF","")}>Off</button>
+                </div>
               </td>;})}
             </tr>)}
           </tbody>
@@ -443,7 +456,9 @@ function SchedTab({proj,sched,setSched,week,sWk,mob}){
       <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{assignCrew.crewId?`Assign ${CREWS.find(c=>c.id===assignCrew.crewId)?.name}`:"Assign Crew"}</h2><button onClick={()=>setAssignCrew(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
       <p style={{fontSize:11,color:C.w3,marginBottom:12}}>{fmt(assignCrew.date)} · {fDay(assignCrew.date)}</p>
       {!assignCrew.crewId&&<><div style={S.lb}>Crew *</div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>{CREWS.map(cr=><button key={cr.id} onClick={()=>setAssignCrew({...assignCrew,crewId:cr.id})} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${cr.color}44`,background:cr.color+"14",color:cr.color,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{cr.name}</button>)}</div></>}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>{CREWS.map(cr=><button key={cr.id} onClick={()=>setAssignCrew({...assignCrew,crewId:cr.id})} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${cr.color}44`,background:cr.color+"14",color:cr.color,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{cr.name}</button>)}</div>
+        <div style={{borderTop:`1px solid ${C.bd}`,paddingTop:10,marginBottom:6}}><div style={S.lb}>Or mark crew as off</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{CREWS.map(cr=><button key={cr.id} onClick={()=>{addAssign(cr.id,assignCrew.date,"OFF","");setAssignCrew(null);}} style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${C.w3}44`,background:C.w3+"14",color:C.w3,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{cr.name}</button>)}</div></div></>}
       {assignCrew.crewId&&<><div style={S.lb}>Search Project</div>
       <AssignPicker projects={active} onPick={(pid,notes)=>{addAssign(assignCrew.crewId,assignCrew.date,pid,notes);setAssignCrew(null);}}/></>}
     </div></div>}
