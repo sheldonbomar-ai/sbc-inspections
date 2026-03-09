@@ -4,6 +4,24 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
+const PRINT_CSS=`@media print{
+  body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  [data-sidebar],[data-mobnav],[data-noprint]{display:none!important;}
+  [data-app]{height:auto!important;overflow:visible!important;background:#fff!important;display:block!important;}
+  [data-content]{padding:0!important;overflow:visible!important;}
+  [data-print-header]{display:flex!important;}
+  *{color:#000!important;border-color:#ccc!important;}
+  [data-day-header]{background:#e5e7eb!important;padding:6px 12px!important;}
+  [data-day-header] span{color:#000!important;}
+  [data-insp-row]{background:#fff!important;border-bottom:1px solid #ccc!important;padding:4px 12px!important;}
+  [data-insp-row] div{color:#000!important;}
+  [data-insp-row] [data-type]{color:#333!important;font-weight:700!important;}
+  [data-col-header]{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  [data-col-header] div{color:#fff!important;}
+  [data-pend-header]{background:#fef3c7!important;border-top:2px solid #f59e0b!important;}
+  [data-pend-header] span{color:#92400e!important;}
+  [data-status-dot]{border:1px solid #000!important;}
+}`;
 const useMobile=()=>{const[m,sM]=useState(window.innerWidth<768);useEffect(()=>{const h=()=>sM(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m;};
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
@@ -103,8 +121,9 @@ function AppMain(){
   const navItems=[["dashboard","Dashboard"],["sheet","Inspections"],["projects","Projects"],["scheduling","Scheduling"]];
 
   return(
-    <div style={{...S.app,flexDirection:mob?"column":"row"}}>
-      {!mob&&<div style={S.side}>
+    <div data-app="" style={{...S.app,flexDirection:mob?"column":"row"}}>
+      <style dangerouslySetInnerHTML={{__html:PRINT_CSS}}/>
+      {!mob&&<div data-sidebar="" style={S.side}>
         <div style={{...S.fxc,gap:10,padding:"4px 16px 18px",borderBottom:`1px solid ${C.bd}`,marginBottom:10}}>
           <svg width="32" height="32" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
@@ -126,7 +145,7 @@ function AppMain(){
         </div>
       </div>}
 
-      <div style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"20px 32px"}}>
+      <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"20px 32px"}}>
 
         {pg==="dashboard"&&(()=>{
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
@@ -198,11 +217,12 @@ function AppMain(){
           const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d.toISOString().split("T")[0];});
           const pend=insp.filter(i=>!i.completed&&(!i.date||i.date<days[0]||i.date>days[4]));
           return <>
-            <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div><button style={S.btn} onClick={()=>sM("insp")}>+ Schedule</button></div>
-            <div style={{...S.fx,gap:6,marginBottom:12}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
-            {!mob&&<div style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>}
+            <div data-print-header="" style={{display:"none",alignItems:"center",gap:10,marginBottom:12,paddingBottom:8,borderBottom:"2px solid #000"}}><div><div style={{fontSize:18,fontWeight:700}}>Stacy Bomar Construction</div><div style={{fontSize:10,fontWeight:600,letterSpacing:1}}>INSPECTION LIST — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
+            <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div><div data-noprint="" style={{display:"flex",gap:6}}><button style={S.bs} onClick={()=>window.print()}>Print</button><button style={S.btn} onClick={()=>sM("insp")}>+ Schedule</button></div></div>
+            <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
+            <div data-col-header="" style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>
             {days.map(d=>{const di=insp.filter(i=>i.date===d);const isT=d===td();return <div key={d}>
-              <div style={{...S.fxc,gap:6,background:isT?C.bll:C.b3,padding:"6px 14px",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:11,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}<span style={{fontSize:10,color:C.w3,marginLeft:"auto"}}>{di.length}</span></div>
+              <div data-day-header="" style={{...S.fxc,gap:6,background:isT?C.bll:C.b3,padding:"6px 14px",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:11,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}<span style={{fontSize:10,color:C.w3,marginLeft:"auto"}}>{di.length}</span></div>
               {di.length===0?<div style={{padding:"8px 14px",color:C.w3,fontSize:11,background:C.b2,borderBottom:`1px solid ${C.bd}`}}>—</div>:
               di.map(i=>{const p=proj.find(x=>x.id===i.projectId);const isOv=!i.completed&&i.date<td();return mob?
                 <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{padding:"10px 14px",background:isOv?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}>
@@ -210,9 +230,9 @@ function AppMain(){
                   <div style={{fontSize:11,color:C.bl}}>{fT(i.type,ct)}</div>
                   <div style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · ${i.permitNum}`:""}</div>
                 </div>:
-                <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{...S.hdr,background:isOv?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</div><div style={{fontSize:11,color:C.w2}}>{p?.city}</div><div style={{fontSize:10,color:C.bl,fontWeight:600}}>{i.permitNum||"—"}</div><div style={{...S.fxc,gap:4}}><div style={{width:5,height:5,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><span style={{fontSize:11}}>{fT(i.type,ct)}</span></div><div style={{fontSize:11,color:C.w2}}>{p?.address!=="TBD"?p?.address:"—"}</div></div>;})}
+                <div data-insp-row="" key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{...S.hdr,background:isOv?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</div><div style={{fontSize:11,color:C.w2}}>{p?.city}</div><div style={{fontSize:10,color:C.bl,fontWeight:600}}>{i.permitNum||"—"}</div><div style={{...S.fxc,gap:4}}><div data-status-dot="" style={{width:5,height:5,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><span data-type="" style={{fontSize:11}}>{fT(i.type,ct)}</span></div><div style={{fontSize:11,color:C.w2}}>{p?.address!=="TBD"?p?.address:"—"}</div></div>;})}
             </div>;})}
-            {pend.length>0&&<><div style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return mob?
+            {pend.length>0&&<><div data-pend-header="" style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return mob?
               <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{padding:"10px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}>
                 <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><span style={{fontSize:10,color:C.or}}>Pending</span></div>
                 <div style={{fontSize:11,color:C.or}}>{fT(i.type,ct)}</div>
@@ -270,7 +290,7 @@ function AppMain(){
         </div></div>}
 
       </div></div>
-      {mob&&<div style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {mob&&<div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {navItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
           <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="sheet"?"📋":id==="projects"?"🏗":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
