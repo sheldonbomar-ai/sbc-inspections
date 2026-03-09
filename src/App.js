@@ -19,8 +19,8 @@ const ldLocal=(k,f)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r)
 const mkSeed=()=>SD.split(";").map(r=>{const p=r.split("|");return{id:uid(),clientName:p[0],city:p[1],address:p[2]||"TBD",permitNum:p[3]==="0"?"":p[3],hoa:p[4]==="1",scopes:p[5]?p[5].split(",").map(x=>SM[x]).filter(Boolean):[],scopeNotes:"",status:p[6]||"",assignee:"",comments:[],createdAt:td()};});
 const S={
   app:{display:"flex",height:"100vh",fontFamily:"system-ui,sans-serif",background:C.bg,color:C.w,overflow:"hidden"},
-  side:{width:200,minWidth:200,background:C.b2,borderRight:`1px solid ${C.bd}`,display:"flex",flexDirection:"column",padding:"16px 0"},
-  nav:a=>({display:"flex",alignItems:"center",gap:8,padding:"9px 10px",border:"none",background:a?C.bll:"transparent",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:a?600:500,color:a?C.bl:C.w3,width:"100%",textAlign:"left",marginBottom:2,fontFamily:"inherit"}),
+  side:{width:240,minWidth:240,background:C.b2,borderRight:`1px solid ${C.bd}`,display:"flex",flexDirection:"column",padding:"16px 0"},
+  nav:a=>({display:"flex",alignItems:"center",gap:10,padding:"12px 16px",border:"none",background:a?C.bll:"transparent",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:a?700:500,color:a?C.bl:C.w3,width:"100%",textAlign:"left",marginBottom:4,fontFamily:"inherit",transition:"background 0.15s",letterSpacing:0.3}),
   cd:{background:C.b2,borderRadius:10,padding:16,border:`1px solid ${C.bd}`,marginBottom:12},
   inp:{width:"100%",padding:"8px 12px",borderRadius:7,border:`1px solid ${C.bd}`,background:C.bg,color:C.w,fontSize:12,outline:"none",fontFamily:"inherit",marginBottom:10},
   btn:{padding:"6px 14px",borderRadius:6,border:"none",background:C.bl,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"},
@@ -97,18 +97,18 @@ function AppMain(){
   return(
     <div style={{...S.app,flexDirection:mob?"column":"row"}}>
       {!mob&&<div style={S.side}>
-        <div style={{...S.fxc,gap:8,padding:"0 14px 16px",borderBottom:`1px solid ${C.bd}`,marginBottom:6}}>
-          <svg width="24" height="24" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
-          <div><div style={{fontSize:12,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:8,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
+        <div style={{...S.fxc,gap:10,padding:"4px 16px 18px",borderBottom:`1px solid ${C.bd}`,marginBottom:10}}>
+          <svg width="32" height="32" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
+          <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
-        <div style={{flex:1,padding:"4px 8px"}}>
-          {navItems.map(([id,lb])=>
+        <div style={{flex:1,padding:"6px 10px"}}>
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
-              {lb}
+              {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
-            </button>)}
+            </button>);})}
         </div>
-        <div style={{padding:"10px 14px",borderTop:`1px solid ${C.bd}`,fontSize:9,color:C.w3,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{padding:"14px 16px",borderTop:`1px solid ${C.bd}`,fontSize:10,color:C.w3,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span>Broward County, FL</span>
           {!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
           <div style={{display:"flex",gap:4}}>
@@ -118,7 +118,7 @@ function AppMain(){
         </div>
       </div>}
 
-      <div style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"20px 24px",maxWidth:1050}}>
+      <div style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"20px 32px"}}>
 
         {pg==="dashboard"&&(()=>{
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
