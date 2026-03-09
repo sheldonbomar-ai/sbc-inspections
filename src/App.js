@@ -465,25 +465,31 @@ function SchedTab({proj,sched,setSched,week,sWk,mob}){
 
     {/* PAYROLL SUMMARY */}
     {(()=>{
-      const payroll=CREWS.map(cr=>{const daysWorked=days.filter(d=>{const a=getAssign(cr.id,d);return a.length>0&&!a.every(x=>x.projectId==="OFF");}).length;const daysOff=days.filter(d=>{const a=getAssign(cr.id,d);return a.length>0&&a.every(x=>x.projectId==="OFF");}).length;return{...cr,daysWorked,daysOff};}).filter(cr=>cr.daysWorked>0||cr.daysOff>0);
+      const payroll=CREWS.map(cr=>{const daysWorked=days.filter(d=>{const a=getAssign(cr.id,d);return a.length>0&&!a.every(x=>x.projectId==="OFF");}).length;const daysOff=days.filter(d=>{const a=getAssign(cr.id,d);return a.length>0&&a.every(x=>x.projectId==="OFF");}).length;return{...cr,daysWorked,daysOff};});
+      const hasWork=payroll.some(cr=>cr.daysWorked>0||cr.daysOff>0);
       const totalDays=payroll.reduce((s,cr)=>s+cr.daysWorked,0);
-      return <div style={{...S.cd,marginTop:20}}>
-        <div style={{...S.fxsb,marginBottom:12}}><h3 style={{fontSize:14,fontWeight:700,margin:0}}>Weekly Payroll Summary</h3><span style={{fontSize:11,color:C.w3}}>{fmt(days[0])} — {fmt(days[4])}</span></div>
-        {payroll.length===0?<p style={{fontSize:11,color:C.w3}}>No assignments yet</p>:
-        <div>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:8}}>
-            {payroll.map(cr=><div key={cr.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:C.bg,borderRadius:8,border:`1px solid ${C.bd}`}}>
-              <div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:cr.color}}/><span style={{fontSize:12,fontWeight:600,color:cr.color}}>{cr.name}</span></div>
-              <div style={{...S.fxc,gap:10}}>
-                <div style={{textAlign:"center"}}><div style={{fontSize:18,fontWeight:700,color:C.w}}>{cr.daysWorked}</div><div style={{fontSize:8,color:C.w3,fontWeight:600,letterSpacing:0.5}}>DAYS</div></div>
-                {cr.daysOff>0&&<div style={{textAlign:"center"}}><div style={{fontSize:14,fontWeight:600,color:C.w3}}>{cr.daysOff}</div><div style={{fontSize:8,color:C.w3,fontWeight:600,letterSpacing:0.5}}>OFF</div></div>}
-              </div>
-            </div>)}
-          </div>
-          <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.bd}`,display:"flex",justifyContent:"flex-end",alignItems:"center",gap:8}}>
-            <span style={{fontSize:11,color:C.w3}}>Total crew-days:</span><span style={{fontSize:18,fontWeight:700,color:C.bl}}>{totalDays}</span>
-          </div>
-        </div>}
+      return <div style={{...S.cd,marginTop:20,padding:0,overflow:"hidden"}}>
+        <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.bd}`,background:C.b3}}><h3 style={{fontSize:13,fontWeight:700,margin:0}}>PAYROLL — {fmt(days[0])} to {fmt(days[4])}</h3></div>
+        {!hasWork?<div style={{padding:"14px 16px",color:C.w3,fontSize:11}}>No assignments yet</div>:
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead><tr style={{borderBottom:`1px solid ${C.bd}`}}>
+            <th style={{padding:"8px 16px",textAlign:"left",fontSize:10,fontWeight:700,color:C.w3,letterSpacing:1}}>CREW</th>
+            {days.map(d=><th key={d} style={{padding:"8px 4px",textAlign:"center",fontSize:9,fontWeight:600,color:C.w3,letterSpacing:0.5}}>{new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"short"}).toUpperCase()}</th>)}
+            <th style={{padding:"8px 16px",textAlign:"center",fontSize:10,fontWeight:700,color:C.bl,letterSpacing:1}}>TOTAL</th>
+          </tr></thead>
+          <tbody>
+            {payroll.map((cr,idx)=><tr key={cr.id} style={{borderBottom:`1px solid ${C.bd}`,background:idx%2===0?"transparent":C.bg}}>
+              <td style={{padding:"8px 16px",whiteSpace:"nowrap"}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{fontWeight:600,color:cr.color,fontSize:12}}>{cr.name}</span></div></td>
+              {days.map(d=>{const a=getAssign(cr.id,d);const worked=a.length>0&&!a.every(x=>x.projectId==="OFF");const off=a.length>0&&a.every(x=>x.projectId==="OFF");return <td key={d} style={{padding:"8px 4px",textAlign:"center"}}>{worked?<span style={{fontSize:14}}>&#10003;</span>:off?<span style={{fontSize:10,color:C.w3,fontWeight:600}}>OFF</span>:<span style={{color:C.w3}}>—</span>}</td>;})}
+              <td style={{padding:"8px 16px",textAlign:"center",fontWeight:700,fontSize:14,color:cr.daysWorked>0?C.w:C.w3}}>{cr.daysWorked}</td>
+            </tr>)}
+            <tr style={{borderTop:`2px solid ${C.bd}`,background:C.b3}}>
+              <td style={{padding:"10px 16px",fontWeight:700,fontSize:12}}>TOTAL</td>
+              <td colSpan={days.length}></td>
+              <td style={{padding:"10px 16px",textAlign:"center",fontWeight:700,fontSize:16,color:C.bl}}>{totalDays}</td>
+            </tr>
+          </tbody>
+        </table>}
       </div>;
     })()}
   </>;
