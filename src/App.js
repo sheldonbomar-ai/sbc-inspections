@@ -476,17 +476,20 @@ function SchedTab({proj,sched,setSched,week,sWk,mob}){
             <th style={{padding:"8px 16px",textAlign:"left",fontSize:10,fontWeight:700,color:C.w3,letterSpacing:1}}>CREW</th>
             {days.map(d=><th key={d} style={{padding:"8px 4px",textAlign:"center",fontSize:9,fontWeight:600,color:C.w3,letterSpacing:0.5}}>{new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"short"}).toUpperCase()}</th>)}
             <th style={{padding:"8px 16px",textAlign:"center",fontSize:10,fontWeight:700,color:C.bl,letterSpacing:1}}>TOTAL</th>
+            <th style={{padding:"8px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:C.w3,letterSpacing:1}}>CREW</th>
           </tr></thead>
           <tbody>
             {payroll.map((cr,idx)=><tr key={cr.id} style={{borderBottom:`1px solid ${C.bd}`,background:idx%2===0?"transparent":C.bg}}>
               <td style={{padding:"8px 16px",whiteSpace:"nowrap"}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{fontWeight:600,color:cr.color,fontSize:12}}>{cr.name}</span></div></td>
               {days.map(d=>{const a=getAssign(cr.id,d);const worked=a.length>0&&!a.every(x=>x.projectId==="OFF");const off=a.length>0&&a.every(x=>x.projectId==="OFF");return <td key={d} style={{padding:"8px 4px",textAlign:"center"}}>{worked?<span style={{fontSize:14}}>&#10003;</span>:off?<span style={{fontSize:10,color:C.w3,fontWeight:600}}>OFF</span>:<span style={{color:C.w3}}>—</span>}</td>;})}
               <td style={{padding:"8px 16px",textAlign:"center",fontWeight:700,fontSize:14,color:cr.daysWorked>0?C.w:C.w3}}>{cr.daysWorked}</td>
+              <td style={{padding:"8px 12px",whiteSpace:"nowrap"}}><span style={{fontSize:11,fontWeight:600,color:cr.color}}>{cr.name}</span></td>
             </tr>)}
             <tr style={{borderTop:`2px solid ${C.bd}`,background:C.b3}}>
               <td style={{padding:"10px 16px",fontWeight:700,fontSize:12}}>TOTAL</td>
               <td colSpan={days.length}></td>
               <td style={{padding:"10px 16px",textAlign:"center",fontWeight:700,fontSize:16,color:C.bl}}>{totalDays}</td>
+              <td></td>
             </tr>
           </tbody>
         </table>}
