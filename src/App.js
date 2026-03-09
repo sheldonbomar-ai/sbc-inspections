@@ -8,6 +8,7 @@ const useMobile=()=>{const[m,sM]=useState(window.innerWidth<768);useEffect(()=>{
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
 const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing"};
+const CREWS=[{id:"horses",name:"Horses",color:"#4ADE80"},{id:"ponies",name:"Ponies",color:"#3B8BF5"},{id:"marcos",name:"Marcos Roofing",color:"#FB923C"},{id:"jose",name:"Jose Roofing",color:"#FBBF24"},{id:"bob",name:"Bob Windows",color:"#A78BFA"}];
 const fT=(t,ct=[])=>{const f=[...DT,...ct].find(x=>x.l===t);return f?`${f.p}- ${f.l}`:t;};
 const SD="Ashley|Pompano Beach|2921 NW 8 ST|0|0|W,E|⚠ REVISION: CGI NOA now PGT by Sparta;Barrant|Sunrise|4008 Del Rio Way|0|1|W,R,E|In permitting;Beckles|Pembroke Pines|12017 NW 11 ST|0|1|W,S,E,P|In permitting;Bryan|Sunrise|11701 NW 30 PL|R-STRT-003473|0|R,S,E,P|Pending building final - work done;Burke|Margate|7708 Margate Blvd Apt C3-6|0|1||CLOSED;Bursztyn|Davie|3745 SW 59 AVE|2025-7435|1|W,S,E,P|Pending finals - job done;Camacho|Plantation|7501 NW 16 ST Unit 3305|P25-1025|0|W,S,E,P|Need appliances AC kitchen sink then finals;Campbell|Margate|1835 Vista Way|0|1|R,S,E|Roof permit in review - other permits issued;Ceasar|Margate|6130 SW 3 ST|0|0|W,R|CLOSED;Clover|Deerfield Beach|516 SW Natura AVE|0|1|R|Roof permit in review;Courts|Deerfield Beach|225 Ventor Q|0|1|W,S,E,P|About to commence;Cox|Deerfield Beach|330 NW 1 AVE|0|0|W,R,S,E,P|Roof in progress - rest about to commence;Davila|Pembroke Pines|1026 NW 159 AVE|0|1|W,R,S,P|Window permit issued - roof in review;Davilsaint|Ft Lauderdale||0|0|R|On pause - insurance issue;Derek-Towriss|Ft Lauderdale|1649 NE 3 CT|0|0||Pending final inspections;Goberdhan|Plantation|7820 NW 14 ST|0|0|W,S,E,P|Win+elec+AC done - bath drywall+appliances+doors left;Gonzalez|Sunrise|9801 Sunrise Lakes Blvd Unit 207|0|1|W,S,E,P|Permit to be issued within 2 weeks;Knight|Pompano Beach|1570 NW 4 AVE|0|0|E|Exterior paint last thing - permits closed;Ledgister|Plantation|103 NW 68 AVE|B25-04632|0|W,S,E,P|All done besides appliances;Mel|Miami||0|0|R|On pause - insurance issue;Mistler|Plantation|5301 SW 8 ST|B25-04835|0|S|Roof work commenced;Morgan|Pembroke Pines|1000 Colony Point Cir #420|0|1|S,E,P|Permit in progress;Moye-Barnett|Davie|7520 NW 31st Place|0|1|W,R,S,E,P|CLOSED;Nora Sanchez|Deerfield Beach|222 Prescott L|0|1|W,S,E,P|About to commence;NSP Swap Shop|Ft Lauderdale|3090 NW 11 ST|18-00205|0|W,R,S,E,P|In progress - big job;NSP WP|West Park|28 Allen RD|WP25-000446|0|W,R,S,E,P|In progress - big job;Phillips|Pembroke Pines|7347 NW 22 DR|0|1|W,R,S,E,P|In permitting;Pifalo|Plantation|8536 NW 10 ST Unit D78|B25-05040|1|W,S,E,P|⚠ REVISION: NOA wrong on window+door - missing plmb permit for WH;Qatar|Sunrise|13800 NW 14 ST Suite 160|0|0|S,E,P|Insurance issue - working to start;Rhoda|Plantation|501 N Pine Island Rd Unit 1|0|0|W,S,E,P|Very active - lots of work to do;Soto|Sunrise|11301 NW 17 ST|0|0|W,R|In review;Stone|Davie|4791 SW 55 AVE|0|0|W,R,S,P|Permit to be closed soon";
 const uid=()=>Math.random().toString(36).substr(2,9);
@@ -57,7 +58,7 @@ export default function App(){
 
 function AppMain(){
   const[pg,setPg]=useState("dashboard");
-  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);
+  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
@@ -66,7 +67,7 @@ function AppMain(){
   const lastFs=useRef({});
 
   useEffect(()=>{
-    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt]];
+    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched]];
     let loaded=0;
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
@@ -87,12 +88,13 @@ function AppMain(){
   useEffect(()=>{if(ok){const j=JSON.stringify(proj);if(j!==lastFs.current.sYp){lastFs.current.sYp=j;svFs("sYp",proj);localStorage.setItem("sYp",j);}}},[proj,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(insp);if(j!==lastFs.current.sYi){lastFs.current.sYi=j;svFs("sYi",insp);localStorage.setItem("sYi",j);}}},[insp,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(ct);if(j!==lastFs.current.sYc){lastFs.current.sYc=j;svFs("sYc",ct);localStorage.setItem("sYc",j);}}},[ct,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(sched);if(j!==lastFs.current.sYs){lastFs.current.sYs=j;svFs("sYs",sched);localStorage.setItem("sYs",j);}}},[sched,ok]);
 
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
   const ovd=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
 
-  const navItems=[["dashboard","Dashboard"],["sheet","Inspections"],["projects","Projects"]];
+  const navItems=[["dashboard","Dashboard"],["sheet","Inspections"],["projects","Projects"],["scheduling","Scheduling"]];
 
   return(
     <div style={{...S.app,flexDirection:mob?"column":"row"}}>
@@ -102,7 +104,7 @@ function AppMain(){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>};return(
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
@@ -249,6 +251,8 @@ function AppMain(){
           {pi.map(i=><div key={i.id} style={S.rw}><div style={{width:6,height:6,borderRadius:"50%",background:i.completed?C.gr:C.or}}/><div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{fT(i.type,ct)}</div><div style={{fontSize:10,color:C.w3}}>{fmt(i.date)} · {i.permitNum||"—"}</div></div><span style={S.bg(i.completed?C.grl:C.orb,i.completed?C.gr:C.or)}>{i.completed?"Done":"Open"}</span></div>)}
         </>;})()}
 
+        {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob}/>}
+
         {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
           {modal==="insp"&&<InspF pr={proj} ok={items=>{setI(v=>[...v,...items.map(i=>({...i,id:uid(),createdAt:td(),completed:false}))]);sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
@@ -262,7 +266,7 @@ function AppMain(){
       </div></div>
       {mob&&<div style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {navItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="sheet"?"📋":"🏗"}</span>
+          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="sheet"?"📋":id==="projects"?"🏗":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
           {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
         </button>;})}
@@ -349,6 +353,75 @@ function EF({p,ok}){
     <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:C.w2,marginBottom:10}}><input type="checkbox" checked={f.hoa} onChange={e=>s({...f,hoa:e.target.checked})}/> HOA</label>
     <div style={S.lb}>Scope Notes</div><textarea style={{...S.inp,minHeight:60,resize:"vertical"}} value={f.scopeNotes} onChange={e=>s({...f,scopeNotes:e.target.value})}/>
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>ok(f)}>Save</button></div>
+  </div>;
+}
+function SchedTab({proj,sched,setSched,week,sWk,mob}){
+  const[assignCrew,setAssignCrew]=useState(null);
+  const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d.toISOString().split("T")[0];});
+  const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
+  const getAssign=(crewId,date)=>sched.filter(s=>s.crewId===crewId&&s.date===date);
+  const addAssign=(crewId,date,projectId,notes)=>setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||""}]);
+  const rmAssign=(id)=>setSched(v=>v.filter(s=>s.id!==id));
+  return <>
+    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>CREW SCHEDULING</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div></div>
+    <div style={{...S.fx,gap:6,marginBottom:16}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
+
+    {mob?
+      days.map(d=>{const isT=d===td();return <div key={d} style={{marginBottom:12}}>
+        <div style={{background:isT?C.bll:C.b3,padding:"8px 14px",borderRadius:"8px 8px 0 0",display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:12,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}</div>
+        {CREWS.map(cr=>{const assigns=getAssign(cr.id,d);return <div key={cr.id} style={{background:C.b2,borderBottom:`1px solid ${C.bd}`,padding:"8px 14px"}}>
+          <div style={{...S.fxsb,marginBottom:assigns.length?4:0}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{fontSize:12,fontWeight:600,color:cr.color}}>{cr.name}</span></div>
+          <button style={{background:"none",border:"none",color:C.bl,cursor:"pointer",fontSize:16,padding:0}} onClick={()=>setAssignCrew({crewId:cr.id,date:d})}>+</button></div>
+          {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return <div key={a.id} style={{...S.fxsb,padding:"3px 0"}}><div><span style={{fontSize:11,fontWeight:600}}>{p?.clientName||"?"}</span>{p?.city&&<span style={{fontSize:10,color:C.w3}}> · {p.city}</span>}{a.notes&&<span style={{fontSize:10,color:C.w2}}> — {a.notes}</span>}</div><button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10}} onClick={()=>rmAssign(a.id)}>✕</button></div>;})}
+          {!assigns.length&&<span style={{fontSize:10,color:C.w3}}>—</span>}
+        </div>;})}
+      </div>;})
+    :
+      <div style={{...S.cd,padding:0,overflow:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead><tr style={{background:C.b3}}>
+            <th style={{padding:"10px 14px",textAlign:"left",fontWeight:700,color:C.w,borderBottom:`1px solid ${C.bd}`,minWidth:130,position:"sticky",left:0,background:C.b3}}>CREW</th>
+            {days.map(d=>{const isT=d===td();return <th key={d} style={{padding:"10px 8px",textAlign:"center",fontWeight:700,color:isT?C.bl:C.w,borderBottom:`1px solid ${C.bd}`,minWidth:150,background:isT?C.bll:C.b3}}>{fmt(d)}<br/><span style={{fontSize:9,fontWeight:400,color:isT?C.bl:C.w3}}>{fDay(d)}</span></th>;})}
+          </tr></thead>
+          <tbody>
+            {CREWS.map(cr=><tr key={cr.id} style={{borderBottom:`1px solid ${C.bd}`}}>
+              <td style={{padding:"10px 14px",fontWeight:600,whiteSpace:"nowrap",position:"sticky",left:0,background:C.b2,borderRight:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{color:cr.color}}>{cr.name}</span></div></td>
+              {days.map(d=>{const assigns=getAssign(cr.id,d);const isT=d===td();return <td key={d} style={{padding:"6px 8px",verticalAlign:"top",background:isT?"rgba(59,139,245,0.05)":"transparent",borderRight:`1px solid ${C.bd}`,minHeight:50}}>
+                {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return <div key={a.id} style={{background:cr.color+"18",border:`1px solid ${cr.color}44`,borderRadius:6,padding:"4px 8px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:9,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:9,color:cr.color,marginTop:1}}>{a.notes}</div>}</div>
+                  <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
+                </div>;})}
+                <button style={{background:"none",border:`1px dashed ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:10,padding:"4px 8px",width:"100%",fontFamily:"inherit"}} onClick={()=>setAssignCrew({crewId:cr.id,date:d})}>+ Assign</button>
+              </td>;})}
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+    }
+
+    {assignCrew&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>setAssignCrew(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":400,maxHeight:mob?"80vh":"70vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+      <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Assign {CREWS.find(c=>c.id===assignCrew.crewId)?.name}</h2><button onClick={()=>setAssignCrew(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
+      <p style={{fontSize:11,color:C.w3,marginBottom:12}}>{fmt(assignCrew.date)} · {fDay(assignCrew.date)}</p>
+      <div style={S.lb}>Search Project</div>
+      <AssignPicker projects={active} onPick={(pid,notes)=>{addAssign(assignCrew.crewId,assignCrew.date,pid,notes);setAssignCrew(null);}}/>
+    </div></div>}
+  </>;
+}
+function AssignPicker({projects,onPick}){
+  const[sr,sSr]=useState("");const[pid,sPid]=useState("");const[notes,sN]=useState("");
+  const fl=projects.filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(sr.toLowerCase()));
+  return <div>
+    <input style={S.inp} value={sr} onChange={e=>sSr(e.target.value)} placeholder="Search by name, city, address..."/>
+    <div style={{maxHeight:200,overflow:"auto",marginBottom:10}}>
+      {fl.map(p=><div key={p.id} onClick={()=>sPid(p.id)} style={{padding:"8px 12px",cursor:"pointer",background:pid===p.id?C.bll:"transparent",borderBottom:`1px solid ${C.bd}`,borderRadius:pid===p.id?6:0}}>
+        <div style={{fontSize:12,fontWeight:pid===p.id?700:500,color:pid===p.id?C.bl:C.w}}>{p.clientName}</div>
+        <div style={{fontSize:10,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>
+      </div>)}
+      {!fl.length&&<p style={{fontSize:11,color:C.w3,padding:8}}>No matching projects</p>}
+    </div>
+    <div style={S.lb}>Notes (optional)</div>
+    <input style={S.inp} value={notes} onChange={e=>sN(e.target.value)} placeholder="e.g. framing, drywall, start at 7am"/>
+    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:pid?1:0.5}} onClick={()=>{if(pid)onPick(pid,notes);}}>Assign</button></div>
   </div>;
 }
 function LinksSection({links,onAdd,onDel,projectId}){
