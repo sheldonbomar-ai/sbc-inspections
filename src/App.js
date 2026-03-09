@@ -401,14 +401,22 @@ function SchedTab({proj,sched,setSched,week,sWk,mob}){
     <div style={{...S.fx,gap:6,marginBottom:16}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
 
     {mob?
-      days.map(d=>{const isT=d===td();return <div key={d} style={{marginBottom:12}}>
-        <div style={{background:isT?C.bll:C.b3,padding:"8px 14px",borderRadius:"8px 8px 0 0",display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:12,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}</div>
-        {CREWS.map(cr=>{const assigns=getAssign(cr.id,d);return <div key={cr.id} style={{background:C.b2,borderBottom:`1px solid ${C.bd}`,padding:"8px 14px"}}>
-          <div style={{...S.fxsb,marginBottom:assigns.length?4:0}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{fontSize:12,fontWeight:600,color:cr.color}}>{cr.name}</span></div>
-          <button style={{background:"none",border:"none",color:C.bl,cursor:"pointer",fontSize:16,padding:0}} onClick={()=>setAssignCrew({crewId:cr.id,date:d})}>+</button></div>
-          {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return <div key={a.id} style={{...S.fxsb,padding:"3px 0"}}><div><span style={{fontSize:11,fontWeight:600}}>{p?.clientName||"?"}</span>{p?.city&&<span style={{fontSize:10,color:C.w3}}> · {p.city}</span>}{a.notes&&<span style={{fontSize:10,color:C.w2}}> — {a.notes}</span>}</div><button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10}} onClick={()=>rmAssign(a.id)}>✕</button></div>;})}
-          {!assigns.length&&<span style={{fontSize:10,color:C.w3}}>—</span>}
-        </div>;})}
+      days.map(d=>{const isT=d===td();const dayAssigns=sched.filter(s=>s.date===d);const crewsWithWork=CREWS.filter(cr=>dayAssigns.some(s=>s.crewId===cr.id));return <div key={d} style={{marginBottom:14}}>
+        <div style={{background:isT?C.bll:C.b3,padding:"10px 14px",borderRadius:"8px 8px 0 0",display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:13,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}
+          <span style={{marginLeft:"auto",fontSize:10,fontWeight:600,color:isT?C.bl:C.w3}}>{dayAssigns.length} assign{dayAssigns.length!==1?"s":""}</span>
+        </div>
+        <div style={{background:C.b2,borderRadius:"0 0 8px 8px",overflow:"hidden",border:`1px solid ${C.bd}`,borderTop:"none"}}>
+          {crewsWithWork.map(cr=>{const assigns=getAssign(cr.id,d);return <div key={cr.id} style={{padding:"8px 12px",borderBottom:`1px solid ${C.bd}`}}>
+            <div style={{...S.fxc,gap:6,marginBottom:4}}><div style={{width:8,height:8,borderRadius:"50%",background:cr.color}}/><span style={{fontSize:11,fontWeight:700,color:cr.color}}>{cr.name}</span></div>
+            {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return <div key={a.id} style={{background:cr.color+"14",border:`1px solid ${cr.color}33`,borderRadius:6,padding:"6px 10px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><div style={{fontSize:12,fontWeight:600}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:10,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:10,color:cr.color,marginTop:2}}>{a.notes}</div>}</div>
+              <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:12,padding:"4px"}} onClick={()=>rmAssign(a.id)}>✕</button>
+            </div>;})}
+          </div>;})}
+          {!crewsWithWork.length&&<div style={{padding:"12px 14px",color:C.w3,fontSize:11}}>No crews assigned</div>}
+          <button style={{width:"100%",padding:"10px",border:"none",borderTop:`1px solid ${C.bd}`,background:"transparent",color:C.bl,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setAssignCrew({crewId:null,date:d})}>+ Assign Crew</button>
+        </div>
       </div>;})
     :
       <div style={{...S.cd,padding:0,overflow:"auto"}}>
@@ -433,11 +441,13 @@ function SchedTab({proj,sched,setSched,week,sWk,mob}){
       </div>
     }
 
-    {assignCrew&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>setAssignCrew(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":400,maxHeight:mob?"80vh":"70vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
-      <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Assign {CREWS.find(c=>c.id===assignCrew.crewId)?.name}</h2><button onClick={()=>setAssignCrew(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
+    {assignCrew&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>setAssignCrew(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":400,maxHeight:mob?"85vh":"70vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+      <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{assignCrew.crewId?`Assign ${CREWS.find(c=>c.id===assignCrew.crewId)?.name}`:"Assign Crew"}</h2><button onClick={()=>setAssignCrew(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
       <p style={{fontSize:11,color:C.w3,marginBottom:12}}>{fmt(assignCrew.date)} · {fDay(assignCrew.date)}</p>
-      <div style={S.lb}>Search Project</div>
-      <AssignPicker projects={active} onPick={(pid,notes)=>{addAssign(assignCrew.crewId,assignCrew.date,pid,notes);setAssignCrew(null);}}/>
+      {!assignCrew.crewId&&<><div style={S.lb}>Crew *</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>{CREWS.map(cr=><button key={cr.id} onClick={()=>setAssignCrew({...assignCrew,crewId:cr.id})} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${cr.color}44`,background:cr.color+"14",color:cr.color,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{cr.name}</button>)}</div></>}
+      {assignCrew.crewId&&<><div style={S.lb}>Search Project</div>
+      <AssignPicker projects={active} onPick={(pid,notes)=>{addAssign(assignCrew.crewId,assignCrew.date,pid,notes);setAssignCrew(null);}}/></>}
     </div></div>}
   </>;
 }
