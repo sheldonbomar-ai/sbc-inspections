@@ -5,22 +5,28 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebas
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
 const PRINT_CSS=`@media print{
-  body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  @page{size:portrait;margin:0.4in;}
+  body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0!important;padding:0!important;}
   [data-sidebar],[data-mobnav],[data-noprint]{display:none!important;}
-  [data-app]{height:auto!important;overflow:visible!important;background:#fff!important;display:block!important;}
-  [data-content]{padding:0!important;overflow:visible!important;}
-  [data-print-header]{display:flex!important;}
+  [data-app]{height:auto!important;overflow:visible!important;background:#fff!important;display:block!important;min-height:0!important;}
+  [data-content]{padding:0!important;overflow:visible!important;height:auto!important;}
+  [data-content]>div{padding:0!important;}
+  [data-print-header]{display:flex!important;justify-content:center!important;text-align:center!important;border-bottom:3px solid #000!important;padding-bottom:10px!important;margin-bottom:14px!important;}
+  [data-print-header] div{text-align:center!important;}
+  [data-print-header] div div:first-child{font-size:22px!important;font-weight:800!important;letter-spacing:1px!important;}
+  [data-print-header] div div:last-child{font-size:12px!important;font-weight:600!important;margin-top:4px!important;letter-spacing:2px!important;text-transform:uppercase!important;}
   *{color:#000!important;border-color:#ccc!important;}
-  [data-day-header]{background:#e5e7eb!important;padding:8px 12px!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  [data-day-header] span{color:#000!important;}
-  [data-insp-row]{background:#fff!important;border-bottom:1px solid #ccc!important;padding:6px 12px!important;}
-  [data-insp-row] [data-name]{color:#000!important;font-size:12px!important;}
-  [data-insp-row] [data-type]{color:#333!important;font-weight:700!important;font-size:11px!important;}
-  [data-insp-row] [data-detail]{color:#555!important;font-size:10px!important;}
-  [data-insp-row] [data-result]{font-weight:700!important;}
-  [data-status-dot]{border:1px solid #000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  [data-pend-header]{background:#fef3c7!important;border-top:2px solid #f59e0b!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  [data-pend-header] span{color:#92400e!important;}
+  [data-day-header]{background:#e5e7eb!important;padding:10px 14px!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin-top:8px!important;border-radius:0!important;border:1px solid #ccc!important;border-bottom:2px solid #999!important;}
+  [data-day-header] span{color:#000!important;font-size:12px!important;}
+  [data-insp-row]{background:#fff!important;border:1px solid #ddd!important;border-top:none!important;padding:10px 14px!important;page-break-inside:avoid!important;}
+  [data-insp-row] [data-name]{color:#000!important;font-size:13px!important;font-weight:700!important;}
+  [data-insp-row] [data-type]{color:#222!important;font-weight:700!important;font-size:12px!important;}
+  [data-insp-row] [data-detail]{color:#444!important;font-size:11px!important;margin-top:3px!important;}
+  [data-insp-row] [data-result]{font-weight:700!important;font-size:11px!important;}
+  [data-status-dot]{width:8px!important;height:8px!important;border:2px solid #000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  [data-pend-header]{background:#fef3c7!important;border:2px solid #f59e0b!important;margin-top:14px!important;padding:10px 14px!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  [data-pend-header] span{color:#92400e!important;font-size:13px!important;}
+  [data-col-header]{display:none!important;}
 }`;
 const useMobile=()=>{const[m,sM]=useState(window.innerWidth<768);useEffect(()=>{const h=()=>sM(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m;};
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
@@ -217,7 +223,7 @@ function AppMain(){
           const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d.toISOString().split("T")[0];});
           const pend=insp.filter(i=>!i.completed&&(!i.date||i.date<days[0]||i.date>days[4]));
           return <>
-            <div data-print-header="" style={{display:"none",alignItems:"center",gap:10,marginBottom:12,paddingBottom:8,borderBottom:"2px solid #000"}}><div><div style={{fontSize:18,fontWeight:700}}>Stacy Bomar Construction</div><div style={{fontSize:10,fontWeight:600,letterSpacing:1}}>INSPECTION LIST — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
+            <div data-print-header="" style={{display:"none",justifyContent:"center",alignItems:"center",marginBottom:14,paddingBottom:10,borderBottom:"3px solid #000",textAlign:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,letterSpacing:1}}>Stacy Bomar Construction</div><div style={{fontSize:12,fontWeight:600,letterSpacing:2,marginTop:4,textTransform:"uppercase"}}>Inspection List — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
             <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div><div data-noprint="" style={{display:"flex",gap:6}}><button style={S.bs} onClick={()=>window.print()}>Print</button><button style={S.btn} onClick={()=>sM("insp")}>+ Schedule</button></div></div>
             <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
             {!mob&&<div data-col-header="" data-noprint="" style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>}
