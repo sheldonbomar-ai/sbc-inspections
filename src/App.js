@@ -88,7 +88,7 @@ export default function App(){
 
 function AppMain(){
   const[pg,setPg]=useState("dashboard");
-  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);
+  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
@@ -97,7 +97,7 @@ function AppMain(){
   const lastFs=useRef({});
 
   useEffect(()=>{
-    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched]];
+    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits]];
     let loaded=0;
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
@@ -121,12 +121,13 @@ function AppMain(){
   useEffect(()=>{if(ok){const j=JSON.stringify(insp);if(j!==lastFs.current.sYi){lastFs.current.sYi=j;svFs("sYi",insp);localStorage.setItem("sYi",j);}}},[insp,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(ct);if(j!==lastFs.current.sYc){lastFs.current.sYc=j;svFs("sYc",ct);localStorage.setItem("sYc",j);}}},[ct,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(sched);if(j!==lastFs.current.sYs){lastFs.current.sYs=j;svFs("sYs",sched);localStorage.setItem("sYs",j);}}},[sched,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(permits);if(j!==lastFs.current.sYpm){lastFs.current.sYpm=j;svFs("sYpm",permits);localStorage.setItem("sYpm",j);}}},[permits,ok]);
 
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
   const ovd=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
 
-  const navItems=[["dashboard","Dashboard"],["sheet","Inspections"],["projects","Projects"],["scheduling","Scheduling"]];
+  const navItems=[["dashboard","Dashboard"],["sheet","Inspections"],["permits","Permits"],["projects","Projects"],["scheduling","Scheduling"]];
 
   return(
     <div data-app="" style={{...S.app,flexDirection:mob?"column":"row"}}>
@@ -137,8 +138,8 @@ function AppMain(){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>};return(
-            <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>};return(
+            <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet")||(pg==="permitDetail"&&id==="permits"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
             </button>);})}
@@ -165,10 +166,15 @@ function AppMain(){
           const isRev=s=>(s||"").includes("REVISION");
           const revCount=active.filter(p=>isRev(p.status)).length;
           return <>
+            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return null;})()}
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:16}}>
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
                 <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`}}><div style={{fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:C.w3}}>{l}</div></div>)}
             </div>
+            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:16}}>
+              {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Comments Need Response",needResp?C.or:C.w3],[pend30,"Pending > 30 Days",pend30?C.rd:C.w3]].map(([v,l,c],i)=>
+                <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer"}} onClick={()=>setPg("permits")}><div style={{fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:C.w3}}>{l}</div></div>)}
+            </div>;})()}
 
             {/* SPREADSHEET TABLE */}
             <div style={{...S.cd,padding:0,overflow:"auto",marginBottom:16}}>
@@ -292,6 +298,7 @@ function AppMain(){
         </>;})()}
 
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob}/>}
+        {(pg==="permits"||pg==="permitDetail")&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob}/>}
 
         {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
@@ -306,7 +313,7 @@ function AppMain(){
       </div></div>
       {mob&&<div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {navItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="sheet"?"📋":id==="projects"?"🏗":"📅"}</span>
+          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="sheet"?"📋":id==="permits"?"📜":id==="projects"?"🏗":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
           {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
         </button>;})}
@@ -605,5 +612,281 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId}){
       <input style={{...S.inp,marginBottom:0,flex:2}} value={url} onChange={e=>sU(e.target.value)} placeholder="Paste link (Google Drive, etc.)" onKeyDown={e=>{if(e.key==="Enter")add();}}/>
       <button style={S.btn} onClick={add}>Add</button>
     </div>}
+  </div>;
+}
+const CITIES=["Davie","Deerfield Beach","Fort Lauderdale","Hollywood","Margate","Miramar","Pembroke Pines","Plantation","Pompano Beach","Sunrise","Tamarac","West Park","Weston","Broward County"];
+const PERMIT_TYPES=["Building","Electrical","Mechanical","Plumbing","Roofing"];
+const PERMIT_STATUSES=["Not Submitted","Submitted","In Review","Comments Received","Approved","Issued","Closed"];
+const SPEC_WRITERS=["Lamar","Tanner","Habitat","CRA","Beth","Jay","Jim","Jenn","SOFI","Igo","Tabber"];
+const TRADES=["Windows","Doors","Structural","Electrical","Plumbing","Mechanical","Roofing"];
+const pStatColor=s=>s==="Issued"||s==="Approved"?C.gr:s==="Comments Received"?C.rd:s==="In Review"||s==="Submitted"?C.or:s==="Closed"?C.w3:"#22D3EE";
+const daysPending=d=>{if(!d)return 0;return Math.max(0,Math.floor((new Date()-new Date(d+"T00:00:00"))/(1e3*86400)));};
+
+function PermitsTab({proj,permits,setPermits,pg,setPg,mob}){
+  const[selPm,setSelPm]=useState(null);
+  const[modal,sM]=useState(null);
+  const[editPm,setEditPm]=useState(null);
+  const[fCity,setFCity]=useState("");
+  const[fStatus,setFStatus]=useState("");
+  const[fAction,setFAction]=useState(false);
+  const[search,sSr]=useState("");
+  const[sortBy,setSortBy]=useState("dateSubmitted");
+  const[sortDir,setSortDir]=useState("desc");
+
+  if(pg==="permitDetail"&&selPm){
+    const pm=permits.find(x=>x.id===selPm);
+    if(!pm)return null;
+    const p=proj.find(x=>x.id===pm.projectId);
+    const dp=daysPending(pm.dateSubmitted);
+    const stC=pStatColor(pm.status);
+    const comments=pm.comments||[];
+    const unresolvedCount=comments.filter(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress").length;
+    return <>
+      <button style={{...S.bs,marginBottom:14}} onClick={()=>{setSelPm(null);setPg("permits");}}>← Back to Permits</button>
+      <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}>
+        <div>
+          <h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{pm.clientName} — {pm.permitType} Permit</h1>
+          <p style={{fontSize:12,color:C.w3,marginTop:3}}>{pm.city}{pm.permitNumber?` · ${pm.permitNumber}`:""}</p>
+        </div>
+        <div style={{...S.fx,gap:6}}>
+          <button style={S.bs} onClick={()=>setEditPm(pm)}>Edit</button>
+          <button style={{...S.bs,color:C.rd}} onClick={()=>{setPermits(v=>v.filter(x=>x.id!==selPm));setSelPm(null);setPg("permits");}}>Delete</button>
+        </div>
+      </div>
+
+      {/* Status + Info */}
+      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:14}}>
+        <div style={S.cd}>
+          <div style={{...S.fxc,gap:6,marginBottom:10}}><div style={{width:10,height:10,borderRadius:"50%",background:stC}}/><span style={{fontSize:14,fontWeight:700,color:stC}}>{pm.status}</span></div>
+          {[["Permit #",pm.permitNumber],["Type",pm.permitType],["Date Submitted",fmt(pm.dateSubmitted)],["Days Pending",dp>0?dp+"d":"—"],["Date Approved",fmt(pm.dateApproved)],["Spec Writer",pm.specWriter],["Assigned To",pm.assignedTo],["HOA",pm.hoa?"Yes":"No"]].map(([l,v])=>v&&v!=="—"&&v!=="No"?<div key={l} style={{...S.fxsb,padding:"4px 0",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:11,color:C.w3}}>{l}</span><span style={{fontSize:12,fontWeight:600}}>{v}</span></div>:null)}
+          {pm.portalUrl&&<div style={{marginTop:6}}><span onClick={()=>window.open(pm.portalUrl,"_blank")} style={{fontSize:11,color:C.bl,cursor:"pointer",textDecoration:"underline"}}>Open City Portal</span></div>}
+          {pm.trades&&pm.trades.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:8}}>{pm.trades.map(t=><span key={t} style={{fontSize:9,fontWeight:600,padding:"3px 9px",borderRadius:12,background:C.bll,color:C.bl}}>{t}</span>)}</div>}
+          {pm.notes&&<p style={{fontSize:11,color:C.w2,marginTop:8,lineHeight:1.5}}>{pm.notes}</p>}
+        </div>
+        <div style={S.cd}>
+          <div style={{...S.fxsb,marginBottom:8}}><h4 style={{fontSize:13,fontWeight:700,margin:0}}>City Comments ({comments.length})</h4>{unresolvedCount>0&&<span style={S.bg(C.rdb,C.rd)}>{unresolvedCount} unresolved</span>}</div>
+          <button style={{...S.btn,fontSize:11,marginBottom:10}} onClick={()=>sM("comment")}>+ Add Comment</button>
+          {comments.length===0&&<p style={{fontSize:11,color:C.w3}}>No comments yet</p>}
+          {[...comments].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(c=>{
+            const rsC=c.responseStatus==="Resolved"?C.gr:c.responseStatus==="Responded"?C.bl:c.responseStatus==="In Progress"?C.or:C.rd;
+            return <div key={c.id} style={{background:C.bg,borderRadius:8,padding:10,marginBottom:8,border:`1px solid ${C.bd}`}}>
+              <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:11,fontWeight:700}}>{c.reviewer||"Reviewer"}</span><span style={{fontSize:10,color:C.w3}}>{fmt(c.date)}</span></div>
+              <p style={{fontSize:12,color:C.w2,margin:"4px 0 6px",lineHeight:1.5}}>{c.commentText}</p>
+              <div style={{...S.fxc,gap:6}}>
+                <select value={c.responseStatus} onChange={e=>{const ns=e.target.value;setPermits(v=>v.map(x=>x.id===selPm?{...x,comments:(x.comments||[]).map(cc=>cc.id===c.id?{...cc,responseStatus:ns,responseDate:ns==="Responded"||ns==="Resolved"?td():cc.responseDate}:cc)}:x));}} style={{...S.inp,marginBottom:0,padding:"3px 8px",fontSize:10,flex:"none",width:"auto"}}>
+                  {["Not Started","In Progress","Responded","Resolved"].map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+                <span style={{width:6,height:6,borderRadius:"50%",background:rsC}}/>
+              </div>
+              {c.responseNotes&&<p style={{fontSize:10,color:C.w3,marginTop:4}}>Response: {c.responseNotes}</p>}
+              <div style={{...S.fx,gap:4,marginTop:6}}>
+                <input placeholder="Response notes..." defaultValue={c.responseNotes||""} onBlur={e=>{const v=e.target.value;setPermits(pr=>pr.map(x=>x.id===selPm?{...x,comments:(x.comments||[]).map(cc=>cc.id===c.id?{...cc,responseNotes:v}:cc)}:x));}} style={{...S.inp,marginBottom:0,fontSize:10,flex:1}}/>
+                <button onClick={()=>setPermits(v=>v.map(x=>x.id===selPm?{...x,comments:(x.comments||[]).filter(cc=>cc.id!==c.id)}:x))} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11}}>✕</button>
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>
+
+      {/* Files */}
+      <PermitFiles files={pm.files||[]} projectId={pm.projectId} permitId={pm.id}
+        onAdd={f=>setPermits(v=>v.map(x=>x.id===selPm?{...x,files:[...(x.files||[]),{id:uid(),...f,date:td()}]}:x))}
+        onDel={fid=>setPermits(v=>v.map(x=>x.id===selPm?{...x,files:(x.files||[]).filter(f=>f.id!==fid)}:x))}/>
+
+      {/* Add Comment Modal */}
+      {modal==="comment"&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":400,border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+        <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Add City Comment</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
+        <CommentForm ok={c=>{setPermits(v=>v.map(x=>x.id===selPm?{...x,status:"Comments Received",actionNeeded:true,comments:[...(x.comments||[]),{id:uid(),...c,responseStatus:"Not Started",responseNotes:"",responseDate:"",createdAt:td()}]}:x));sM(null);}}/>
+      </div></div>}
+
+      {/* Edit Permit Modal */}
+      {editPm&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>setEditPm(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":500,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+        <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Edit Permit</h2><button onClick={()=>setEditPm(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
+        <PermitForm proj={proj} initial={editPm} ok={u=>{setPermits(v=>v.map(x=>x.id===editPm.id?{...x,...u,updatedAt:td()}:x));setEditPm(null);}}/>
+      </div></div>}
+    </>;
+  }
+
+  // List view
+  const filtered=permits.filter(pm=>{
+    if(fCity&&pm.city!==fCity)return false;
+    if(fStatus&&pm.status!==fStatus)return false;
+    if(fAction&&!pm.actionNeeded)return false;
+    if(search){const s=search.toLowerCase();if(!(pm.clientName||"").toLowerCase().includes(s)&&!(pm.permitNumber||"").toLowerCase().includes(s)&&!(pm.city||"").toLowerCase().includes(s))return false;}
+    return true;
+  });
+  const sorted=[...filtered].sort((a,b)=>{
+    let av,bv;
+    if(sortBy==="daysPending"){av=daysPending(a.dateSubmitted);bv=daysPending(b.dateSubmitted);}
+    else if(sortBy==="lastComment"){const ac=(a.comments||[]).map(c=>c.date).sort().pop()||"";const bc=(b.comments||[]).map(c=>c.date).sort().pop()||"";av=ac;bv=bc;}
+    else{av=a[sortBy]||"";bv=b[sortBy]||"";}
+    if(sortDir==="asc")return av>bv?1:av<bv?-1:0;
+    return av<bv?1:av>bv?-1:0;
+  });
+
+  return <>
+    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}>
+      <div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>PERMITS</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{permits.length} total · {permits.filter(p=>!["Closed","Issued"].includes(p.status)).length} active</p></div>
+      <button style={S.btn} onClick={()=>sM("addPermit")}>+ New Permit</button>
+    </div>
+
+    {/* Filters */}
+    <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12,flexWrap:"wrap"}}>
+      <input style={{...S.inp,marginBottom:0,width:160}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search..."/>
+      <select style={{...S.inp,marginBottom:0,width:140}} value={fCity} onChange={e=>setFCity(e.target.value)}><option value="">All Cities</option>{CITIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
+      <select style={{...S.inp,marginBottom:0,width:140}} value={fStatus} onChange={e=>setFStatus(e.target.value)}><option value="">All Statuses</option>{PERMIT_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select>
+      <button onClick={()=>setFAction(!fAction)} style={{...S.bs,fontSize:10,padding:"6px 12px",background:fAction?C.rdb:"transparent",color:fAction?C.rd:C.w3,border:`1px solid ${fAction?C.rd:C.bd}`}}>Action Needed</button>
+      <select style={{...S.inp,marginBottom:0,width:130}} value={sortBy+"|"+sortDir} onChange={e=>{const[sb,sd]=e.target.value.split("|");setSortBy(sb);setSortDir(sd);}}>
+        <option value="dateSubmitted|desc">Newest First</option>
+        <option value="dateSubmitted|asc">Oldest First</option>
+        <option value="daysPending|desc">Most Days Pending</option>
+        <option value="lastComment|desc">Recent Comments</option>
+        <option value="clientName|asc">Client A-Z</option>
+      </select>
+    </div>
+
+    {/* Table */}
+    <div style={{...S.cd,padding:0,overflow:"auto"}}>
+      {!mob&&<table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+        <thead><tr style={{background:C.b3}}>
+          {["CLIENT","CITY","PERMIT #","TYPE","SUBMITTED","STATUS","LAST COMMENT","DAYS","!"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:700,color:C.w,borderBottom:`1px solid ${C.bd}`,whiteSpace:"nowrap",fontSize:10,letterSpacing:0.5}}>{h}</th>)}
+        </tr></thead>
+        <tbody>
+          {sorted.map((pm,idx)=>{const stC=pStatColor(pm.status);const dp=daysPending(pm.dateSubmitted);const lastCom=(pm.comments||[]).map(c=>c.date).sort().pop()||"";const dpC=dp>60?C.rd:dp>30?C.or:C.w;return(
+            <tr key={pm.id} style={{background:idx%2===0?C.b2:"transparent",borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}} onClick={()=>{setSelPm(pm.id);setPg("permitDetail");}}>
+              <td style={{padding:"8px 10px",fontWeight:600,whiteSpace:"nowrap"}}>{pm.clientName}</td>
+              <td style={{padding:"8px 10px",color:C.w3,fontSize:11}}>{pm.city}</td>
+              <td style={{padding:"8px 10px",color:C.bl,fontSize:11}}>{pm.permitNumber||"—"}</td>
+              <td style={{padding:"8px 10px",fontSize:11}}>{pm.permitType}</td>
+              <td style={{padding:"8px 10px",fontSize:11,color:C.w3}}>{fmt(pm.dateSubmitted)}</td>
+              <td style={{padding:"8px 10px"}}><div style={{...S.fxc,gap:4}}><div style={{width:6,height:6,borderRadius:"50%",background:stC}}/><span style={{fontSize:11,color:stC,fontWeight:600}}>{pm.status}</span></div></td>
+              <td style={{padding:"8px 10px",fontSize:11,color:C.w3}}>{fmt(lastCom)}</td>
+              <td style={{padding:"8px 10px",fontSize:11,fontWeight:700,color:dpC}}>{dp>0?dp:""}</td>
+              <td style={{padding:"8px 10px",textAlign:"center"}}>{pm.actionNeeded&&<span style={{fontSize:12,color:C.rd}}>!</span>}</td>
+            </tr>);
+          })}
+          {sorted.length===0&&<tr><td colSpan={9} style={{padding:"20px",textAlign:"center",color:C.w3,fontSize:12}}>No permits found</td></tr>}
+        </tbody>
+      </table>}
+      {mob&&sorted.map(pm=>{const stC=pStatColor(pm.status);const dp=daysPending(pm.dateSubmitted);return(
+        <div key={pm.id} style={{padding:"10px 14px",borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}} onClick={()=>{setSelPm(pm.id);setPg("permitDetail");}}>
+          <div style={{...S.fxsb,marginBottom:2}}><span style={{fontSize:13,fontWeight:600}}>{pm.clientName}</span><div style={{...S.fxc,gap:4}}><div style={{width:6,height:6,borderRadius:"50%",background:stC}}/><span style={{fontSize:10,color:stC}}>{pm.status}</span>{pm.actionNeeded&&<span style={{fontSize:12,color:C.rd}}>!</span>}</div></div>
+          <div style={{fontSize:11,color:C.bl}}>{pm.permitType}{pm.permitNumber?` · ${pm.permitNumber}`:""}</div>
+          <div style={{fontSize:10,color:C.w3,marginTop:2}}>{pm.city}{dp>0?` · ${dp}d pending`:""}</div>
+        </div>);
+      })}
+    </div>
+
+    {/* Add Permit Modal */}
+    {modal==="addPermit"&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":500,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+      <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>New Permit</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
+      <PermitForm proj={proj} ok={pm=>{setPermits(v=>[...v,{...pm,id:uid(),comments:[],files:[],actionNeeded:false,createdAt:td(),updatedAt:td()}]);sM(null);}}/>
+    </div></div>}
+  </>;
+}
+
+function PermitForm({proj,ok,initial}){
+  const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
+  const[f,s]=useState(initial?{
+    projectId:initial.projectId||"",clientName:initial.clientName||"",city:initial.city||"",permitNumber:initial.permitNumber||"",
+    permitType:initial.permitType||"Building",dateSubmitted:initial.dateSubmitted||"",dateApproved:initial.dateApproved||"",
+    status:initial.status||"Not Submitted",specWriter:initial.specWriter||"",assignedTo:initial.assignedTo||"",
+    hoa:initial.hoa||false,portalUrl:initial.portalUrl||"",trades:initial.trades||[],notes:initial.notes||""
+  }:{projectId:"",clientName:"",city:"",permitNumber:"",permitType:"Building",dateSubmitted:td(),dateApproved:"",status:"Not Submitted",specWriter:"",assignedTo:"",hoa:false,portalUrl:"",trades:[],notes:""});
+  const pickProj=pid=>{const p=proj.find(x=>x.id===pid);if(p)s({...f,projectId:pid,clientName:p.clientName,city:p.city||f.city,hoa:p.hoa||f.hoa});else s({...f,projectId:pid});};
+  const togTrade=t=>s({...f,trades:f.trades.includes(t)?f.trades.filter(x=>x!==t):[...f.trades,t]});
+  return <div>
+    <div style={S.lb}>Project</div>
+    <select style={S.inp} value={f.projectId} onChange={e=>pickProj(e.target.value)}><option value="">Select or enter manually...</option>{active.map(p=><option key={p.id} value={p.id}>{p.clientName} — {p.city}</option>)}</select>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><div style={S.lb}>Client Name *</div><input style={S.inp} value={f.clientName} onChange={e=>s({...f,clientName:e.target.value})}/></div>
+      <div><div style={S.lb}>City *</div><select style={S.inp} value={f.city} onChange={e=>s({...f,city:e.target.value})}><option value="">Select...</option>{CITIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><div style={S.lb}>Permit #</div><input style={S.inp} value={f.permitNumber} onChange={e=>s({...f,permitNumber:e.target.value})} placeholder="BLDG-2026-001234"/></div>
+      <div><div style={S.lb}>Permit Type *</div><select style={S.inp} value={f.permitType} onChange={e=>s({...f,permitType:e.target.value})}>{PERMIT_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><div style={S.lb}>Date Submitted</div><input style={S.inp} type="date" value={f.dateSubmitted} onChange={e=>s({...f,dateSubmitted:e.target.value})}/></div>
+      <div><div style={S.lb}>Date Approved</div><input style={S.inp} type="date" value={f.dateApproved} onChange={e=>s({...f,dateApproved:e.target.value})}/></div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><div style={S.lb}>Status *</div><select style={S.inp} value={f.status} onChange={e=>s({...f,status:e.target.value})}>{PERMIT_STATUSES.map(st=><option key={st} value={st}>{st}</option>)}</select></div>
+      <div><div style={S.lb}>Spec Writer</div><select style={S.inp} value={f.specWriter} onChange={e=>s({...f,specWriter:e.target.value})}><option value="">None</option>{SPEC_WRITERS.map(w=><option key={w} value={w}>{w}</option>)}</select></div>
+    </div>
+    <div style={S.lb}>Trades</div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>{TRADES.map(t=><button key={t} onClick={()=>togTrade(t)} style={{padding:"4px 10px",borderRadius:12,border:`1px solid ${f.trades.includes(t)?C.bl:C.bd}`,background:f.trades.includes(t)?C.bll:"transparent",color:f.trades.includes(t)?C.bl:C.w3,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{t}</button>)}</div>
+    <div style={S.lb}>City Portal URL</div>
+    <input style={S.inp} value={f.portalUrl} onChange={e=>s({...f,portalUrl:e.target.value})} placeholder="https://..."/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><div style={S.lb}>Assigned To</div><input style={S.inp} value={f.assignedTo} onChange={e=>s({...f,assignedTo:e.target.value})} placeholder="Sheldon"/></div>
+      <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:C.w2,marginTop:18}}><input type="checkbox" checked={f.hoa} onChange={e=>s({...f,hoa:e.target.checked})}/> HOA</label>
+    </div>
+    <div style={S.lb}>Notes</div>
+    <textarea style={{...S.inp,minHeight:50,resize:"vertical"}} value={f.notes} onChange={e=>s({...f,notes:e.target.value})}/>
+    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:f.clientName&&f.city&&f.permitType?1:0.5}} onClick={()=>{if(f.clientName&&f.city&&f.permitType)ok(f);}}>
+      {initial?"Save":"Create Permit"}
+    </button></div>
+  </div>;
+}
+
+function CommentForm({ok}){
+  const[f,s]=useState({date:td(),reviewer:"",commentText:""});
+  return <div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><div style={S.lb}>Date</div><input style={S.inp} type="date" value={f.date} onChange={e=>s({...f,date:e.target.value})}/></div>
+      <div><div style={S.lb}>Reviewer Name</div><input style={S.inp} value={f.reviewer} onChange={e=>s({...f,reviewer:e.target.value})} placeholder="City reviewer name"/></div>
+    </div>
+    <div style={S.lb}>Comment *</div>
+    <textarea style={{...S.inp,minHeight:70,resize:"vertical"}} value={f.commentText} onChange={e=>s({...f,commentText:e.target.value})} placeholder="What did the city say needs fixing?"/>
+    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:f.commentText?1:0.5}} onClick={()=>{if(f.commentText)ok(f);}}>Add Comment</button></div>
+  </div>;
+}
+
+function PermitFiles({files,onAdd,onDel,permitId}){
+  const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[uploadErr,setUploadErr]=useState("");
+  const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(doc|docx)$/))return"📝";return"📄";};
+  const handleUpload=async(e)=>{
+    const fileList=e.target.files;if(!fileList||!fileList.length)return;
+    setUploading(true);setUploadErr("");
+    for(let i=0;i<fileList.length;i++){
+      const file=fileList[i];
+      const path=`permits/${permitId}/${Date.now()}_${file.name}`;
+      const sRef=ref(storage,path);
+      try{
+        const task=uploadBytesResumable(sRef,file);
+        await new Promise((resolve,reject)=>{
+          task.on("state_changed",snap=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},err=>{reject(err);},async()=>{
+            const dlUrl=await getDownloadURL(task.snapshot.ref);
+            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size});
+            resolve();
+          });
+        });
+      }catch(err){setUploadErr(err.message);}
+    }
+    setUploading(false);setProg(0);e.target.value="";
+  };
+  const handleDel=async(f)=>{
+    if(f.storagePath){try{await deleteObject(ref(storage,f.storagePath));}catch(e){console.error(e);}}
+    onDel(f.id);
+  };
+  const fmtSize=b=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
+  return <div style={S.cd}>
+    <h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>Permit Documents</h4>
+    {files.map(f=><div key={f.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}>
+      <span style={{fontSize:14}}>{icon(f.label)}</span>
+      <div style={{flex:1,minWidth:0}}><span onClick={()=>window.open(f.url,"_blank")} style={{fontSize:12,color:C.bl,fontWeight:600,cursor:"pointer",textDecoration:"underline",wordBreak:"break-all"}}>{f.label}</span>{f.fileSize&&<span style={{fontSize:9,color:C.w3,marginLeft:6}}>{fmtSize(f.fileSize)}</span>}</div>
+      <span style={{fontSize:9,color:C.w3,whiteSpace:"nowrap"}}>{fmt(f.date)}</span>
+      <button onClick={()=>handleDel(f)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 6px"}}>✕</button>
+    </div>)}
+    {!files.length&&<p style={{fontSize:11,color:C.w3}}>No documents uploaded</p>}
+    <div style={{marginTop:8}}>
+      <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:12,borderRadius:8,border:`2px dashed ${C.bd}`,cursor:uploading?"default":"pointer",color:C.w3,fontSize:11,background:C.bg}}>
+        <input type="file" multiple style={{display:"none"}} onChange={handleUpload} disabled={uploading}/>
+        {uploading?<span style={{color:C.bl}}>Uploading... {progress}%</span>:<span>Click to upload permit docs, comment letters, responses</span>}
+      </label>
+      {uploading&&<div style={{height:3,background:C.bd,borderRadius:2,marginTop:4,overflow:"hidden"}}><div style={{height:"100%",background:C.bl,borderRadius:2,width:`${progress}%`,transition:"width 0.2s"}}/></div>}
+      {uploadErr&&<div style={{fontSize:11,color:C.rd,marginTop:4}}>{uploadErr}</div>}
+    </div>
   </div>;
 }
