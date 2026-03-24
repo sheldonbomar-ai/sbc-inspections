@@ -286,7 +286,7 @@ function AppMain(){
             {!(p.comments||[]).length&&<p style={{fontSize:11,color:C.w3}}>No notes yet</p>}
             <div style={{...S.fx,gap:6,marginTop:8}}><input id="cm" style={{...S.inp,marginBottom:0,flex:1}} placeholder="Add note..." onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:e.target.value.trim(),date:td()}]}:x));e.target.value="";}}} /><button style={S.btn} onClick={()=>{const el=document.getElementById("cm");if(el?.value.trim()){setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:el.value.trim(),date:td()}]}:x));el.value="";}}}>Add</button></div>
           </div>
-          <LinksSection links={p.links||[]} projectId={selP} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))}/>
+          <LinksSection links={p.links||[]} projectId={selP} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))} onUpdate={(lid,upd)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).map(l=>l.id===lid?{...l,...upd}:l)}:x))}/>
           <h4 style={{fontSize:13,fontWeight:700,margin:"12px 0 8px"}}>Inspections ({pi.length})</h4>
           {pi.map(i=>{const rc=i.result==="pass"?C.gr:i.result==="fail"?C.rd:C.or;const rl=i.result==="pass"?"Pass":i.result==="fail"?"Fail":"Open";const rb=i.result==="pass"?C.grl:i.result==="fail"?C.rdb:C.orb;return <div key={i.id} style={S.rw}><div style={{width:6,height:6,borderRadius:"50%",background:rc}}/><div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{fT(i.type,ct)}</div><div style={{fontSize:10,color:C.w3}}>{fmt(i.date)} · {i.permitNum||"—"}</div></div><span style={S.bg(rb,rc)}>{rl}</span></div>;})}
         </>;})()}
@@ -529,8 +529,8 @@ function AssignPicker({projects,onPick}){
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:pid?1:0.5}} onClick={()=>{if(pid)onPick(pid,notes);}}>Assign</button></div>
   </div>;
 }
-function LinksSection({links,onAdd,onDel,projectId}){
-  const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");
+function LinksSection({links,onAdd,onDel,onUpdate,projectId}){
+  const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");const[addCat,setAddCat]=useState("pre");
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
   const handleUpload=async(e)=>{
     const files=e.target.files;if(!files||!files.length)return;
@@ -544,7 +544,7 @@ function LinksSection({links,onAdd,onDel,projectId}){
         await new Promise((resolve,reject)=>{
           task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>{reject(err);},async()=>{
             const dlUrl=await getDownloadURL(task.snapshot.ref);
-            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size});
+            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:addCat});
             resolve();
           });
         });
@@ -556,20 +556,39 @@ function LinksSection({links,onAdd,onDel,projectId}){
     if(lk.storagePath){try{await deleteObject(ref(storage,lk.storagePath));}catch(e){console.error("Delete error:",e);}}
     onDel(lk.id);
   };
-  const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim()});sL("");sU("");}};
+  const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim(),category:addCat});sL("");sU("");}};
   const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
-  return <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>Files & Links</h4>
-    {links.map(lk=><div key={lk.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}>
-      <span style={{fontSize:14}}>{icon(lk.label)}</span>
-      <div style={{flex:1,minWidth:0}}>
-        <span onClick={()=>window.open(lk.url,"_blank")} style={{fontSize:12,color:C.bl,fontWeight:600,cursor:"pointer",textDecoration:"underline",wordBreak:"break-all"}}>{lk.label}</span>
-        {lk.fileSize&&<span style={{fontSize:9,color:C.w3,marginLeft:6}}>{fmtSize(lk.fileSize)}</span>}
+  const preFiles=links.filter(l=>(l.category||"pre")==="pre");
+  const postFiles=links.filter(l=>l.category==="post");
+  const renderFile=(lk,otherCat)=><div key={lk.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}>
+    <span style={{fontSize:14}}>{icon(lk.label)}</span>
+    <div style={{flex:1,minWidth:0}}>
+      <span onClick={()=>window.open(lk.url,"_blank")} style={{fontSize:12,color:C.bl,fontWeight:600,cursor:"pointer",textDecoration:"underline",wordBreak:"break-all"}}>{lk.label}</span>
+      {lk.fileSize&&<span style={{fontSize:9,color:C.w3,marginLeft:6}}>{fmtSize(lk.fileSize)}</span>}
+    </div>
+    <span style={{fontSize:9,color:C.w3,whiteSpace:"nowrap"}}>{fmt(lk.date)}</span>
+    <button onClick={()=>onUpdate(lk.id,{category:otherCat})} title={otherCat==="post"?"Move to Post Approved":"Move to Pre Job"} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,padding:"2px 5px",fontFamily:"inherit"}}>{otherCat==="post"?"→":"←"}</button>
+    <button onClick={()=>handleDel(lk)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 6px"}}>✕</button>
+  </div>;
+  return <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:10}}>Files & Links</h4>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10}}>
+      <div style={{background:C.bg,borderRadius:8,padding:10,border:`1px solid ${C.bd}`}}>
+        <div style={{...S.fxc,gap:6,marginBottom:8}}><div style={{width:8,height:8,borderRadius:"50%",background:C.or}}/><span style={{fontSize:11,fontWeight:700,color:C.or,letterSpacing:0.5}}>PRE JOB</span><span style={{fontSize:9,color:C.w3}}>({preFiles.length})</span></div>
+        {preFiles.map(lk=>renderFile(lk,"post"))}
+        {!preFiles.length&&<p style={{fontSize:10,color:C.w3,margin:0}}>No files</p>}
       </div>
-      <span style={{fontSize:9,color:C.w3,whiteSpace:"nowrap"}}>{fmt(lk.date)}</span>
-      <button onClick={()=>handleDel(lk)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 6px"}}>✕</button>
-    </div>)}
-    {!links.length&&<p style={{fontSize:11,color:C.w3}}>No files yet</p>}
-    <div style={{...S.fx,gap:6,marginTop:10,marginBottom:6}}>
+      <div style={{background:C.bg,borderRadius:8,padding:10,border:`1px solid ${C.bd}`}}>
+        <div style={{...S.fxc,gap:6,marginBottom:8}}><div style={{width:8,height:8,borderRadius:"50%",background:C.gr}}/><span style={{fontSize:11,fontWeight:700,color:C.gr,letterSpacing:0.5}}>POST APPROVED</span><span style={{fontSize:9,color:C.w3}}>({postFiles.length})</span></div>
+        {postFiles.map(lk=>renderFile(lk,"pre"))}
+        {!postFiles.length&&<p style={{fontSize:10,color:C.w3,margin:0}}>No files</p>}
+      </div>
+    </div>
+    <div style={{...S.fx,gap:6,marginBottom:6,alignItems:"center"}}>
+      <span style={{fontSize:10,color:C.w3}}>Add to:</span>
+      <button onClick={()=>setAddCat("pre")} style={{...S.bs,fontSize:10,padding:"3px 10px",background:addCat==="pre"?C.orb:"transparent",color:addCat==="pre"?C.or:C.w3,border:`1px solid ${addCat==="pre"?C.or:C.bd}`}}>Pre Job</button>
+      <button onClick={()=>setAddCat("post")} style={{...S.bs,fontSize:10,padding:"3px 10px",background:addCat==="post"?C.grl:"transparent",color:addCat==="post"?C.gr:C.w3,border:`1px solid ${addCat==="post"?C.gr:C.bd}`}}>Post Approved</button>
+    </div>
+    <div style={{...S.fx,gap:6,marginBottom:6}}>
       <button onClick={()=>setMode("upload")} style={{...S.bs,fontSize:10,padding:"4px 10px",background:mode==="upload"?C.bll:"transparent",color:mode==="upload"?C.bl:C.w3,border:`1px solid ${mode==="upload"?C.bl:C.bd}`}}>Upload File</button>
       <button onClick={()=>setMode("link")} style={{...S.bs,fontSize:10,padding:"4px 10px",background:mode==="link"?C.bll:"transparent",color:mode==="link"?C.bl:C.w3,border:`1px solid ${mode==="link"?C.bl:C.bd}`}}>Paste Link</button>
     </div>
