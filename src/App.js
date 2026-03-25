@@ -166,7 +166,6 @@ function AppMain(){
           const isRev=s=>(s||"").includes("REVISION");
           const revCount=active.filter(p=>isRev(p.status)).length;
           return <>
-            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return null;})()}
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:16}}>
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
                 <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`}}><div style={{fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:C.w3}}>{l}</div></div>)}
@@ -636,7 +635,6 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob}){
   if(pg==="permitDetail"&&selPm){
     const pm=permits.find(x=>x.id===selPm);
     if(!pm)return null;
-    const p=proj.find(x=>x.id===pm.projectId);
     const dp=daysPending(pm.dateSubmitted);
     const stC=pStatColor(pm.status);
     const comments=pm.comments||[];
