@@ -536,7 +536,7 @@ function AssignPicker({projects,onPick}){
   </div>;
 }
 function LinksSection({links,onAdd,onDel,onUpdate,projectId}){
-  const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");const[addCat,setAddCat]=useState("pre");
+  const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");const[addCat,setAddCat]=useState("pre");const[addFolder,setAddFolder]=useState("");
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
   const handleUpload=async(e)=>{
     const files=e.target.files;if(!files||!files.length)return;
@@ -550,7 +550,7 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId}){
         await new Promise((resolve,reject)=>{
           task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>{reject(err);},async()=>{
             const dlUrl=await getDownloadURL(task.snapshot.ref);
-            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:addCat});
+            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:addCat,folder:addFolder||""});
             resolve();
           });
         });
@@ -562,37 +562,69 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId}){
     if(lk.storagePath){try{await deleteObject(ref(storage,lk.storagePath));}catch(e){console.error("Delete error:",e);}}
     onDel(lk.id);
   };
-  const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim(),category:addCat});sL("");sU("");}};
+  const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim(),category:addCat,folder:addFolder||""});sL("");sU("");}};
   const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
+  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);
   const preFiles=links.filter(l=>(l.category||"pre")==="pre");
   const postFiles=links.filter(l=>l.category==="post");
-  const renderFile=(lk,otherCat)=><div key={lk.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}>
-    <span style={{fontSize:14}}>{icon(lk.label)}</span>
+  const getFolders=(files)=>{const folders=new Set();files.forEach(f=>{if(f.folder)folders.add(f.folder);});return[...folders].sort();};
+  const preFolders=getFolders(preFiles);
+  const postFolders=getFolders(postFiles);
+  const renderFile=(lk,otherCat,folders)=><div key={lk.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:`1px solid ${C.bd}`}}>
+    <span style={{fontSize:12}}>{icon(lk.label)}</span>
     <div style={{flex:1,minWidth:0}}>
-      <span onClick={()=>window.open(lk.url,"_blank")} style={{fontSize:12,color:C.bl,fontWeight:600,cursor:"pointer",textDecoration:"underline",wordBreak:"break-all"}}>{lk.label}</span>
-      {lk.fileSize&&<span style={{fontSize:9,color:C.w3,marginLeft:6}}>{fmtSize(lk.fileSize)}</span>}
+      <span onClick={()=>window.open(lk.url,"_blank")} style={{fontSize:11,color:C.bl,fontWeight:600,cursor:"pointer",textDecoration:"underline",wordBreak:"break-all"}}>{lk.label}</span>
+      {lk.fileSize&&<span style={{fontSize:8,color:C.w3,marginLeft:4}}>{fmtSize(lk.fileSize)}</span>}
     </div>
-    <span style={{fontSize:9,color:C.w3,whiteSpace:"nowrap"}}>{fmt(lk.date)}</span>
+    {folders.length>0&&<select value={lk.folder||""} onChange={e=>onUpdate(lk.id,{folder:e.target.value})} style={{...S.inp,marginBottom:0,padding:"2px 4px",fontSize:8,width:"auto",minWidth:50}} title="Move to folder">
+      <option value="">Unfiled</option>{folders.map(f=><option key={f} value={f}>{f}</option>)}
+    </select>}
     <button onClick={()=>onUpdate(lk.id,{category:otherCat})} title={otherCat==="post"?"Move to Post Approved":"Move to Pre Job"} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,padding:"2px 5px",fontFamily:"inherit"}}>{otherCat==="post"?"→":"←"}</button>
-    <button onClick={()=>handleDel(lk)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 6px"}}>✕</button>
+    <button onClick={()=>handleDel(lk)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 4px"}}>✕</button>
   </div>;
+  const renderSide=(files,folders,cat,otherCat,color,title)=>{
+    const unfiled=files.filter(f=>!f.folder);
+    return <div style={{background:C.bg,borderRadius:8,padding:10,border:`1px solid ${C.bd}`}}>
+      <div style={{...S.fxsb,marginBottom:8}}>
+        <div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:color}}/><span style={{fontSize:11,fontWeight:700,color:color,letterSpacing:0.5}}>{title}</span><span style={{fontSize:9,color:C.w3}}>({files.length})</span></div>
+        <button onClick={()=>setAddFolderSide(cat)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,padding:"2px 6px",fontFamily:"inherit"}}>+ Folder</button>
+      </div>
+      {addFolderSide===cat&&<div style={{...S.fx,gap:4,marginBottom:8}}>
+        <input style={{...S.inp,marginBottom:0,fontSize:10,flex:1}} value={newFolder} onChange={e=>setNewFolder(e.target.value)} placeholder="Folder name..." onKeyDown={e=>{if(e.key==="Enter"&&newFolder.trim()){setNewFolder("");setAddFolderSide(null);}}}/>
+        <button style={{...S.btn,fontSize:10,padding:"4px 8px"}} onClick={()=>{if(newFolder.trim()){onAdd({label:".folder",url:"",category:cat,folder:newFolder.trim(),isFolder:true});setNewFolder("");setAddFolderSide(null);}}}>Add</button>
+        <button style={{...S.bs,fontSize:10,padding:"4px 8px"}} onClick={()=>{setNewFolder("");setAddFolderSide(null);}}>✕</button>
+      </div>}
+      {folders.map(folder=>{const folderFiles=files.filter(f=>f.folder===folder&&!f.isFolder);const isOpen=selFolder===cat+":"+folder;return <div key={folder} style={{marginBottom:6}}>
+        <div onClick={()=>setSelFolder(isOpen?null:cat+":"+folder)} style={{...S.fxc,gap:6,padding:"5px 8px",background:C.b3,borderRadius:6,cursor:"pointer",border:`1px solid ${C.bd}`}}>
+          <span style={{fontSize:11}}>{isOpen?"📂":"📁"}</span>
+          <span style={{fontSize:11,fontWeight:600,flex:1}}>{folder}</span>
+          <span style={{fontSize:9,color:C.w3}}>{folderFiles.length}</span>
+          <button onClick={e=>{e.stopPropagation();onDel(links.find(l=>l.isFolder&&l.folder===folder&&(l.category||"pre")===cat)?.id);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,padding:"0 2px"}}>✕</button>
+        </div>
+        {isOpen&&<div style={{paddingLeft:8,borderLeft:`2px solid ${color}33`,marginLeft:8,marginTop:2}}>
+          {folderFiles.map(lk=>renderFile(lk,otherCat,folders))}
+          {!folderFiles.length&&<p style={{fontSize:9,color:C.w3,margin:"4px 0"}}>Empty folder</p>}
+        </div>}
+      </div>;})}
+      {unfiled.filter(f=>!f.isFolder).length>0&&<>
+        {folders.length>0&&<div style={{fontSize:9,fontWeight:600,color:C.w3,marginTop:6,marginBottom:4,letterSpacing:0.5}}>UNFILED</div>}
+        {unfiled.filter(f=>!f.isFolder).map(lk=>renderFile(lk,otherCat,folders))}
+      </>}
+      {files.filter(f=>!f.isFolder).length===0&&folders.length===0&&<p style={{fontSize:10,color:C.w3,margin:0}}>No files</p>}
+    </div>;
+  };
   return <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:10}}>Files & Links</h4>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10}}>
-      <div style={{background:C.bg,borderRadius:8,padding:10,border:`1px solid ${C.bd}`}}>
-        <div style={{...S.fxc,gap:6,marginBottom:8}}><div style={{width:8,height:8,borderRadius:"50%",background:C.or}}/><span style={{fontSize:11,fontWeight:700,color:C.or,letterSpacing:0.5}}>PRE JOB</span><span style={{fontSize:9,color:C.w3}}>({preFiles.length})</span></div>
-        {preFiles.map(lk=>renderFile(lk,"post"))}
-        {!preFiles.length&&<p style={{fontSize:10,color:C.w3,margin:0}}>No files</p>}
-      </div>
-      <div style={{background:C.bg,borderRadius:8,padding:10,border:`1px solid ${C.bd}`}}>
-        <div style={{...S.fxc,gap:6,marginBottom:8}}><div style={{width:8,height:8,borderRadius:"50%",background:C.gr}}/><span style={{fontSize:11,fontWeight:700,color:C.gr,letterSpacing:0.5}}>POST APPROVED</span><span style={{fontSize:9,color:C.w3}}>({postFiles.length})</span></div>
-        {postFiles.map(lk=>renderFile(lk,"pre"))}
-        {!postFiles.length&&<p style={{fontSize:10,color:C.w3,margin:0}}>No files</p>}
-      </div>
+      {renderSide(preFiles,preFolders,"pre","post",C.or,"PRE JOB")}
+      {renderSide(postFiles,postFolders,"post","pre",C.gr,"POST APPROVED")}
     </div>
     <div style={{...S.fx,gap:6,marginBottom:6,alignItems:"center"}}>
       <span style={{fontSize:10,color:C.w3}}>Add to:</span>
       <button onClick={()=>setAddCat("pre")} style={{...S.bs,fontSize:10,padding:"3px 10px",background:addCat==="pre"?C.orb:"transparent",color:addCat==="pre"?C.or:C.w3,border:`1px solid ${addCat==="pre"?C.or:C.bd}`}}>Pre Job</button>
       <button onClick={()=>setAddCat("post")} style={{...S.bs,fontSize:10,padding:"3px 10px",background:addCat==="post"?C.grl:"transparent",color:addCat==="post"?C.gr:C.w3,border:`1px solid ${addCat==="post"?C.gr:C.bd}`}}>Post Approved</button>
+      {(addCat==="pre"?preFolders:postFolders).length>0&&<select style={{...S.inp,marginBottom:0,fontSize:10,width:"auto",padding:"3px 8px"}} value={addFolder} onChange={e=>setAddFolder(e.target.value)}>
+        <option value="">No folder</option>{(addCat==="pre"?preFolders:postFolders).map(f=><option key={f} value={f}>{f}</option>)}
+      </select>}
     </div>
     <div style={{...S.fx,gap:6,marginBottom:6}}>
       <button onClick={()=>setMode("upload")} style={{...S.bs,fontSize:10,padding:"4px 10px",background:mode==="upload"?C.bll:"transparent",color:mode==="upload"?C.bl:C.w3,border:`1px solid ${mode==="upload"?C.bl:C.bd}`}}>Upload File</button>
