@@ -564,38 +564,40 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId}){
   };
   const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim(),category:addCat,folder:addFolder||""});sL("");sU("");}};
   const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
-  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);
+  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);const[dragId,setDragId]=useState(null);const[dragOver,setDragOver]=useState(null);
   const preFiles=links.filter(l=>(l.category||"pre")==="pre");
   const postFiles=links.filter(l=>l.category==="post");
   const getFolders=(files)=>{const folders=new Set();files.forEach(f=>{if(f.folder)folders.add(f.folder);});return[...folders].sort();};
   const preFolders=getFolders(preFiles);
   const postFolders=getFolders(postFiles);
-  const renderFile=(lk,otherCat,folders)=><div key={lk.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:`1px solid ${C.bd}`}}>
+  const createFolder=(cat)=>{if(newFolder.trim()){onAdd({label:".folder",url:"",category:cat,folder:newFolder.trim(),isFolder:true});setNewFolder("");setAddFolderSide(null);}};
+  const onDragStart=(e,id)=>{setDragId(id);e.dataTransfer.effectAllowed="move";};
+  const onDragEnd=()=>{setDragId(null);setDragOver(null);};
+  const onFolderDrop=(e,folder,cat)=>{e.preventDefault();setDragOver(null);if(dragId){onUpdate(dragId,{folder:folder,category:cat});setDragId(null);}};
+  const onFolderDragOver=(e,key)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDragOver(key);};
+  const renderFile=(lk,otherCat,folders)=><div key={lk.id} draggable onDragStart={e=>onDragStart(e,lk.id)} onDragEnd={onDragEnd} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:`1px solid ${C.bd}`,cursor:"grab",opacity:dragId===lk.id?0.4:1}}>
     <span style={{fontSize:12}}>{icon(lk.label)}</span>
     <div style={{flex:1,minWidth:0}}>
       <span onClick={()=>window.open(lk.url,"_blank")} style={{fontSize:11,color:C.bl,fontWeight:600,cursor:"pointer",textDecoration:"underline",wordBreak:"break-all"}}>{lk.label}</span>
       {lk.fileSize&&<span style={{fontSize:8,color:C.w3,marginLeft:4}}>{fmtSize(lk.fileSize)}</span>}
     </div>
-    {folders.length>0&&<select value={lk.folder||""} onChange={e=>onUpdate(lk.id,{folder:e.target.value})} style={{...S.inp,marginBottom:0,padding:"2px 4px",fontSize:8,width:"auto",minWidth:50}} title="Move to folder">
-      <option value="">Unfiled</option>{folders.map(f=><option key={f} value={f}>{f}</option>)}
-    </select>}
     <button onClick={()=>onUpdate(lk.id,{category:otherCat})} title={otherCat==="post"?"Move to Post Approved":"Move to Pre Job"} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,padding:"2px 5px",fontFamily:"inherit"}}>{otherCat==="post"?"→":"←"}</button>
     <button onClick={()=>handleDel(lk)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 4px"}}>✕</button>
   </div>;
   const renderSide=(files,folders,cat,otherCat,color,title)=>{
     const unfiled=files.filter(f=>!f.folder);
-    return <div style={{background:C.bg,borderRadius:8,padding:10,border:`1px solid ${C.bd}`}}>
+    return <div style={{background:C.bg,borderRadius:8,padding:10,border:`1px solid ${C.bd}`}} onDragOver={e=>{e.preventDefault();if(!dragOver)setDragOver(cat+":unfiled");}} onDrop={e=>{e.preventDefault();if(dragId){onUpdate(dragId,{folder:"",category:cat});setDragId(null);setDragOver(null);}}}>
       <div style={{...S.fxsb,marginBottom:8}}>
-        <div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:color}}/><span style={{fontSize:11,fontWeight:700,color:color,letterSpacing:0.5}}>{title}</span><span style={{fontSize:9,color:C.w3}}>({files.length})</span></div>
+        <div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:color}}/><span style={{fontSize:11,fontWeight:700,color:color,letterSpacing:0.5}}>{title}</span><span style={{fontSize:9,color:C.w3}}>({files.filter(f=>!f.isFolder).length})</span></div>
         <button onClick={()=>setAddFolderSide(cat)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,padding:"2px 6px",fontFamily:"inherit"}}>+ Folder</button>
       </div>
       {addFolderSide===cat&&<div style={{...S.fx,gap:4,marginBottom:8}}>
-        <input style={{...S.inp,marginBottom:0,fontSize:10,flex:1}} value={newFolder} onChange={e=>setNewFolder(e.target.value)} placeholder="Folder name..." onKeyDown={e=>{if(e.key==="Enter"&&newFolder.trim()){setNewFolder("");setAddFolderSide(null);}}}/>
-        <button style={{...S.btn,fontSize:10,padding:"4px 8px"}} onClick={()=>{if(newFolder.trim()){onAdd({label:".folder",url:"",category:cat,folder:newFolder.trim(),isFolder:true});setNewFolder("");setAddFolderSide(null);}}}>Add</button>
+        <input autoFocus style={{...S.inp,marginBottom:0,fontSize:10,flex:1}} value={newFolder} onChange={e=>setNewFolder(e.target.value)} placeholder="Folder name..." onKeyDown={e=>{if(e.key==="Enter")createFolder(cat);}}/>
+        <button style={{...S.btn,fontSize:10,padding:"4px 8px"}} onClick={()=>createFolder(cat)}>Add</button>
         <button style={{...S.bs,fontSize:10,padding:"4px 8px"}} onClick={()=>{setNewFolder("");setAddFolderSide(null);}}>✕</button>
       </div>}
-      {folders.map(folder=>{const folderFiles=files.filter(f=>f.folder===folder&&!f.isFolder);const isOpen=selFolder===cat+":"+folder;return <div key={folder} style={{marginBottom:6}}>
-        <div onClick={()=>setSelFolder(isOpen?null:cat+":"+folder)} style={{...S.fxc,gap:6,padding:"5px 8px",background:C.b3,borderRadius:6,cursor:"pointer",border:`1px solid ${C.bd}`}}>
+      {folders.map(folder=>{const folderFiles=files.filter(f=>f.folder===folder&&!f.isFolder);const isOpen=selFolder===cat+":"+folder;const isDragTarget=dragOver===cat+":"+folder;return <div key={folder} style={{marginBottom:6}}>
+        <div onClick={()=>setSelFolder(isOpen?null:cat+":"+folder)} onDragOver={e=>onFolderDragOver(e,cat+":"+folder)} onDragLeave={()=>setDragOver(null)} onDrop={e=>onFolderDrop(e,folder,cat)} style={{...S.fxc,gap:6,padding:"5px 8px",background:isDragTarget?color+"33":C.b3,borderRadius:6,cursor:"pointer",border:`2px solid ${isDragTarget?color:C.bd}`,transition:"background 0.15s, border 0.15s"}}>
           <span style={{fontSize:11}}>{isOpen?"📂":"📁"}</span>
           <span style={{fontSize:11,fontWeight:600,flex:1}}>{folder}</span>
           <span style={{fontSize:9,color:C.w3}}>{folderFiles.length}</span>
@@ -603,7 +605,7 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId}){
         </div>
         {isOpen&&<div style={{paddingLeft:8,borderLeft:`2px solid ${color}33`,marginLeft:8,marginTop:2}}>
           {folderFiles.map(lk=>renderFile(lk,otherCat,folders))}
-          {!folderFiles.length&&<p style={{fontSize:9,color:C.w3,margin:"4px 0"}}>Empty folder</p>}
+          {!folderFiles.length&&<p style={{fontSize:9,color:C.w3,margin:"4px 0"}}>Empty folder — drag files here</p>}
         </div>}
       </div>;})}
       {unfiled.filter(f=>!f.isFolder).length>0&&<>
