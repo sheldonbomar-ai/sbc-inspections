@@ -93,6 +93,7 @@ function AppMain(){
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
   const[resetting,setResetting]=useState(false);
+  const[inspDragId,setInspDragId]=useState(null);const[inspDropDay,setInspDropDay]=useState(null);const inspDragRef=useRef(null);
   const mob=useMobile();
   const lastFs=useRef({});
 
@@ -229,23 +230,27 @@ function AppMain(){
         {pg==="sheet"&&!selI&&(()=>{
           const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d.toISOString().split("T")[0];});
           const pend=insp.filter(i=>!i.completed&&(!i.date||i.date<days[0]||i.date>days[4]));
+          const iDragStart=(e,id)=>{inspDragRef.current=id;setInspDragId(id);e.dataTransfer.setData("text/plain",id);e.dataTransfer.effectAllowed="move";};
+          const iDragEnd=()=>{inspDragRef.current=null;setInspDragId(null);setInspDropDay(null);};
+          const iDrop=(e,date)=>{e.preventDefault();setInspDropDay(null);const id=inspDragRef.current||e.dataTransfer.getData("text/plain");if(id){setI(v=>v.map(x=>x.id===id?{...x,date:date}:x));inspDragRef.current=null;setInspDragId(null);}};
+          const iDragOver=(e,date)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setInspDropDay(date);};
           return <>
             <div data-print-header="" style={{display:"none",justifyContent:"center",alignItems:"center",marginBottom:14,paddingBottom:10,borderBottom:"3px solid #000",textAlign:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,letterSpacing:1}}>Stacy Bomar Construction</div><div style={{fontSize:12,fontWeight:600,letterSpacing:2,marginTop:4,textTransform:"uppercase"}}>Inspection List — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
             <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div><div data-noprint="" style={{display:"flex",gap:6}}><button style={S.bs} onClick={()=>window.print()}>Print</button><button style={S.btn} onClick={()=>sM("insp")}>+ Schedule</button></div></div>
             <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
             {!mob&&<div data-col-header="" data-noprint="" style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>}
-            {days.map(d=>{const di=insp.filter(i=>i.date===d);const isT=d===td();return <div key={d}>
-              <div data-day-header="" style={{...S.fxc,gap:6,background:isT?C.bll:C.b3,padding:"6px 14px",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:11,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}<span style={{fontSize:10,color:C.w3,marginLeft:"auto"}}>{di.length}</span></div>
-              {di.length===0?<div style={{padding:"8px 14px",color:C.w3,fontSize:11,background:C.b2,borderBottom:`1px solid ${C.bd}`}}>—</div>:
+            {days.map(d=>{const di=insp.filter(i=>i.date===d);const isT=d===td();const isDrop=inspDropDay===d;return <div key={d} onDragOver={e=>iDragOver(e,d)} onDragLeave={()=>setInspDropDay(null)} onDrop={e=>iDrop(e,d)}>
+              <div data-day-header="" style={{...S.fxc,gap:6,background:isDrop?C.bl+"55":isT?C.bll:C.b3,padding:"6px 14px",borderBottom:`1px solid ${C.bd}`,border:isDrop?`2px solid ${C.bl}`:"2px solid transparent",transition:"background 0.15s, border 0.15s"}}><span style={{fontSize:11,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}{isDrop&&<span style={{fontSize:10,color:C.bl,marginLeft:4}}>Drop here</span>}<span style={{fontSize:10,color:C.w3,marginLeft:"auto"}}>{di.length}</span></div>
+              {di.length===0?<div style={{padding:isDrop?"14px":"8px 14px",color:C.w3,fontSize:11,background:isDrop?C.bll:C.b2,borderBottom:`1px solid ${C.bd}`,transition:"padding 0.15s, background 0.15s"}}>{isDrop?"Drop to move here":"—"}</div>:
               di.map(i=>{const p=proj.find(x=>x.id===i.projectId);const isOv=!i.completed&&i.date<td();const rC=i.result==="pass"?C.gr:i.result==="fail"?C.rd:C.or;const rL=i.result==="pass"?"Pass":i.result==="fail"?"Fail":"Open";return(
-                <div data-insp-row="" key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{padding:"8px 14px",background:isOv?C.rdb:i.result==="fail"?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}>
+                <div data-insp-row="" key={i.id} draggable onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:"8px 14px",background:isOv?C.rdb:i.result==="fail"?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"grab",opacity:inspDragId===i.id?0.4:1,transition:"opacity 0.15s"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><div style={{display:"flex",alignItems:"center",gap:4}}><div data-status-dot="" style={{width:6,height:6,borderRadius:"50%",background:rC}}/><span data-result="" style={{fontSize:10,color:rC}}>{rL}</span></div></div>
                   <div data-type="" style={{fontSize:11,color:C.bl,fontWeight:600}}>{fT(i.type,ct)}</div>
                   <div data-detail="" style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
                 </div>);})}
             </div>;})}
             {pend.length>0&&<><div data-pend-header="" style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return(
-              <div data-insp-row="" key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{padding:"8px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}>
+              <div data-insp-row="" key={i.id} draggable onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:"8px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"grab",opacity:inspDragId===i.id?0.4:1}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><span data-result="" style={{fontSize:10,color:C.or}}>Pending</span></div>
                 <div data-type="" style={{fontSize:11,color:C.or,fontWeight:600}}>{fT(i.type,ct)}</div>
                 <div data-detail="" style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
