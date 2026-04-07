@@ -425,7 +425,8 @@ function RevisionSection({revisions,onUpdate,logAct,projectName,mob,inspections,
   const updateStatus=(id,status)=>{onUpdate(revisions.map(r=>r.id===id?{...r,status,resolvedAt:status==="Resolved"?td():""}:r));if(logAct)logAct(`${status.toLowerCase()} revision`,`for ${projectName}`);};
   const delRev=(id)=>{onUpdate(revisions.filter(r=>r.id!==id));if(logAct)logAct("removed revision",projectName);};
   const hasOpen=open.length>0;
-  const inspTypes=[...new Set(inspections.map(i=>fT(i.type,ct)))];
+  const allTypes=[...DT,...ct].map(t=>`${t.p}- ${t.l}`);
+  const inspTypes=[...new Set([...allTypes,...inspections.map(i=>fT(i.type,ct))])];
   return <div style={{...S.cd,borderLeft:`3px solid ${hasOpen?C.or:C.bd}`}}>
     <div style={{...S.fxsb,marginBottom:hasOpen||resub.length||resolved.length?10:0,alignItems:"center"}}>
       <div style={{...S.fxc,gap:8}}>
