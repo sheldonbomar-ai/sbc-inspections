@@ -151,8 +151,6 @@ function AppMain({user}){
   const pendCO=proj.reduce((n,p)=>n+((p.changeOrders||[]).filter(co=>co.status==="Pending").length),0);
   const pendRev=proj.reduce((n,p)=>n+((p.revisions||[]).filter(r=>r.status==="Open").length),0);
   const pendTotal=pendCO+pendRev;
-  const projWithCO=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending"));
-  const projWithRev=proj.filter(p=>(p.revisions||[]).some(r=>r.status==="Open"));
   const projWithIssues=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open"));
 
   const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"]];
