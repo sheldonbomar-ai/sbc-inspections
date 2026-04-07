@@ -148,6 +148,8 @@ function AppMain({user}){
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
   const ovd=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
+  const pendCO=proj.reduce((n,p)=>n+((p.changeOrders||[]).filter(co=>co.status==="Pending").length),0);
+  const projWithCO=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending"));
 
   const navBase=[["dashboard","Dashboard"],["sheet","Inspections"],["permits","Permits"],["projects","Projects"],["scheduling","Scheduling"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"]]:navBase;
@@ -167,6 +169,7 @@ function AppMain({user}){
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
+              {id==="projects"&&pendCO>0&&<span style={{...S.bg(C.rd,"#fff"),marginLeft:"auto"}}>{pendCO}</span>}
             </button>);})}
         </div>
         <div style={{padding:"14px 16px",borderTop:`1px solid ${C.bd}`,fontSize:10,color:C.w3}}>
@@ -213,6 +216,15 @@ function AppMain({user}){
               {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Comments Need Response",needResp?C.or:C.w3],[pend30,"Pending > 30 Days",pend30?C.rd:C.w3]].map(([v,l,c],i)=>
                 <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer"}} onClick={()=>setPg("permits")}><div style={{fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:C.w3}}>{l}</div></div>)}
             </div>;})()}
+
+            {pendCO>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.rd}`,marginBottom:16,background:C.rdb}}>
+              <div style={{...S.fxsb,marginBottom:8}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:20}}>⚠</span><span style={{fontSize:14,fontWeight:700,color:C.rd}}>CHANGE ORDERS / REVISIONS</span></div><span style={{fontSize:24,fontWeight:700,color:C.rd}}>{pendCO}</span></div>
+              {projWithCO.map(p=>{const pco=(p.changeOrders||[]).filter(co=>co.status==="Pending");return <div key={p.id} style={{padding:"6px 0",borderTop:`1px solid ${C.bd}`}}>
+                <span style={{fontSize:12,fontWeight:600,color:C.w,cursor:"pointer",textDecoration:"underline"}} onClick={()=>{sSP(p.id);setPg("projects");}}>{p.clientName}</span>
+                <span style={{fontSize:11,color:C.rd,marginLeft:8}}>{pco.length} pending</span>
+                {pco.map(co=><div key={co.id} style={{fontSize:10,color:C.w3,marginLeft:16,marginTop:2}}>• {co.description}{co.cost?` ($${co.cost})`:""}  </div>)}
+              </div>;})}
+            </div>}
 
             {/* SPREADSHEET TABLE */}
             <div style={{...S.cd,padding:0,overflow:"auto",marginBottom:16}}>
@@ -287,6 +299,12 @@ function AppMain({user}){
                   <div data-detail="" style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
                 </div>);})}
             </div>;})}
+            {projWithCO.length>0&&<><div data-pend-header="" style={{background:C.rdb,padding:"7px 14px",borderTop:`2px solid ${C.rd}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.rd}}>⚠ REVISION / CHANGE ORDER ({projWithCO.length})</span></div>{projWithCO.map(p=>{const pco=(p.changeOrders||[]).filter(co=>co.status==="Pending");return(
+              <div data-insp-row="" key={"co-"+p.id} onClick={()=>{sSP(p.id);setPg("projects");}} style={{padding:"8px 14px",background:C.rdb,borderBottom:`1px solid ${C.bd}`,cursor:"pointer"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p.clientName}</span><div style={{display:"flex",alignItems:"center",gap:4}}><div data-status-dot="" style={{width:6,height:6,borderRadius:"50%",background:C.rd}}/><span data-result="" style={{fontSize:10,color:C.rd}}>Revision Required</span></div></div>
+                {pco.map(co=><div key={co.id} data-type="" style={{fontSize:11,color:C.rd,fontWeight:600}}>CO: {co.description}{co.cost?` ($${co.cost})`:""}</div>)}
+                <div data-detail="" style={{fontSize:10,color:C.w3,marginTop:2}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>
+              </div>);})}</>}
             {pend.length>0&&<><div data-pend-header="" style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return(
               <div data-insp-row="" key={i.id} draggable onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:"8px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"grab",opacity:inspDragId===i.id?0.4:1}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><span data-result="" style={{fontSize:10,color:C.or}}>Pending</span></div>
@@ -315,8 +333,8 @@ function AppMain({user}){
           <input style={S.inp} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search..."/>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:10}}>
             {proj.filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=>
-              <div key={p.id} style={{...S.cd,cursor:"pointer",borderLeft:`3px solid ${p.hoa?C.or:C.bl}`}} onClick={()=>sSP(p.id)}>
-                <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
+              <div key={p.id} style={{...S.cd,cursor:"pointer",borderLeft:`3px solid ${(p.changeOrders||[]).some(co=>co.status==="Pending")?C.rd:p.hoa?C.or:C.bl}`}} onClick={()=>sSP(p.id)}>
+                <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4}}>{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>⚠ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
                 <div style={{fontSize:11,color:C.w3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</div>
                 {p.permitNum&&<div style={{fontSize:10,color:C.bl,marginTop:2}}>{p.permitNum}</div>}
                 {p.scopes&&p.scopes.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{p.scopes.map(sc=><span key={sc} style={{fontSize:9,fontWeight:600,padding:"3px 9px",borderRadius:12,background:sc==="Structural"?"#2D1F4E":sc==="Plumbing"?C.bll:sc==="Electrical"?C.rdb:sc==="Roofing"?"#3B2410":sc==="Windows & Doors"?C.grl:C.b3,color:sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:C.w2}}>{sc}</span>)}</div>}
@@ -328,6 +346,7 @@ function AppMain({user}){
           <button style={{...S.bs,marginBottom:14}} onClick={()=>sSP(null)}>← Back</button>
           <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</p></div><div style={{...S.fx,gap:6}}><button style={S.bs} onClick={()=>sEP(p)}>Edit</button><button style={S.btn} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
           <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
+          <COSection changeOrders={p.changeOrders||[]} onUpdate={cos=>setP(v=>v.map(x=>x.id===selP?{...x,changeOrders:cos}:x))} logAct={logAct} projectName={p.clientName} mob={mob}/>
           {p.scopeNotes&&<div style={S.cd}><p style={{margin:0,fontSize:12,color:C.w2,lineHeight:1.5}}>{p.scopeNotes}</p></div>}
           <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>Notes</h4>
             {(p.comments||[]).map(c=><div key={c.id} style={{padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{fontSize:11,color:C.w2}}>{c.text}</div><div style={{fontSize:9,color:C.w3,marginTop:2}}>{fmt(c.date)}</div></div>)}
@@ -377,10 +396,56 @@ function AppMain({user}){
           <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="activity"?"📝":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
           {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
+          {id==="projects"&&pendCO>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.rd,color:"#fff",borderRadius:8,padding:"1px 4px"}}>{pendCO}</span>}
         </button>;})}
       </div>}
     </div>
   );
+}
+
+function COSection({changeOrders,onUpdate,logAct,projectName,mob}){
+  const[adding,setAdding]=useState(false);const[desc,setDesc]=useState("");const[cost,setCost]=useState("");const[reason,setReason]=useState("");
+  const pending=changeOrders.filter(co=>co.status==="Pending");
+  const resolved=changeOrders.filter(co=>co.status!=="Pending");
+  const addCO=()=>{if(!desc.trim())return;const co={id:uid(),description:desc.trim(),cost:cost.trim(),reason:reason.trim(),status:"Pending",createdAt:td()};onUpdate([...changeOrders,co]);if(logAct)logAct("added change order",`"${desc.trim()}" for ${projectName}`);setDesc("");setCost("");setReason("");setAdding(false);};
+  const updateStatus=(id,status)=>{onUpdate(changeOrders.map(co=>co.id===id?{...co,status,resolvedAt:status!=="Pending"?td():""}:co));if(logAct)logAct(`${status.toLowerCase()} change order`,`for ${projectName}`);};
+  const delCO=(id)=>{onUpdate(changeOrders.filter(co=>co.id!==id));if(logAct)logAct("removed change order",projectName);};
+  const hasPending=pending.length>0;
+  return <div style={{...S.cd,borderLeft:`3px solid ${hasPending?C.rd:C.bd}`}}>
+    <div style={{...S.fxsb,marginBottom:hasPending||resolved.length?10:0,alignItems:"center"}}>
+      <div style={{...S.fxc,gap:8}}>
+        {hasPending&&<span style={{fontSize:16}}>⚠</span>}
+        <h4 style={{fontSize:13,fontWeight:700,margin:0,color:hasPending?C.rd:C.w}}>Change Orders{hasPending?` (${pending.length} Pending)`:""}</h4>
+      </div>
+      <button onClick={()=>setAdding(!adding)} style={{...S.bs,fontSize:10,padding:mob?"6px 10px":"4px 8px"}}>{adding?"Cancel":"+ Add"}</button>
+    </div>
+    {adding&&<div style={{background:C.bg,borderRadius:8,padding:mob?12:10,border:`1px solid ${C.bd}`,marginBottom:10}}>
+      <input style={{...S.inp,fontSize:mob?13:12}} value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description (e.g. Window NOA revision needed)"/>
+      <div style={{display:"flex",gap:6}}>
+        <input style={{...S.inp,fontSize:mob?13:12,flex:1}} value={cost} onChange={e=>setCost(e.target.value)} placeholder="Cost impact (optional, e.g. 1500)"/>
+        <input style={{...S.inp,fontSize:mob?13:12,flex:2}} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Reason (optional)"/>
+      </div>
+      <button onClick={addCO} style={{...S.btn,width:"100%",padding:mob?"10px":"6px 14px"}}>Add Change Order</button>
+    </div>}
+    {pending.map(co=><div key={co.id} style={{background:C.rdb,borderRadius:8,padding:mob?"12px":"8px 10px",marginBottom:6,border:`1px solid ${C.rd}33`}}>
+      <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:mob?13:12,fontWeight:700,color:C.rd}}>{co.description}</span><span style={{fontSize:10,color:C.w3}}>{fmt(co.createdAt)}</span></div>
+      {co.cost&&<div style={{fontSize:11,color:C.or,fontWeight:600,marginBottom:2}}>Cost: ${co.cost}</div>}
+      {co.reason&&<div style={{fontSize:11,color:C.w3,marginBottom:4}}>{co.reason}</div>}
+      <div style={{display:"flex",gap:6,marginTop:6}}>
+        <button onClick={()=>updateStatus(co.id,"Approved")} style={{...S.btn,fontSize:10,padding:mob?"6px 12px":"4px 10px",background:C.gr,color:C.bg}}>Approve</button>
+        <button onClick={()=>updateStatus(co.id,"Completed")} style={{...S.btn,fontSize:10,padding:mob?"6px 12px":"4px 10px",background:C.bl}}>Complete</button>
+        <button onClick={()=>delCO(co.id)} style={{...S.bs,fontSize:10,padding:mob?"6px 12px":"4px 10px",color:C.rd,marginLeft:"auto"}}>Delete</button>
+      </div>
+    </div>)}
+    {resolved.length>0&&<details style={{marginTop:pending.length?6:0}}>
+      <summary style={{fontSize:11,color:C.w3,cursor:"pointer",padding:"4px 0"}}>Resolved ({resolved.length})</summary>
+      {resolved.map(co=><div key={co.id} style={{padding:"6px 0",borderBottom:`1px solid ${C.bd}`,opacity:0.6}}>
+        <div style={{...S.fxsb}}><span style={{fontSize:11,color:C.w2}}>{co.description}</span><span style={S.bg(co.status==="Approved"?C.grl:C.bll,co.status==="Approved"?C.gr:C.bl)}>{co.status}</span></div>
+        {co.cost&&<span style={{fontSize:10,color:C.w3}}>${co.cost}</span>}
+      </div>)}
+    </details>}
+    {!changeOrders.length&&!adding&&<p style={{fontSize:11,color:C.w3,margin:0}}>No change orders</p>}
+  </div>;
 }
 
 function InspF({pr,ok,ct=[],aC,pre}){
