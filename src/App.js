@@ -151,7 +151,7 @@ function AppMain({user}){
   const pendCO=proj.reduce((n,p)=>n+((p.changeOrders||[]).filter(co=>co.status==="Pending").length),0);
   const projWithCO=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending"));
 
-  const navBase=[["dashboard","Dashboard"],["sheet","Inspections"],["permits","Permits"],["projects","Projects"],["scheduling","Scheduling"]];
+  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"]]:navBase;
   const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"]];
   const mobNavItems=isAdmin?[...mobBase,["activity","Log"]]:mobBase;
