@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage, auth } from "./firebase";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 
@@ -140,12 +140,19 @@ function AppMain({user}){
   useEffect(()=>{if(ok){const j=JSON.stringify(sched);if(j!==lastFs.current.sYs){lastFs.current.sYs=j;svFs("sYs",sched);localStorage.setItem("sYs",j);}}},[sched,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(permits);if(j!==lastFs.current.sYpm){lastFs.current.sYpm=j;svFs("sYpm",permits);localStorage.setItem("sYpm",j);}}},[permits,ok]);
 
+  const logAct=(action,detail)=>{try{addDoc(collection(db,"activityLog"),{user:user.displayName||"Unknown",action,detail:detail||"",ts:new Date().toISOString()});}catch(e){console.error("Log error:",e);}};
+  const isAdmin=user.email==="sheldon@sbc.app";
+  const[actLog,setActLog]=useState([]);
+  const loadLog=async()=>{try{const q2=query(collection(db,"activityLog"),orderBy("ts","desc"),limit(200));const snap=await getDocs(q2);setActLog(snap.docs.map(d=>({id:d.id,...d.data()})));}catch(e){console.error("Load log error:",e);}};
+
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
   const ovd=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
 
-  const navItems=[["dashboard","Dashboard"],["sheet","Inspections"],["permits","Permits"],["projects","Projects"],["scheduling","Scheduling"]];
-  const mobNavItems=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"]];
+  const navBase=[["dashboard","Dashboard"],["sheet","Inspections"],["permits","Permits"],["projects","Projects"],["scheduling","Scheduling"]];
+  const navItems=isAdmin?[...navBase,["activity","Activity Log"]]:navBase;
+  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"]];
+  const mobNavItems=isAdmin?[...mobBase,["activity","Log"]]:mobBase;
 
   return(
     <div data-app="" style={{...S.app,flexDirection:mob?"column":"row"}}>
@@ -156,7 +163,7 @@ function AppMain({user}){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>};return(
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
@@ -296,9 +303,9 @@ function AppMain({user}){
           <button style={{...S.bs,marginBottom:14}} onClick={()=>{sSI(null);setPg("sheet");}}>← Back</button>
           <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{fT(i.type,ct)}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p?.clientName} · {p?.city} · {fmt(i.date)}</p>{i.permitNum&&<p style={{fontSize:11,color:C.bl,marginTop:3}}>Permit: {i.permitNum}</p>}</div>
           <div style={{...S.fx,gap:6}}>
-            {!i.result&&<><button style={{...S.btn,background:C.gr,color:C.bg}} onClick={()=>setI(v=>v.map(x=>x.id===i.id?{...x,completed:true,result:"pass",completedAt:td()}:x))}>✓ Pass</button><button style={{...S.btn,background:C.rd,color:"#fff"}} onClick={()=>setI(v=>v.map(x=>x.id===i.id?{...x,completed:true,result:"fail",completedAt:td()}:x))}>✗ Fail</button></>}
-            {i.result&&<button style={S.bs} onClick={()=>setI(v=>v.map(x=>x.id===i.id?{...x,completed:false,result:"",completedAt:""}:x))}>Reset</button>}
-            <button style={{...S.bs,color:C.rd}} onClick={()=>{setI(v=>v.filter(x=>x.id!==i.id));sSI(null);setPg("sheet");}}>Delete</button>
+            {!i.result&&<><button style={{...S.btn,background:C.gr,color:C.bg}} onClick={()=>{setI(v=>v.map(x=>x.id===i.id?{...x,completed:true,result:"pass",completedAt:td()}:x));logAct("passed inspection",`${fT(i.type,ct)} for ${p?.clientName}`);}}>✓ Pass</button><button style={{...S.btn,background:C.rd,color:"#fff"}} onClick={()=>{setI(v=>v.map(x=>x.id===i.id?{...x,completed:true,result:"fail",completedAt:td()}:x));logAct("failed inspection",`${fT(i.type,ct)} for ${p?.clientName}`);}}>✗ Fail</button></>}
+            {i.result&&<button style={S.bs} onClick={()=>{setI(v=>v.map(x=>x.id===i.id?{...x,completed:false,result:"",completedAt:""}:x));logAct("reset inspection",`${fT(i.type,ct)} for ${p?.clientName}`);}}>Reset</button>}
+            <button style={{...S.bs,color:C.rd}} onClick={()=>{logAct("deleted inspection",`${fT(i.type,ct)} for ${p?.clientName}`);setI(v=>v.filter(x=>x.id!==i.id));sSI(null);setPg("sheet");}}>Delete</button>
           </div></div>
           <div style={S.cd}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:stColor}}/><span style={{fontSize:13,fontWeight:600,color:stColor}}>{stLabel}</span></div>{i.notes&&<p style={{fontSize:12,color:C.w2,marginTop:6}}>Notes: {i.notes}</p>}</div>
         </>;})()}
@@ -319,7 +326,7 @@ function AppMain({user}){
 
         {pg==="projects"&&selP&&(()=>{const p=proj.find(x=>x.id===selP);if(!p)return null;const pi=insp.filter(i=>i.projectId===selP);return <>
           <button style={{...S.bs,marginBottom:14}} onClick={()=>sSP(null)}>← Back</button>
-          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</p></div><div style={{...S.fx,gap:6}}><button style={S.bs} onClick={()=>sEP(p)}>Edit</button><button style={S.btn} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd}} onClick={()=>{setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
+          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</p></div><div style={{...S.fx,gap:6}}><button style={S.bs} onClick={()=>sEP(p)}>Edit</button><button style={S.btn} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
           <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
           {p.scopeNotes&&<div style={S.cd}><p style={{margin:0,fontSize:12,color:C.w2,lineHeight:1.5}}>{p.scopeNotes}</p></div>}
           <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>Notes</h4>
@@ -327,28 +334,47 @@ function AppMain({user}){
             {!(p.comments||[]).length&&<p style={{fontSize:11,color:C.w3}}>No notes yet</p>}
             <div style={{...S.fx,gap:6,marginTop:8}}><input id="cm" style={{...S.inp,marginBottom:0,flex:1}} placeholder="Add note..." onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:e.target.value.trim(),date:td()}]}:x));e.target.value="";}}} /><button style={S.btn} onClick={()=>{const el=document.getElementById("cm");if(el?.value.trim()){setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:el.value.trim(),date:td()}]}:x));el.value="";}}}>Add</button></div>
           </div>
-          <LinksSection mob={mob} links={p.links||[]} projectId={selP} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))} onUpdate={(lid,upd)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).map(l=>l.id===lid?{...l,...upd}:l)}:x))}/>
+          <LinksSection mob={mob} links={p.links||[]} projectId={selP} logAct={logAct} projectName={p.clientName} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))} onUpdate={(lid,upd)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).map(l=>l.id===lid?{...l,...upd}:l)}:x))}/>
           <h4 style={{fontSize:13,fontWeight:700,margin:"12px 0 8px"}}>Inspections ({pi.length})</h4>
           {pi.map(i=>{const rc=i.result==="pass"?C.gr:i.result==="fail"?C.rd:C.or;const rl=i.result==="pass"?"Pass":i.result==="fail"?"Fail":"Open";const rb=i.result==="pass"?C.grl:i.result==="fail"?C.rdb:C.orb;return <div key={i.id} style={S.rw}><div style={{width:6,height:6,borderRadius:"50%",background:rc}}/><div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{fT(i.type,ct)}</div><div style={{fontSize:10,color:C.w3}}>{fmt(i.date)} · {i.permitNum||"—"}</div></div><span style={S.bg(rb,rc)}>{rl}</span></div>;})}
         </>;})()}
 
-        {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob}/>}
-        {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob}/>}
+        {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
+        {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct}/>}
+
+        {pg==="activity"&&isAdmin&&(()=>{
+          if(!actLog.length)loadLog();
+          const fmtTs=(ts)=>{const d=new Date(ts);return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
+          const actColor={added:C.gr,scheduled:C.bl,updated:C.or,deleted:C.rd,passed:C.gr,failed:C.rd,reset:C.w3,uploaded:C.bl,moved:C.or,removed:C.rd};
+          const getVerb=(a)=>{const w=a.toLowerCase().split(" ")[0];return actColor[w]||C.w2;};
+          return <>
+            <div style={{...S.fxsb,marginBottom:16,alignItems:"center"}}><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>Activity Log</h1><button onClick={loadLog} style={{...S.bs,fontSize:11}}>Refresh</button></div>
+            {!actLog.length&&<p style={{color:C.w3,fontSize:13}}>No activity recorded yet.</p>}
+            {actLog.map(a=><div key={a.id} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:`1px solid ${C.bd}`,alignItems:"flex-start"}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:getVerb(a.action),marginTop:6,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:mob?13:12}}><span style={{fontWeight:700,color:C.w}}>{a.user}</span> <span style={{color:C.w2}}>{a.action}</span></div>
+                {a.detail&&<div style={{fontSize:mob?12:11,color:C.w3,marginTop:2}}>{a.detail}</div>}
+              </div>
+              <span style={{fontSize:10,color:C.w3,whiteSpace:"nowrap",flexShrink:0}}>{fmtTs(a.ts)}</span>
+            </div>)}
+          </>;
+        })()}
 
         {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
-          {modal==="insp"&&<InspF pr={proj} ok={items=>{setI(v=>[...v,...items.map(i=>({...i,id:uid(),createdAt:td(),completed:false}))]);sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
-          {modal==="proj"&&<PF ok={p=>{setP(v=>[...v,{...p,id:uid(),comments:[],createdAt:td()}]);sM(null);}}/>}
+          {modal==="insp"&&<InspF pr={proj} ok={items=>{setI(v=>[...v,...items.map(i=>({...i,id:uid(),createdAt:td(),completed:false}))]);const pName=proj.find(x=>x.id===items[0]?.projectId)?.clientName;logAct("scheduled "+items.length+" inspection"+(items.length>1?"s":""),pName?`for ${pName}`:"");sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
+          {modal==="proj"&&<PF ok={p=>{setP(v=>[...v,{...p,id:uid(),comments:[],createdAt:td()}]);logAct("added project",p.clientName);sM(null);}}/>}
         </div></div>}
         {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Edit Project</h2><button onClick={()=>sEP(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
-          <EF p={editP} ok={u=>{setP(v=>v.map(p=>p.id===editP.id?{...p,...u}:p));sEP(null);}}/>
+          <EF p={editP} ok={u=>{setP(v=>v.map(p=>p.id===editP.id?{...p,...u}:p));logAct("updated project",editP.clientName);sEP(null);}}/>
         </div></div>}
 
       </div></div>
       {mob&&<div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {mobNavItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":"📅"}</span>
+          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="activity"?"📝":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
           {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
         </button>;})}
@@ -437,13 +463,13 @@ function EF({p,ok}){
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>ok(f)}>Save</button></div>
   </div>;
 }
-function SchedTab({proj,sched,setSched,week,sWk,mob}){
+function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
   const[assignCrew,setAssignCrew]=useState(null);
   const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d.toISOString().split("T")[0];});
   const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const getAssign=(crewId,date)=>sched.filter(s=>s.crewId===crewId&&s.date===date);
-  const addAssign=(crewId,date,projectId,notes)=>setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||""}]);
-  const rmAssign=(id)=>setSched(v=>v.filter(s=>s.id!==id));
+  const addAssign=(crewId,date,projectId,notes)=>{setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||""}]);const cr=CREWS.find(c=>c.id===crewId);const p=proj.find(x=>x.id===projectId);if(logAct)logAct("scheduled crew",`${cr?.name||crewId} → ${p?.clientName||"?"} on ${fmt(date)}`);};
+  const rmAssign=(id)=>{const a=sched.find(s=>s.id===id);const cr=CREWS.find(c=>c.id===a?.crewId);const p=proj.find(x=>x.id===a?.projectId);if(logAct)logAct("removed crew assignment",`${cr?.name||"?"} from ${p?.clientName||"?"}`);setSched(v=>v.filter(s=>s.id!==id));};
   return <>
     <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>CREW SCHEDULING</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div></div>
     <div style={{...S.fx,gap:6,marginBottom:16}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
@@ -571,7 +597,7 @@ function AssignPicker({projects,onPick}){
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:pid?1:0.5}} onClick={()=>{if(pid)onPick(pid,notes);}}>Assign</button></div>
   </div>;
 }
-function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob}){
+function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectName}){
   const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");const[addCat,setAddCat]=useState("pre");const[addFolder,setAddFolder]=useState("");
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
   const handleUpload=async(e)=>{
@@ -586,7 +612,7 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob}){
         await new Promise((resolve,reject)=>{
           task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>{reject(err);},async()=>{
             const dlUrl=await getDownloadURL(task.snapshot.ref);
-            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:addCat,folder:addFolder||""});
+            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:addCat,folder:addFolder||""});if(logAct)logAct("uploaded file",`${file.name} to ${projectName}`);
             resolve();
           });
         });
@@ -709,7 +735,7 @@ const PERMIT_STATUSES=["Not Submitted","Submitted","In Review","Comments Receive
 const SPEC_WRITERS=["Lamar","Tanner","Habitat","CRA","Beth","Jay","Jim","Jenn","SOFI","Igo","Tabber"];
 const pStatColor=s=>s==="Issued"||s==="Approved"?C.gr:s==="Comments Received"?C.rd:s==="In Review"||s==="Submitted"?C.or:s==="Closed"?C.w3:"#22D3EE";
 
-function PermitsTab({proj,permits,setPermits,pg,setPg,mob}){
+function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct}){
   const[selProj,setSelProj]=useState(null);
   const[modal,sM]=useState(null);
   const[search,sSr]=useState("");
@@ -767,13 +793,13 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob}){
           {/* Inline edit row */}
           <div style={{...S.fx,gap:6,marginBottom:8,flexWrap:"wrap"}}>
             <input style={{...S.inp,marginBottom:0,width:130,fontSize:11}} value={pm.permitNumber||""} onChange={e=>{const v=e.target.value;setPermits(pr=>pr.map(x=>x.id===pm.id?{...x,permitNumber:v}:x));}} placeholder="Permit #"/>
-            <select style={{...S.inp,marginBottom:0,width:130,fontSize:11}} value={pm.status} onChange={e=>{const v=e.target.value;setPermits(pr=>pr.map(x=>x.id===pm.id?{...x,status:v}:x));}}>
+            <select style={{...S.inp,marginBottom:0,width:130,fontSize:11}} value={pm.status} onChange={e=>{const v=e.target.value;setPermits(pr=>pr.map(x=>x.id===pm.id?{...x,status:v}:x));if(logAct)logAct("updated permit status",`${pm.clientName} ${pm.permitType||"permit"} → ${v}`);}}>
               {PERMIT_STATUSES.map(st=><option key={st} value={st}>{st}</option>)}
             </select>
             <select style={{...S.inp,marginBottom:0,width:110,fontSize:11}} value={pm.specWriter||""} onChange={e=>{const v=e.target.value;setPermits(pr=>pr.map(x=>x.id===pm.id?{...x,specWriter:v}:x));}}>
               <option value="">Spec Writer</option>{SPEC_WRITERS.map(w=><option key={w} value={w}>{w}</option>)}
             </select>
-            <button onClick={()=>setPermits(v=>v.filter(x=>x.id!==pm.id))} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,marginLeft:"auto"}}>Delete</button>
+            <button onClick={()=>{if(logAct)logAct("deleted permit",`${pm.permitType||"permit"} for ${pm.clientName}`);setPermits(v=>v.filter(x=>x.id!==pm.id));}} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,marginLeft:"auto"}}>Delete</button>
           </div>
 
           {/* Comments */}
@@ -825,7 +851,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob}){
       {/* Add Permit Modal */}
       {modal==="addPermit"&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":420,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
         <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Add Permit — {p.clientName}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
-        <QuickPermitForm city={p.city} ok={pm=>{setPermits(v=>[...v,{...pm,id:uid(),projectId:selProj,clientName:p.clientName,city:p.city||pm.city,comments:[],files:[],actionNeeded:false,createdAt:td(),updatedAt:td()}]);sM(null);}}/>
+        <QuickPermitForm city={p.city} ok={pm=>{setPermits(v=>[...v,{...pm,id:uid(),projectId:selProj,clientName:p.clientName,city:p.city||pm.city,comments:[],files:[],actionNeeded:false,createdAt:td(),updatedAt:td()}]);if(logAct)logAct("added permit",`${pm.permitType||"permit"} for ${p.clientName}`);sM(null);}}/>
       </div></div>}
     </>;
   }
