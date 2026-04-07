@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { db, storage } from "./firebase";
+import { db, storage, auth } from "./firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
 const PRINT_CSS=`@media print{
@@ -63,30 +64,45 @@ const S={
   fx:{display:"flex"},fxsb:{display:"flex",justifyContent:"space-between"},fxc:{display:"flex",alignItems:"center"},
 };
 
-const APP_PW="Papasauce@811";
-
 export default function App(){
-  const[authed,setAuthed]=useState(false);const[pwInput,setPwInput]=useState("");const[pwErr,setPwErr]=useState(false);
+  const[user,setUser]=useState(null);const[loading,setLoading]=useState(true);
+  const[nameInput,setNameInput]=useState("");const[pwInput,setPwInput]=useState("");const[loginErr,setLoginErr]=useState("");const[signingIn,setSigningIn]=useState(false);
 
-  useEffect(()=>{(async()=>{try{const r=localStorage.getItem("sbc-auth");if(r===APP_PW)setAuthed(true);}catch{}})();},[]);
+  useEffect(()=>{const unsub=onAuthStateChanged(auth,(u)=>{setUser(u);setLoading(false);});return unsub;},[]);
 
-  if(!authed)return(
+  const doLogin=async()=>{
+    if(!nameInput.trim()||!pwInput)return;
+    setSigningIn(true);setLoginErr("");
+    try{
+      await signInWithEmailAndPassword(auth,nameInput.trim().toLowerCase()+"@sbc.app",pwInput);
+    }catch(e){
+      setLoginErr(e.code==="auth/invalid-credential"?"Wrong username or password":e.code==="auth/user-not-found"?"User not found":e.code==="auth/too-many-requests"?"Too many attempts — try again later":"Login failed");
+    }
+    setSigningIn(false);
+  };
+
+  if(loading)return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:C.bg}}><div style={{color:C.bl,fontSize:14,fontFamily:"system-ui,sans-serif"}}>Loading...</div></div>;
+
+  if(!user)return(
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:C.bg,fontFamily:"system-ui,sans-serif"}}>
       <div style={{background:C.b2,borderRadius:16,padding:36,border:`1px solid ${C.bd}`,width:340,textAlign:"center"}}>
         <svg width="48" height="48" viewBox="0 0 40 40" style={{marginBottom:12}}><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
         <div style={{fontSize:18,fontWeight:700,color:C.bl,marginBottom:2}}>Stacy Bomar</div>
         <div style={{fontSize:10,fontWeight:700,color:C.gr,letterSpacing:2,marginBottom:24}}>CONSTRUCTION</div>
-        <input value={pwInput} onChange={e=>{setPwInput(e.target.value);setPwErr(false);}} onKeyDown={e=>{if(e.key==="Enter"){if(pwInput===APP_PW){setAuthed(true);localStorage.setItem("sbc-auth",pwInput);}else setPwErr(true);}}} type="password" placeholder="Enter password" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${pwErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:12}}/>
-        {pwErr&&<div style={{fontSize:12,color:C.rd,marginBottom:8}}>Wrong password</div>}
-        <button onClick={()=>{if(pwInput===APP_PW){setAuthed(true);localStorage.setItem("sbc-auth",pwInput);}else setPwErr(true);}} style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:C.bl,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}>Sign In</button>
+        <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")document.getElementById("sbc-pw")?.focus();}} type="text" autoCapitalize="none" autoCorrect="off" placeholder="Username" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:10}}/>
+        <input id="sbc-pw" value={pwInput} onChange={e=>{setPwInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")doLogin();}} type="password" placeholder="Password" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:12}}/>
+        {loginErr&&<div style={{fontSize:12,color:C.rd,marginBottom:8}}>{loginErr}</div>}
+        <button disabled={signingIn} onClick={doLogin} style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:C.bl,color:"#fff",fontSize:14,fontWeight:600,cursor:signingIn?"default":"pointer",opacity:signingIn?0.7:1}}>
+          {signingIn?"Signing in...":"Sign In"}
+        </button>
       </div>
     </div>
   );
 
-  return <AppMain/>;
+  return <AppMain user={user}/>;
 }
 
-function AppMain(){
+function AppMain({user}){
   const[pg,setPg]=useState("dashboard");
   const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
@@ -146,16 +162,30 @@ function AppMain(){
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
             </button>);})}
         </div>
-        <div style={{padding:"14px 16px",borderTop:`1px solid ${C.bd}`,fontSize:10,color:C.w3,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span>Broward County, FL</span>
-          {!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
-          <div style={{display:"flex",gap:4}}>
-            <button onClick={async()=>{const p=mkSeed();setP(p);setI([]);setCt([]);setResetting(false);}} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4,fontWeight:600}}>Yes, reset all</button>
-            <button onClick={()=>setResetting(false)} style={{background:"none",border:`1px solid ${C.bd}`,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4}}>Cancel</button>
-          </div>}
+        <div style={{padding:"14px 16px",borderTop:`1px solid ${C.bd}`,fontSize:10,color:C.w3}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontWeight:600,color:C.w2}}>{user.displayName||"User"}</span>
+            <button onClick={()=>signOut(auth)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px"}}>Sign Out</button>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>Broward County, FL</span>
+            {!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
+            <div style={{display:"flex",gap:4}}>
+              <button onClick={async()=>{const p=mkSeed();setP(p);setI([]);setCt([]);setResetting(false);}} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4,fontWeight:600}}>Yes, reset all</button>
+              <button onClick={()=>setResetting(false)} style={{background:"none",border:`1px solid ${C.bd}`,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4}}>Cancel</button>
+            </div>}
+          </div>
         </div>
       </div>}
 
+      {mob&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`}}>
+        <div style={{...S.fxc,gap:8}}>
+          <svg width="24" height="24" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
+          <span style={{fontSize:13,fontWeight:700,color:C.bl}}>SBC</span>
+          <span style={{fontSize:11,color:C.w2,fontWeight:500}}>{user.displayName||"User"}</span>
+        </div>
+        <button onClick={()=>signOut(auth)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:11,fontFamily:"inherit",padding:"5px 10px"}}>Sign Out</button>
+      </div>}
       <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"20px 32px"}}>
 
         {pg==="dashboard"&&(()=>{
