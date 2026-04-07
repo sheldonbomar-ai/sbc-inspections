@@ -141,7 +141,7 @@ function AppMain({user}){
   useEffect(()=>{if(ok){const j=JSON.stringify(permits);if(j!==lastFs.current.sYpm){lastFs.current.sYpm=j;svFs("sYpm",permits);localStorage.setItem("sYpm",j);}}},[permits,ok]);
 
   const logAct=(action,detail)=>{try{addDoc(collection(db,"activityLog"),{user:user.displayName||"Unknown",action,detail:detail||"",ts:new Date().toISOString()});}catch(e){console.error("Log error:",e);}};
-  const isAdmin=user.email==="sheldon@sbc.app";
+  const isAdmin=user.email==="sheldon@sbc.app"||user.email==="tim@sbc.app";
   const[actLog,setActLog]=useState([]);
   const loadLog=async()=>{try{const q2=query(collection(db,"activityLog"),orderBy("ts","desc"),limit(200));const snap=await getDocs(q2);setActLog(snap.docs.map(d=>({id:d.id,...d.data()})));}catch(e){console.error("Load log error:",e);}};
 
