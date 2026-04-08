@@ -1049,8 +1049,10 @@ function QuickPermitForm({city,ok}){
 
 function TodoTab({todos,setTodos,proj,mob,logAct,user}){
   const[text,setText]=useState("");const[project,setProject]=useState("");const[priority,setPriority]=useState("Normal");const[filter,setFilter]=useState("active");
-  const add=()=>{if(!text.trim())return;const t={id:uid(),text:text.trim(),done:false,priority,projectId:project||"",createdBy:user.displayName||"User",createdAt:td(),doneAt:""};setTodos(v=>[t,...v]);logAct("added todo",text.trim());setText("");setProject("");setPriority("Normal");};
-  const toggle=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,done:!t.done,doneAt:!t.done?td():""}:t));
+  const me=user.displayName||"User";
+  const add=()=>{if(!text.trim())return;const t={id:uid(),text:text.trim(),done:false,priority,projectId:project||"",assignee:"",createdBy:me,createdAt:td(),doneAt:"",doneBy:""};setTodos(v=>[t,...v]);logAct("added todo",text.trim());setText("");setProject("");setPriority("Normal");};
+  const toggle=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,done:!t.done,doneAt:!t.done?td():"",doneBy:!t.done?me:""}:t));
+  const take=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,assignee:t.assignee===me?"":me}:t));
   const del=(id)=>{const t=todos.find(x=>x.id===id);setTodos(v=>v.filter(x=>x.id!==id));if(t)logAct("deleted todo",t.text);};
   const filtered=filter==="active"?todos.filter(t=>!t.done):filter==="done"?todos.filter(t=>t.done):todos;
   const priColor={High:C.rd,Normal:C.bl,Low:C.w3};
@@ -1080,19 +1082,23 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
     </div>
     {!sortedTodos.length&&<p style={{color:C.w3,fontSize:mob?14:13}}>{filter==="done"?"No completed items.":"Nothing to do — nice!"}</p>}
     <div style={{paddingBottom:mob?70:0}}>
-    {sortedTodos.map(t=>{const pj=proj.find(x=>x.id===t.projectId);return <div key={t.id} style={{...S.cd,marginBottom:8,opacity:t.done?0.55:1,display:"flex",alignItems:"flex-start",gap:mob?14:12,padding:mob?"14px 12px":16}}>
-      <button onClick={()=>toggle(t.id)} style={{marginTop:2,width:mob?28:20,height:mob?28:20,minWidth:mob?28:20,borderRadius:mob?7:5,border:`2px solid ${t.done?C.gr:C.bd}`,background:t.done?C.gr:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
-        {t.done&&<svg width={mob?16:12} height={mob?16:12} viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
-      </button>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:mob?15:13,fontWeight:600,textDecoration:t.done?"line-through":"none",color:t.done?C.w3:C.w,wordBreak:"break-word",lineHeight:1.4}}>{t.text}</div>
-        <div style={{...S.fx,gap:6,marginTop:mob?6:4,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={S.bg(t.priority==="High"?C.rdb:t.priority==="Low"?"transparent":C.bll,priColor[t.priority])}>{t.priority}</span>
-          {pj&&<span style={S.bg(C.bll,C.bl)}>{pj.clientName}</span>}
-          <span style={{fontSize:mob?11:10,color:C.w3}}>{t.createdBy} · {fmt(t.createdAt)}{t.doneAt?" · Done "+fmt(t.doneAt):""}</span>
+    {sortedTodos.map(t=>{const pj=proj.find(x=>x.id===t.projectId);return <div key={t.id} style={{...S.cd,marginBottom:8,opacity:t.done?0.55:1,padding:mob?"14px 12px":16}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:mob?14:12}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:mob?15:13,fontWeight:600,textDecoration:t.done?"line-through":"none",color:t.done?C.w3:C.w,wordBreak:"break-word",lineHeight:1.4}}>{t.text}</div>
+          <div style={{...S.fx,gap:6,marginTop:mob?6:4,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={S.bg(t.priority==="High"?C.rdb:t.priority==="Low"?"transparent":C.bll,priColor[t.priority])}>{t.priority}</span>
+            {pj&&<span style={S.bg(C.bll,C.bl)}>{pj.clientName}</span>}
+            {t.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {t.assignee}</span>}
+            <span style={{fontSize:mob?11:10,color:C.w3}}>{t.createdBy} · {fmt(t.createdAt)}{t.doneAt?` · Done by ${t.doneBy||"?"} ${fmt(t.doneAt)}`:""}</span>
+          </div>
         </div>
+        <button onClick={()=>del(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:mob?18:14,padding:mob?"6px 10px":"2px 6px",flexShrink:0}}>✕</button>
       </div>
-      <button onClick={()=>del(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:mob?18:14,padding:mob?"6px 10px":"2px 6px",flexShrink:0}}>✕</button>
+      <div style={{...S.fx,gap:8,marginTop:mob?10:8}}>
+        {!t.done&&<button onClick={()=>take(t.id)} style={{...S.bs,flex:1,padding:mob?"10px 0":"6px 0",fontSize:mob?13:12,background:t.assignee===me?C.grl:"transparent",color:t.assignee===me?C.gr:C.w2,borderColor:t.assignee===me?C.gr:C.bd}}>{t.assignee===me?"Assigned to me":t.assignee?`Take from ${t.assignee}`:"Take Task"}</button>}
+        <button onClick={()=>toggle(t.id)} style={{...S.btn,flex:1,padding:mob?"10px 0":"6px 0",fontSize:mob?13:12,background:t.done?C.b3:C.gr,color:t.done?C.w2:C.bg}}>{t.done?"Reopen":"Mark Done"}</button>
+      </div>
     </div>;})}
     </div>
   </>;
