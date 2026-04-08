@@ -1061,37 +1061,39 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
       <h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>To Do <span style={{fontSize:13,fontWeight:500,color:C.w3}}>({activeCount} open)</span></h1>
     </div>
     <div style={{...S.cd,marginBottom:16}}>
-      <div style={{...S.fx,gap:8,marginBottom:8,flexWrap:"wrap"}}>
-        <input style={{...S.inp,flex:1,marginBottom:0,minWidth:180}} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} placeholder="What needs to be done?"/>
-        <select style={{...S.inp,width:"auto",marginBottom:0}} value={priority} onChange={e=>setPriority(e.target.value)}>
+      <input style={{...S.inp,marginBottom:8,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} placeholder="What needs to be done?"/>
+      <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"auto auto 1fr auto",gap:8,alignItems:"center"}}>
+        <select style={{...S.inp,marginBottom:0,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={priority} onChange={e=>setPriority(e.target.value)}>
           <option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option>
         </select>
-        <select style={{...S.inp,width:"auto",marginBottom:0}} value={project} onChange={e=>setProject(e.target.value)}>
+        <select style={{...S.inp,marginBottom:0,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={project} onChange={e=>setProject(e.target.value)}>
           <option value="">No project</option>
           {[...proj].sort((a,b)=>a.clientName.localeCompare(b.clientName)).map(p=><option key={p.id} value={p.id}>{p.clientName}</option>)}
         </select>
-        <button style={S.btn} onClick={add}>Add</button>
+        <button style={{...S.btn,padding:mob?"12px 14px":"6px 14px",fontSize:mob?14:12,gridColumn:mob?"1 / -1":"auto"}} onClick={add}>Add To Do</button>
       </div>
     </div>
     <div style={{...S.fx,gap:6,marginBottom:14}}>
       {[["active","Active ("+activeCount+")"],["done","Done ("+doneCount+")"],["all","All"]].map(([k,lb])=>
-        <button key={k} onClick={()=>setFilter(k)} style={{...S.bs,background:filter===k?C.bll:"transparent",color:filter===k?C.bl:C.w3,borderColor:filter===k?C.bl:C.bd}}>{lb}</button>
+        <button key={k} onClick={()=>setFilter(k)} style={{...S.bs,background:filter===k?C.bll:"transparent",color:filter===k?C.bl:C.w3,borderColor:filter===k?C.bl:C.bd,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}}>{lb}</button>
       )}
     </div>
-    {!sortedTodos.length&&<p style={{color:C.w3,fontSize:13}}>{filter==="done"?"No completed items.":"Nothing to do — nice!"}</p>}
-    {sortedTodos.map(t=>{const pj=proj.find(x=>x.id===t.projectId);return <div key={t.id} style={{...S.cd,marginBottom:8,opacity:t.done?0.55:1,display:"flex",alignItems:"flex-start",gap:12}}>
-      <button onClick={()=>toggle(t.id)} style={{marginTop:2,width:20,height:20,minWidth:20,borderRadius:5,border:`2px solid ${t.done?C.gr:C.bd}`,background:t.done?C.gr:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
-        {t.done&&<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
+    {!sortedTodos.length&&<p style={{color:C.w3,fontSize:mob?14:13}}>{filter==="done"?"No completed items.":"Nothing to do — nice!"}</p>}
+    <div style={{paddingBottom:mob?70:0}}>
+    {sortedTodos.map(t=>{const pj=proj.find(x=>x.id===t.projectId);return <div key={t.id} style={{...S.cd,marginBottom:8,opacity:t.done?0.55:1,display:"flex",alignItems:"flex-start",gap:mob?14:12,padding:mob?"14px 12px":16}}>
+      <button onClick={()=>toggle(t.id)} style={{marginTop:2,width:mob?28:20,height:mob?28:20,minWidth:mob?28:20,borderRadius:mob?7:5,border:`2px solid ${t.done?C.gr:C.bd}`,background:t.done?C.gr:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+        {t.done&&<svg width={mob?16:12} height={mob?16:12} viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
       </button>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:13,fontWeight:600,textDecoration:t.done?"line-through":"none",color:t.done?C.w3:C.w,wordBreak:"break-word"}}>{t.text}</div>
-        <div style={{...S.fx,gap:6,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{fontSize:mob?15:13,fontWeight:600,textDecoration:t.done?"line-through":"none",color:t.done?C.w3:C.w,wordBreak:"break-word",lineHeight:1.4}}>{t.text}</div>
+        <div style={{...S.fx,gap:6,marginTop:mob?6:4,flexWrap:"wrap",alignItems:"center"}}>
           <span style={S.bg(t.priority==="High"?C.rdb:t.priority==="Low"?"transparent":C.bll,priColor[t.priority])}>{t.priority}</span>
           {pj&&<span style={S.bg(C.bll,C.bl)}>{pj.clientName}</span>}
-          <span style={{fontSize:10,color:C.w3}}>{t.createdBy} · {fmt(t.createdAt)}{t.doneAt?" · Done "+fmt(t.doneAt):""}</span>
+          <span style={{fontSize:mob?11:10,color:C.w3}}>{t.createdBy} · {fmt(t.createdAt)}{t.doneAt?" · Done "+fmt(t.doneAt):""}</span>
         </div>
       </div>
-      <button onClick={()=>del(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:14,padding:"2px 6px",flexShrink:0}}>✕</button>
+      <button onClick={()=>del(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:mob?18:14,padding:mob?"6px 10px":"2px 6px",flexShrink:0}}>✕</button>
     </div>;})}
+    </div>
   </>;
 }
