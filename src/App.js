@@ -104,7 +104,7 @@ export default function App(){
 
 function AppMain({user}){
   const[pg,setPg]=useState("dashboard");
-  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);
+  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
@@ -114,7 +114,7 @@ function AppMain({user}){
   const lastFs=useRef({});
 
   useEffect(()=>{
-    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits]];
+    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos]];
     let loaded=0;
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
@@ -139,6 +139,7 @@ function AppMain({user}){
   useEffect(()=>{if(ok){const j=JSON.stringify(ct);if(j!==lastFs.current.sYc){lastFs.current.sYc=j;svFs("sYc",ct);localStorage.setItem("sYc",j);}}},[ct,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(sched);if(j!==lastFs.current.sYs){lastFs.current.sYs=j;svFs("sYs",sched);localStorage.setItem("sYs",j);}}},[sched,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(permits);if(j!==lastFs.current.sYpm){lastFs.current.sYpm=j;svFs("sYpm",permits);localStorage.setItem("sYpm",j);}}},[permits,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(todos);if(j!==lastFs.current.sYtd){lastFs.current.sYtd=j;svFs("sYtd",todos);localStorage.setItem("sYtd",j);}}},[todos,ok]);
 
   const logAct=(action,detail)=>{try{addDoc(collection(db,"activityLog"),{user:user.displayName||"Unknown",action,detail:detail||"",ts:new Date().toISOString()});}catch(e){console.error("Log error:",e);}};
   const isAdmin=user.email==="sheldon@sbc.app"||user.email==="tim@sbc.app";
@@ -153,9 +154,9 @@ function AppMain({user}){
   const pendTotal=pendCO+pendRev;
   const projWithIssues=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open"));
 
-  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"]];
+  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"]]:navBase;
-  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"]];
+  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const mobNavItems=isAdmin?[...mobBase,["activity","Log"]]:mobBase;
 
   return(
@@ -167,11 +168,12 @@ function AppMain({user}){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>};return(
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
               {id==="projects"&&pendTotal>0&&<span style={{...S.bg(C.rd,"#fff"),marginLeft:"auto"}}>{pendTotal}</span>}
+              {id==="todos"&&todos.filter(t=>!t.done).length>0&&<span style={{...S.bg(C.orb,C.or),marginLeft:"auto"}}>{todos.filter(t=>!t.done).length}</span>}
             </button>);})}
         </div>
         <div style={{padding:"14px 16px",borderTop:`1px solid ${C.bd}`,fontSize:10,color:C.w3}}>
@@ -359,6 +361,7 @@ function AppMain({user}){
 
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct}/>}
+        {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} mob={mob} logAct={logAct} user={user}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
           if(!actLog.length)loadLog();
@@ -392,7 +395,7 @@ function AppMain({user}){
       </div></div>
       {mob&&<div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {mobNavItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="activity"?"📝":"📅"}</span>
+          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
           {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
           {id==="projects"&&pendTotal>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.rd,color:"#fff",borderRadius:8,padding:"1px 4px"}}>{pendTotal}</span>}
@@ -1042,4 +1045,53 @@ function QuickPermitForm({city,ok}){
     <input style={S.inp} value={f.portalUrl} onChange={e=>s({...f,portalUrl:e.target.value})} placeholder="https://..."/>
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>ok(f)}>Add Permit</button></div>
   </div>;
+}
+
+function TodoTab({todos,setTodos,proj,mob,logAct,user}){
+  const[text,setText]=useState("");const[project,setProject]=useState("");const[priority,setPriority]=useState("Normal");const[filter,setFilter]=useState("active");
+  const add=()=>{if(!text.trim())return;const t={id:uid(),text:text.trim(),done:false,priority,projectId:project||"",createdBy:user.displayName||"User",createdAt:td(),doneAt:""};setTodos(v=>[t,...v]);logAct("added todo",text.trim());setText("");setProject("");setPriority("Normal");};
+  const toggle=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,done:!t.done,doneAt:!t.done?td():""}:t));
+  const del=(id)=>{const t=todos.find(x=>x.id===id);setTodos(v=>v.filter(x=>x.id!==id));if(t)logAct("deleted todo",t.text);};
+  const filtered=filter==="active"?todos.filter(t=>!t.done):filter==="done"?todos.filter(t=>t.done):todos;
+  const priColor={High:C.rd,Normal:C.bl,Low:C.w3};
+  const sortedTodos=[...filtered].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;const po={High:0,Normal:1,Low:2};return(po[a.priority]||1)-(po[b.priority]||1);});
+  const activeCount=todos.filter(t=>!t.done).length;const doneCount=todos.filter(t=>t.done).length;
+  return <>
+    <div style={{...S.fxsb,marginBottom:16,alignItems:"center",flexWrap:"wrap",gap:8}}>
+      <h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>To Do <span style={{fontSize:13,fontWeight:500,color:C.w3}}>({activeCount} open)</span></h1>
+    </div>
+    <div style={{...S.cd,marginBottom:16}}>
+      <div style={{...S.fx,gap:8,marginBottom:8,flexWrap:"wrap"}}>
+        <input style={{...S.inp,flex:1,marginBottom:0,minWidth:180}} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} placeholder="What needs to be done?"/>
+        <select style={{...S.inp,width:"auto",marginBottom:0}} value={priority} onChange={e=>setPriority(e.target.value)}>
+          <option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option>
+        </select>
+        <select style={{...S.inp,width:"auto",marginBottom:0}} value={project} onChange={e=>setProject(e.target.value)}>
+          <option value="">No project</option>
+          {[...proj].sort((a,b)=>a.clientName.localeCompare(b.clientName)).map(p=><option key={p.id} value={p.id}>{p.clientName}</option>)}
+        </select>
+        <button style={S.btn} onClick={add}>Add</button>
+      </div>
+    </div>
+    <div style={{...S.fx,gap:6,marginBottom:14}}>
+      {[["active","Active ("+activeCount+")"],["done","Done ("+doneCount+")"],["all","All"]].map(([k,lb])=>
+        <button key={k} onClick={()=>setFilter(k)} style={{...S.bs,background:filter===k?C.bll:"transparent",color:filter===k?C.bl:C.w3,borderColor:filter===k?C.bl:C.bd}}>{lb}</button>
+      )}
+    </div>
+    {!sortedTodos.length&&<p style={{color:C.w3,fontSize:13}}>{filter==="done"?"No completed items.":"Nothing to do — nice!"}</p>}
+    {sortedTodos.map(t=>{const pj=proj.find(x=>x.id===t.projectId);return <div key={t.id} style={{...S.cd,marginBottom:8,opacity:t.done?0.55:1,display:"flex",alignItems:"flex-start",gap:12}}>
+      <button onClick={()=>toggle(t.id)} style={{marginTop:2,width:20,height:20,minWidth:20,borderRadius:5,border:`2px solid ${t.done?C.gr:C.bd}`,background:t.done?C.gr:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+        {t.done&&<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
+      </button>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:600,textDecoration:t.done?"line-through":"none",color:t.done?C.w3:C.w,wordBreak:"break-word"}}>{t.text}</div>
+        <div style={{...S.fx,gap:6,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={S.bg(t.priority==="High"?C.rdb:t.priority==="Low"?"transparent":C.bll,priColor[t.priority])}>{t.priority}</span>
+          {pj&&<span style={S.bg(C.bll,C.bl)}>{pj.clientName}</span>}
+          <span style={{fontSize:10,color:C.w3}}>{t.createdBy} · {fmt(t.createdAt)}{t.doneAt?" · Done "+fmt(t.doneAt):""}</span>
+        </div>
+      </div>
+      <button onClick={()=>del(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:14,padding:"2px 6px",flexShrink:0}}>✕</button>
+    </div>;})}
+  </>;
 }
