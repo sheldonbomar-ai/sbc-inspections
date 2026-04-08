@@ -346,8 +346,8 @@ function AppMain({user}){
           <button style={{...S.bs,marginBottom:14}} onClick={()=>sSP(null)}>← Back</button>
           <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</p></div><div style={{...S.fx,gap:6}}><button style={S.bs} onClick={()=>sEP(p)}>Edit</button><button style={S.btn} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
           <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
-          <RevisionSection revisions={p.revisions||[]} onUpdate={revs=>setP(v=>v.map(x=>x.id===selP?{...x,revisions:revs}:x))} logAct={logAct} projectName={p.clientName} mob={mob} inspections={insp.filter(i=>i.projectId===selP)} ct={ct}/>
-          <COSection changeOrders={p.changeOrders||[]} onUpdate={cos=>setP(v=>v.map(x=>x.id===selP?{...x,changeOrders:cos}:x))} logAct={logAct} projectName={p.clientName} mob={mob}/>
+          <RevisionSection revisions={p.revisions||[]} onUpdate={revs=>setP(v=>v.map(x=>x.id===selP?{...x,revisions:revs}:x))} logAct={logAct} projectName={p.clientName} mob={mob} inspections={insp.filter(i=>i.projectId===selP)} ct={ct} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
+          <COSection changeOrders={p.changeOrders||[]} onUpdate={cos=>setP(v=>v.map(x=>x.id===selP?{...x,changeOrders:cos}:x))} logAct={logAct} projectName={p.clientName} mob={mob} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
           {p.scopeNotes&&<div style={S.cd}><p style={{margin:0,fontSize:12,color:C.w2,lineHeight:1.5}}>{p.scopeNotes}</p></div>}
           <div style={S.cd}><h4 style={{fontSize:13,fontWeight:700,marginBottom:8}}>Notes</h4>
             {(p.comments||[]).map(c=><div key={c.id} style={{padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{fontSize:11,color:C.w2}}>{c.text}</div><div style={{fontSize:9,color:C.w3,marginTop:2}}>{fmt(c.date)}</div></div>)}
@@ -405,12 +405,13 @@ function AppMain({user}){
   );
 }
 
-function RevisionSection({revisions,onUpdate,logAct,projectName,mob,inspections,ct}){
+function RevisionSection({revisions,onUpdate,logAct,projectName,mob,inspections,ct,todos,setTodos,user,projectId}){
   const[adding,setAdding]=useState(false);const[desc,setDesc]=useState("");const[insp2,setInsp2]=useState("");const[notes,setNotes]=useState("");
   const open=revisions.filter(r=>r.status==="Open");
   const resub=revisions.filter(r=>r.status==="Resubmitted");
   const resolved=revisions.filter(r=>r.status==="Resolved");
-  const addRev=()=>{if(!desc.trim())return;const r={id:uid(),description:desc.trim(),inspection:insp2,notes:notes.trim(),status:"Open",createdAt:td()};onUpdate([...revisions,r]);if(logAct)logAct("added revision",`"${desc.trim()}" for ${projectName}`);setDesc("");setInsp2("");setNotes("");setAdding(false);};
+  const linkedTodos=(revId)=>(todos||[]).filter(t=>t.linkedRevId===revId);
+  const addRev=()=>{if(!desc.trim())return;const revId=uid();const r={id:revId,description:desc.trim(),inspection:insp2,notes:notes.trim(),status:"Open",createdAt:td()};onUpdate([...revisions,r]);if(logAct)logAct("added revision",`"${desc.trim()}" for ${projectName}`);if(setTodos){const t={id:uid(),text:`Revision: ${desc.trim()} — ${projectName}`,done:false,priority:"High",projectId:projectId||"",assignee:"",createdBy:user?.displayName||"System",createdAt:td(),doneAt:"",doneBy:"",linkedRevId:revId,linkedType:"revision"};setTodos(v=>[t,...v]);}setDesc("");setInsp2("");setNotes("");setAdding(false);};
   const updateStatus=(id,status)=>{onUpdate(revisions.map(r=>r.id===id?{...r,status,resolvedAt:status==="Resolved"?td():""}:r));if(logAct)logAct(`${status.toLowerCase()} revision`,`for ${projectName}`);};
   const delRev=(id)=>{onUpdate(revisions.filter(r=>r.id!==id));if(logAct)logAct("removed revision",projectName);};
   const hasOpen=open.length>0;
@@ -433,16 +434,17 @@ function RevisionSection({revisions,onUpdate,logAct,projectName,mob,inspections,
       <input style={{...S.inp,fontSize:mob?13:12}} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Notes (optional, e.g. city comments reference #)"/>
       <button onClick={addRev} style={{...S.btn,width:"100%",padding:mob?"10px":"6px 14px"}}>Add Revision</button>
     </div>}
-    {open.map(r=><div key={r.id} style={{background:C.orb,borderRadius:8,padding:mob?"12px":"8px 10px",marginBottom:6,border:`1px solid ${C.or}33`}}>
+    {open.map(r=>{const lt=linkedTodos(r.id);return <div key={r.id} style={{background:C.orb,borderRadius:8,padding:mob?"12px":"8px 10px",marginBottom:6,border:`1px solid ${C.or}33`}}>
       <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:mob?13:12,fontWeight:700,color:C.or}}>{r.description}</span><span style={{fontSize:10,color:C.w3}}>{fmt(r.createdAt)}</span></div>
       {r.inspection&&<div style={{fontSize:11,color:C.rd,fontWeight:600,marginBottom:2}}>Failed: {r.inspection}</div>}
       {r.notes&&<div style={{fontSize:11,color:C.w3,marginBottom:4}}>{r.notes}</div>}
+      {lt.length>0&&<div style={{marginTop:4,marginBottom:4}}>{lt.map(t=><div key={t.id} style={{fontSize:10,color:t.done?C.gr:C.or,display:"flex",gap:4,alignItems:"center"}}><span>{t.done?"✓":"○"}</span><span style={{textDecoration:t.done?"line-through":"none"}}>{t.text}</span>{t.assignee&&<span style={{color:C.w3}}>— {t.assignee}</span>}</div>)}</div>}
       <div style={{display:"flex",gap:6,marginTop:6}}>
         <button onClick={()=>updateStatus(r.id,"Resubmitted")} style={{...S.btn,fontSize:10,padding:mob?"6px 12px":"4px 10px",background:C.bl}}>Resubmitted</button>
         <button onClick={()=>updateStatus(r.id,"Resolved")} style={{...S.btn,fontSize:10,padding:mob?"6px 12px":"4px 10px",background:C.gr,color:C.bg}}>Resolved</button>
         <button onClick={()=>delRev(r.id)} style={{...S.bs,fontSize:10,padding:mob?"6px 12px":"4px 10px",color:C.rd,marginLeft:"auto"}}>Delete</button>
       </div>
-    </div>)}
+    </div>;})}
     {resub.length>0&&<><div style={{fontSize:10,fontWeight:600,color:C.bl,marginTop:6,marginBottom:4,letterSpacing:0.5}}>RESUBMITTED</div>
       {resub.map(r=><div key={r.id} style={{background:C.bll,borderRadius:8,padding:mob?"10px":"6px 10px",marginBottom:4,border:`1px solid ${C.bl}33`}}>
         <div style={{...S.fxsb}}><span style={{fontSize:11,fontWeight:600,color:C.bl}}>{r.description}</span><span style={{fontSize:10,color:C.w3}}>{fmt(r.createdAt)}</span></div>
@@ -455,7 +457,7 @@ function RevisionSection({revisions,onUpdate,logAct,projectName,mob,inspections,
     {resolved.length>0&&<details style={{marginTop:6}}>
       <summary style={{fontSize:11,color:C.w3,cursor:"pointer",padding:"4px 0"}}>Resolved ({resolved.length})</summary>
       {resolved.map(r=><div key={r.id} style={{padding:"6px 0",borderBottom:`1px solid ${C.bd}`,opacity:0.6}}>
-        <div style={{...S.fxsb}}><span style={{fontSize:11,color:C.w2}}>{r.description}</span><span style={S.bg(C.grl,C.gr)}>Resolved</span></div>
+        <div style={{...S.fxsb,alignItems:"center"}}><span style={{fontSize:11,color:C.w2}}>{r.description}</span><div style={{...S.fx,gap:6,alignItems:"center"}}><span style={S.bg(C.grl,C.gr)}>Resolved</span><button onClick={()=>updateStatus(r.id,"Open")} style={{...S.bs,fontSize:9,padding:"3px 8px"}}>Reopen</button></div></div>
         {r.inspection&&<span style={{fontSize:10,color:C.w3}}>{r.inspection}</span>}
       </div>)}
     </details>}
@@ -463,11 +465,12 @@ function RevisionSection({revisions,onUpdate,logAct,projectName,mob,inspections,
   </div>;
 }
 
-function COSection({changeOrders,onUpdate,logAct,projectName,mob}){
+function COSection({changeOrders,onUpdate,logAct,projectName,mob,todos,setTodos,user,projectId}){
   const[adding,setAdding]=useState(false);const[desc,setDesc]=useState("");const[cost,setCost]=useState("");const[reason,setReason]=useState("");
   const pending=changeOrders.filter(co=>co.status==="Pending");
   const resolved=changeOrders.filter(co=>co.status!=="Pending");
-  const addCO=()=>{if(!desc.trim())return;const co={id:uid(),description:desc.trim(),cost:cost.trim(),reason:reason.trim(),status:"Pending",createdAt:td()};onUpdate([...changeOrders,co]);if(logAct)logAct("added change order",`"${desc.trim()}" for ${projectName}`);setDesc("");setCost("");setReason("");setAdding(false);};
+  const linkedTodos=(coId)=>(todos||[]).filter(t=>t.linkedCOId===coId);
+  const addCO=()=>{if(!desc.trim())return;const coId=uid();const co={id:coId,description:desc.trim(),cost:cost.trim(),reason:reason.trim(),status:"Pending",createdAt:td()};onUpdate([...changeOrders,co]);if(logAct)logAct("added change order",`"${desc.trim()}" for ${projectName}`);if(setTodos){const t={id:uid(),text:`CO: ${desc.trim()} — ${projectName}`,done:false,priority:"High",projectId:projectId||"",assignee:"",createdBy:user?.displayName||"System",createdAt:td(),doneAt:"",doneBy:"",linkedCOId:coId,linkedType:"changeOrder"};setTodos(v=>[t,...v]);}setDesc("");setCost("");setReason("");setAdding(false);};
   const updateStatus=(id,status)=>{onUpdate(changeOrders.map(co=>co.id===id?{...co,status,resolvedAt:status!=="Pending"?td():""}:co));if(logAct)logAct(`${status.toLowerCase()} change order`,`for ${projectName}`);};
   const delCO=(id)=>{onUpdate(changeOrders.filter(co=>co.id!==id));if(logAct)logAct("removed change order",projectName);};
   const hasPending=pending.length>0;
@@ -487,20 +490,21 @@ function COSection({changeOrders,onUpdate,logAct,projectName,mob}){
       </div>
       <button onClick={addCO} style={{...S.btn,width:"100%",padding:mob?"10px":"6px 14px"}}>Add Change Order</button>
     </div>}
-    {pending.map(co=><div key={co.id} style={{background:C.rdb,borderRadius:8,padding:mob?"12px":"8px 10px",marginBottom:6,border:`1px solid ${C.rd}33`}}>
+    {pending.map(co=>{const lt=linkedTodos(co.id);return <div key={co.id} style={{background:C.rdb,borderRadius:8,padding:mob?"12px":"8px 10px",marginBottom:6,border:`1px solid ${C.rd}33`}}>
       <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:mob?13:12,fontWeight:700,color:C.rd}}>{co.description}</span><span style={{fontSize:10,color:C.w3}}>{fmt(co.createdAt)}</span></div>
       {co.cost&&<div style={{fontSize:11,color:C.or,fontWeight:600,marginBottom:2}}>Cost: ${co.cost}</div>}
       {co.reason&&<div style={{fontSize:11,color:C.w3,marginBottom:4}}>{co.reason}</div>}
+      {lt.length>0&&<div style={{marginTop:4,marginBottom:4}}>{lt.map(t=><div key={t.id} style={{fontSize:10,color:t.done?C.gr:C.rd,display:"flex",gap:4,alignItems:"center"}}><span>{t.done?"✓":"○"}</span><span style={{textDecoration:t.done?"line-through":"none"}}>{t.text}</span>{t.assignee&&<span style={{color:C.w3}}>— {t.assignee}</span>}</div>)}</div>}
       <div style={{display:"flex",gap:6,marginTop:6}}>
         <button onClick={()=>updateStatus(co.id,"Approved")} style={{...S.btn,fontSize:10,padding:mob?"6px 12px":"4px 10px",background:C.gr,color:C.bg}}>Approve</button>
         <button onClick={()=>updateStatus(co.id,"Completed")} style={{...S.btn,fontSize:10,padding:mob?"6px 12px":"4px 10px",background:C.bl}}>Complete</button>
         <button onClick={()=>delCO(co.id)} style={{...S.bs,fontSize:10,padding:mob?"6px 12px":"4px 10px",color:C.rd,marginLeft:"auto"}}>Delete</button>
       </div>
-    </div>)}
+    </div>;})}
     {resolved.length>0&&<details style={{marginTop:pending.length?6:0}}>
       <summary style={{fontSize:11,color:C.w3,cursor:"pointer",padding:"4px 0"}}>Resolved ({resolved.length})</summary>
       {resolved.map(co=><div key={co.id} style={{padding:"6px 0",borderBottom:`1px solid ${C.bd}`,opacity:0.6}}>
-        <div style={{...S.fxsb}}><span style={{fontSize:11,color:C.w2}}>{co.description}</span><span style={S.bg(co.status==="Approved"?C.grl:C.bll,co.status==="Approved"?C.gr:C.bl)}>{co.status}</span></div>
+        <div style={{...S.fxsb,alignItems:"center"}}><span style={{fontSize:11,color:C.w2}}>{co.description}</span><div style={{...S.fx,gap:6,alignItems:"center"}}><span style={S.bg(co.status==="Approved"?C.grl:C.bll,co.status==="Approved"?C.gr:C.bl)}>{co.status}</span><button onClick={()=>updateStatus(co.id,"Pending")} style={{...S.bs,fontSize:9,padding:"3px 8px"}}>Reopen</button></div></div>
         {co.cost&&<span style={{fontSize:10,color:C.w3}}>${co.cost}</span>}
       </div>)}
     </details>}
@@ -1048,9 +1052,11 @@ function QuickPermitForm({city,ok}){
 }
 
 function TodoTab({todos,setTodos,proj,mob,logAct,user}){
-  const[text,setText]=useState("");const[project,setProject]=useState("");const[priority,setPriority]=useState("Normal");const[filter,setFilter]=useState("active");
+  const[text,setText]=useState("");const[project,setProject]=useState("");const[priority,setPriority]=useState("Normal");const[filter,setFilter]=useState("active");const[linkTo,setLinkTo]=useState("");
   const me=user.displayName||"User";
-  const add=()=>{if(!text.trim())return;const t={id:uid(),text:text.trim(),done:false,priority,projectId:project||"",assignee:"",createdBy:me,createdAt:td(),doneAt:"",doneBy:""};setTodos(v=>[t,...v]);logAct("added todo",text.trim());setText("");setProject("");setPriority("Normal");};
+  const allLinks=[];
+  proj.forEach(p=>{(p.revisions||[]).filter(r=>r.status!=="Resolved").forEach(r=>allLinks.push({type:"revision",id:r.id,label:`Revision: ${r.description} — ${p.clientName}`,projectId:p.id}));(p.changeOrders||[]).filter(co=>co.status==="Pending").forEach(co=>allLinks.push({type:"changeOrder",id:co.id,label:`CO: ${co.description} — ${p.clientName}`,projectId:p.id}));});
+  const add=()=>{if(!text.trim())return;const link=allLinks.find(l=>`${l.type}:${l.id}`===linkTo);const t={id:uid(),text:text.trim(),done:false,priority,projectId:link?link.projectId:(project||""),assignee:"",createdBy:me,createdAt:td(),doneAt:"",doneBy:"",linkedRevId:link&&link.type==="revision"?link.id:"",linkedCOId:link&&link.type==="changeOrder"?link.id:"",linkedType:link?link.type:""};setTodos(v=>[t,...v]);logAct("added todo",text.trim());setText("");setProject("");setPriority("Normal");setLinkTo("");};
   const toggle=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,done:!t.done,doneAt:!t.done?td():"",doneBy:!t.done?me:""}:t));
   const take=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,assignee:t.assignee===me?"":me}:t));
   const del=(id)=>{const t=todos.find(x=>x.id===id);setTodos(v=>v.filter(x=>x.id!==id));if(t)logAct("deleted todo",t.text);};
@@ -1074,6 +1080,10 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
         </select>
         <button style={{...S.btn,padding:mob?"12px 14px":"6px 14px",fontSize:mob?14:12,gridColumn:mob?"1 / -1":"auto"}} onClick={add}>Add To Do</button>
       </div>
+      {allLinks.length>0&&<select style={{...S.inp,marginBottom:0,marginTop:8,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={linkTo} onChange={e=>setLinkTo(e.target.value)}>
+        <option value="">Link to revision or change order (optional)</option>
+        {allLinks.map(l=><option key={`${l.type}:${l.id}`} value={`${l.type}:${l.id}`}>{l.label}</option>)}
+      </select>}
     </div>
     <div style={{...S.fx,gap:6,marginBottom:14}}>
       {[["active","Active ("+activeCount+")"],["done","Done ("+doneCount+")"],["all","All"]].map(([k,lb])=>
@@ -1090,6 +1100,8 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
             <span style={S.bg(t.priority==="High"?C.rdb:t.priority==="Low"?"transparent":C.bll,priColor[t.priority])}>{t.priority}</span>
             {pj&&<span style={S.bg(C.bll,C.bl)}>{pj.clientName}</span>}
             {t.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {t.assignee}</span>}
+            {t.linkedType==="revision"&&<span style={S.bg(C.orb,C.or)}>↺ Revision</span>}
+            {t.linkedType==="changeOrder"&&<span style={S.bg(C.rdb,C.rd)}>⚠ CO</span>}
             <span style={{fontSize:mob?11:10,color:C.w3}}>{t.createdBy} · {fmt(t.createdAt)}{t.doneAt?` · Done by ${t.doneBy||"?"} ${fmt(t.doneAt)}`:""}</span>
           </div>
         </div>
