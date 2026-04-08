@@ -53,11 +53,11 @@ const S={
   app:{display:"flex",height:"100vh",fontFamily:"system-ui,sans-serif",background:C.bg,color:C.w,overflow:"hidden"},
   side:{width:240,minWidth:240,background:C.b2,borderRight:`1px solid ${C.bd}`,display:"flex",flexDirection:"column",padding:"16px 0"},
   nav:a=>({display:"flex",alignItems:"center",gap:10,padding:"12px 16px",border:"none",background:a?C.bll:"transparent",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:a?700:500,color:a?C.bl:C.w3,width:"100%",textAlign:"left",marginBottom:4,fontFamily:"inherit",transition:"background 0.15s",letterSpacing:0.3}),
-  cd:{background:C.b2,borderRadius:10,padding:16,border:`1px solid ${C.bd}`,marginBottom:12},
-  inp:{width:"100%",padding:"8px 12px",borderRadius:7,border:`1px solid ${C.bd}`,background:C.bg,color:C.w,fontSize:12,outline:"none",fontFamily:"inherit",marginBottom:10},
-  btn:{padding:"6px 14px",borderRadius:6,border:"none",background:C.bl,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"},
-  bs:{padding:"6px 14px",borderRadius:6,border:`1px solid ${C.bd}`,background:C.b2,color:C.w2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"},
-  bg:(b,c)=>({fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:5,background:b,color:c,whiteSpace:"nowrap"}),
+  cd:{background:C.b2,borderRadius:10,padding:18,border:`1px solid ${C.bd}`,marginBottom:14,transition:"box-shadow 0.15s"},
+  inp:{width:"100%",padding:"10px 14px",borderRadius:7,border:`1px solid ${C.bd}`,background:C.bg,color:C.w,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:10,transition:"border-color 0.15s"},
+  btn:{padding:"8px 16px",borderRadius:6,border:"none",background:C.bl,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"opacity 0.15s"},
+  bs:{padding:"8px 16px",borderRadius:6,border:`1px solid ${C.bd}`,background:C.b2,color:C.w2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"background 0.15s"},
+  bg:(b,c)=>({fontSize:11,fontWeight:600,padding:"3px 9px",borderRadius:5,background:b,color:c,whiteSpace:"nowrap"}),
   hdr:{display:"grid",gridTemplateColumns:"130px 90px 130px 1fr 160px",gap:6,padding:"8px 14px",alignItems:"center"},
   rw:{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.bd}`},
   lb:{fontSize:10,fontWeight:600,color:C.w3,textTransform:"uppercase",letterSpacing:1,marginBottom:3},
@@ -200,7 +200,7 @@ function AppMain({user}){
         </div>
         <button onClick={()=>signOut(auth)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:11,fontFamily:"inherit",padding:"5px 10px"}}>Sign Out</button>
       </div>}
-      <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"20px 32px"}}>
+      <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"24px 40px",maxWidth:mob?"100%":1400}}>
 
         {pg==="dashboard"&&(()=>{
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
@@ -212,23 +212,23 @@ function AppMain({user}){
           const isRev=s=>(s||"").includes("REVISION");
           const revCount=active.filter(p=>isRev(p.status)).length;
           return <>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:16}}>
+            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
-                <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`}}><div style={{fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:C.w3}}>{l}</div></div>)}
+                <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
             </div>
-            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:16}}>
+            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
               {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Comments Need Response",needResp?C.or:C.w3],[pend30,"Pending > 30 Days",pend30?C.rd:C.w3]].map(([v,l,c],i)=>
-                <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer"}} onClick={()=>setPg("permits")}><div style={{fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:C.w3}}>{l}</div></div>)}
+                <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer",padding:mob?16:20}} onClick={()=>setPg("permits")}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
             </div>;})()}
 
-            {pendTotal>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.rd}`,marginBottom:16,background:C.rdb}}>
-              <div style={{...S.fxsb,marginBottom:8}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:20}}>⚠</span><span style={{fontSize:14,fontWeight:700,color:C.rd}}>REVISIONS & CHANGE ORDERS</span></div><span style={{fontSize:24,fontWeight:700,color:C.rd}}>{pendTotal}</span></div>
-              {projWithIssues.map(p=>{const pco=(p.changeOrders||[]).filter(co=>co.status==="Pending");const prev=(p.revisions||[]).filter(r=>r.status==="Open");return <div key={p.id} style={{padding:"6px 0",borderTop:`1px solid ${C.bd}`}}>
-                <span style={{fontSize:12,fontWeight:600,color:C.w,cursor:"pointer",textDecoration:"underline"}} onClick={()=>{sSP(p.id);setPg("projects");}}>{p.clientName}</span>
-                {prev.length>0&&<span style={{fontSize:11,color:C.or,marginLeft:8}}>{prev.length} revision{prev.length>1?"s":""}</span>}
-                {pco.length>0&&<span style={{fontSize:11,color:C.rd,marginLeft:8}}>{pco.length} CO</span>}
-                {prev.map(r=><div key={r.id} style={{fontSize:10,color:C.or,marginLeft:16,marginTop:2}}>↺ {r.description}{r.inspection?` (${r.inspection})`:""}</div>)}
-                {pco.map(co=><div key={co.id} style={{fontSize:10,color:C.w3,marginLeft:16,marginTop:2}}>$ {co.description}{co.cost?` ($${co.cost})`:""}</div>)}
+            {pendTotal>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.rd}`,marginBottom:20,background:C.rdb,padding:mob?16:20}}>
+              <div style={{...S.fxsb,marginBottom:10}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:22}}>⚠</span><span style={{fontSize:16,fontWeight:700,color:C.rd}}>REVISIONS & CHANGE ORDERS</span></div><span style={{fontSize:28,fontWeight:700,color:C.rd}}>{pendTotal}</span></div>
+              {projWithIssues.map(p=>{const pco=(p.changeOrders||[]).filter(co=>co.status==="Pending");const prev=(p.revisions||[]).filter(r=>r.status==="Open");return <div key={p.id} style={{padding:"8px 0",borderTop:`1px solid ${C.bd}`}}>
+                <span style={{fontSize:13,fontWeight:600,color:C.w,cursor:"pointer",textDecoration:"underline"}} onClick={()=>{sSP(p.id);setPg("projects");}}>{p.clientName}</span>
+                {prev.length>0&&<span style={{fontSize:12,color:C.or,marginLeft:8}}>{prev.length} revision{prev.length>1?"s":""}</span>}
+                {pco.length>0&&<span style={{fontSize:12,color:C.rd,marginLeft:8}}>{pco.length} CO</span>}
+                {prev.map(r=><div key={r.id} style={{fontSize:11,color:C.or,marginLeft:16,marginTop:3}}>↺ {r.description}{r.inspection?` (${r.inspection})`:""}</div>)}
+                {pco.map(co=><div key={co.id} style={{fontSize:11,color:C.w3,marginLeft:16,marginTop:3}}>$ {co.description}{co.cost?` ($${co.cost})`:""}</div>)}
               </div>;})}
             </div>}
 
@@ -243,21 +243,21 @@ function AppMain({user}){
               </div>)}
               {closed.length>0&&<details style={{marginTop:6,padding:"0 4px"}}><summary style={{fontSize:11,color:C.w3,cursor:"pointer",padding:"6px 0"}}>Closed ({closed.length})</summary>{closed.map(p=><div key={p.id} style={{padding:"6px 12px",borderBottom:`1px solid ${C.bd}`,opacity:0.5}}><span style={{fontSize:12,color:C.w3}}>{p.clientName}</span><span style={{fontSize:10,color:C.w3,marginLeft:8}}>{p.city}</span></div>)}</details>}
               </div>
-              :<table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              :<table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                 <thead><tr style={{background:C.b3}}>
-                  <th style={{padding:"8px 12px",textAlign:"left",fontWeight:700,color:C.w,borderBottom:`1px solid ${C.bd}`,position:"sticky",left:0,background:C.b3,minWidth:110}}>NAME</th>
-                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700,color:C.w,borderBottom:`1px solid ${C.bd}`,minWidth:80}}>CITY</th>
-                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700,color:C.w2,borderBottom:`1px solid ${C.bd}`,minWidth:140}}>ADDRESS</th>
-                  <th style={{padding:"8px 10px",textAlign:"left",fontWeight:700,color:C.w2,borderBottom:`1px solid ${C.bd}`,minWidth:180}}>STATUS</th>
-                  {cols.map(c=>{const sn={"Windows & Doors":"W/D",Roofing:"ROOF",Structural:"STRUCT",Electrical:"ELEC",Plumbing:"PLMB"};return <th key={c} style={{padding:"8px 6px",textAlign:"center",fontWeight:700,color:colC[c],borderBottom:`1px solid ${C.bd}`,minWidth:55}}>{sn[c]||c}</th>;})}
+                  <th style={{padding:"10px 14px",textAlign:"left",fontWeight:700,color:C.w,borderBottom:`1px solid ${C.bd}`,position:"sticky",left:0,background:C.b3,minWidth:140}}>NAME</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontWeight:700,color:C.w,borderBottom:`1px solid ${C.bd}`,minWidth:100}}>CITY</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontWeight:700,color:C.w2,borderBottom:`1px solid ${C.bd}`,minWidth:180}}>ADDRESS</th>
+                  <th style={{padding:"10px 12px",textAlign:"left",fontWeight:700,color:C.w2,borderBottom:`1px solid ${C.bd}`,minWidth:220}}>STATUS</th>
+                  {cols.map(c=>{const sn={"Windows & Doors":"W/D",Roofing:"ROOF",Structural:"STRUCT",Electrical:"ELEC",Plumbing:"PLMB"};return <th key={c} style={{padding:"10px 8px",textAlign:"center",fontWeight:700,color:colC[c],borderBottom:`1px solid ${C.bd}`,minWidth:65}}>{sn[c]||c}</th>;})}
                 </tr></thead>
                 <tbody>
-                  {active.map((p,idx)=><tr key={p.id} style={{background:isRev(p.status)?C.rdb:idx%2===0?C.b2:"transparent",borderBottom:`1px solid ${C.bd}`}}>
-                    <td style={{padding:"6px 12px",fontWeight:600,color:C.w,whiteSpace:"nowrap"}}>{p.clientName}</td>
-                    <td style={{padding:"6px 8px",color:C.w3,fontSize:10}}>{p.city}</td>
-                    <td style={{padding:"6px 8px",color:C.w2,fontSize:10}}>{p.address&&p.address!=="TBD"?p.address:"—"}</td>
-                    <td style={{padding:"6px 8px",fontSize:10,color:isRev(p.status)?C.or:C.w2,fontWeight:isRev(p.status)?700:400}}>{p.status||"—"}</td>
-                    {cols.map(c=>{const has=(p.scopes||[]).includes(c);return <td key={c} style={{padding:"6px 6px",textAlign:"center"}}>{has?<span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:colC[c]}}/>:<span style={{color:C.b3}}>—</span>}</td>;})}
+                  {active.map((p,idx)=><tr key={p.id} style={{background:isRev(p.status)?C.rdb:idx%2===0?C.b2:"transparent",borderBottom:`1px solid ${C.bd}`,transition:"background 0.1s",cursor:"default"}}>
+                    <td style={{padding:"8px 14px",fontWeight:600,color:C.w,whiteSpace:"nowrap"}}>{p.clientName}</td>
+                    <td style={{padding:"8px 12px",color:C.w3,fontSize:12}}>{p.city}</td>
+                    <td style={{padding:"8px 12px",color:C.w2,fontSize:12}}>{p.address&&p.address!=="TBD"?p.address:"—"}</td>
+                    <td style={{padding:"8px 12px",fontSize:12,color:isRev(p.status)?C.or:C.w2,fontWeight:isRev(p.status)?700:400}}>{p.status||"—"}</td>
+                    {cols.map(c=>{const has=(p.scopes||[]).includes(c);return <td key={c} style={{padding:"8px 8px",textAlign:"center"}}>{has?<span style={{display:"inline-block",width:10,height:10,borderRadius:"50%",background:colC[c]}}/>:<span style={{color:C.b3}}>—</span>}</td>;})}
                   </tr>)}
                   {closed.length>0&&<><tr><td colSpan={5+cols.length} style={{padding:"8px 12px",fontSize:10,fontWeight:700,color:C.w3,background:C.b3,borderBottom:`1px solid ${C.bd}`,letterSpacing:1}}>CLOSED JOBS</td></tr>
                   {closed.map((p,idx)=><tr key={p.id} style={{background:"transparent",borderBottom:`1px solid ${C.bd}`,opacity:0.5}}>
@@ -275,16 +275,16 @@ function AppMain({user}){
             {(()=>{
               const psc={issued:0,review:0,none:0};proj.forEach(p=>{const ps=(p.permitStatus||"").toLowerCase();if(ps==="issued")psc.issued++;else if(ps==="in review")psc.review++;else psc.none++;});
               const phases={permitting:0,progress:0,done:0,paused:0,commence:0};active.forEach(p=>{const st=(p.status||"").toLowerCase();if(st.includes("permit")||st.includes("review"))phases.permitting++;else if(st.includes("progress")||st.includes("active")||st.includes("commenced")||st.includes("work"))phases.progress++;else if(st.includes("done")||st.includes("final")||st.includes("closed soon"))phases.done++;else if(st.includes("pause")||st.includes("insurance")||st.includes("waiting"))phases.paused++;else if(st.includes("commence"))phases.commence++;else phases.progress++;});
-              return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12}}>
-                <div style={S.cd}><h3 style={{fontSize:13,fontWeight:700,marginBottom:10}}>By City</h3>
-                  {Object.entries(cc).sort((a,b)=>b[1]-a[1]).map(([c,n])=><div key={c} style={{...S.fxsb,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:12}}>{c}</span><span style={{fontSize:14,fontWeight:700,color:C.bl}}>{n}</span></div>)}
+              return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:14}}>
+                <div style={{...S.cd,padding:mob?16:20}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>By City</h3>
+                  {Object.entries(cc).sort((a,b)=>b[1]-a[1]).map(([c,n])=><div key={c} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:13}}>{c}</span><span style={{fontSize:16,fontWeight:700,color:C.bl}}>{n}</span></div>)}
                 </div>
-                <div style={S.cd}><h3 style={{fontSize:13,fontWeight:700,marginBottom:10}}>Permit Status</h3>
-                  {[["Issued / Approved",psc.issued,C.gr],["In Review",psc.review,C.or],["Not Set",psc.none,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:c}}/><span style={{fontSize:12}}>{l}</span></div><span style={{fontSize:14,fontWeight:700,color:c}}>{v}</span></div>)}
-                  <p style={{fontSize:10,color:C.w3,marginTop:6}}>Set in project Edit</p>
+                <div style={{...S.cd,padding:mob?16:20}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>Permit Status</h3>
+                  {[["Issued / Approved",psc.issued,C.gr],["In Review",psc.review,C.or],["Not Set",psc.none,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:c}}/><span style={{fontSize:13}}>{l}</span></div><span style={{fontSize:16,fontWeight:700,color:c}}>{v}</span></div>)}
+                  <p style={{fontSize:11,color:C.w3,marginTop:8}}>Set in project Edit</p>
                 </div>
-                <div style={S.cd}><h3 style={{fontSize:13,fontWeight:700,marginBottom:10}}>Jobs by Phase</h3>
-                  {[["In Permitting",phases.permitting,C.or],["In Progress",phases.progress,C.bl],["Nearly Done / Finals",phases.done,C.gr],["On Pause",phases.paused,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:c}}/><span style={{fontSize:12}}>{l}</span></div><span style={{fontSize:14,fontWeight:700,color:c}}>{v}</span></div>)}
+                <div style={{...S.cd,padding:mob?16:20}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>Jobs by Phase</h3>
+                  {[["In Permitting",phases.permitting,C.or],["In Progress",phases.progress,C.bl],["Nearly Done / Finals",phases.done,C.gr],["On Pause",phases.paused,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:c}}/><span style={{fontSize:13}}>{l}</span></div><span style={{fontSize:16,fontWeight:700,color:c}}>{v}</span></div>)}
                 </div>
               </div>;
             })()}
@@ -300,17 +300,17 @@ function AppMain({user}){
           const iDragOver=(e,date)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setInspDropDay(date);};
           return <>
             <div data-print-header="" style={{display:"none",justifyContent:"center",alignItems:"center",marginBottom:14,paddingBottom:10,borderBottom:"3px solid #000",textAlign:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,letterSpacing:1}}>Stacy Bomar Construction</div><div style={{fontSize:12,fontWeight:600,letterSpacing:2,marginTop:4,textTransform:"uppercase"}}>Inspection List — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
-            <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div><div data-noprint="" style={{display:"flex",gap:6}}>{!mob&&<button style={S.bs} onClick={()=>window.print()}>Print</button>}<button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Schedule</button></div></div>
+            <div style={{...S.fxsb,marginBottom:20,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>{fmt(days[0])} — {fmt(days[4])}</p></div><div data-noprint="" style={{display:"flex",gap:6}}>{!mob&&<button style={S.bs} onClick={()=>window.print()}>Print</button>}<button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Schedule</button></div></div>
             <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12}}><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
             {!mob&&<div data-col-header="" data-noprint="" style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>}
             {days.map(d=>{const di=insp.filter(i=>i.date===d);const isT=d===td();const isDrop=inspDropDay===d;return <div key={d} onDragOver={e=>iDragOver(e,d)} onDragLeave={()=>setInspDropDay(null)} onDrop={e=>iDrop(e,d)}>
               <div data-day-header="" style={{...S.fxc,gap:6,background:isDrop?C.bl+"55":isT?C.bll:C.b3,padding:mob?"10px 14px":"6px 14px",borderBottom:`1px solid ${C.bd}`,border:isDrop?`2px solid ${C.bl}`:"2px solid transparent",transition:"background 0.15s, border 0.15s"}}><span style={{fontSize:mob?13:11,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:mob?12:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}{isDrop&&<span style={{fontSize:10,color:C.bl,marginLeft:4}}>Drop here</span>}<span style={{fontSize:mob?12:10,color:C.w3,marginLeft:"auto"}}>{di.length}</span></div>
               {di.length===0?<div style={{padding:isDrop?"14px":"8px 14px",color:C.w3,fontSize:11,background:isDrop?C.bll:C.b2,borderBottom:`1px solid ${C.bd}`,transition:"padding 0.15s, background 0.15s"}}>{isDrop?"Drop to move here":"—"}</div>:
               di.map(i=>{const p=proj.find(x=>x.id===i.projectId);const isOv=!i.completed&&i.date<td();const rC=i.result==="pass"?C.gr:i.result==="fail"?C.rd:C.or;const rL=i.result==="pass"?"Pass":i.result==="fail"?"Fail":"Open";return(
-                <div data-insp-row="" key={i.id} draggable={!mob} onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:mob?"12px 14px":"8px 14px",background:isOv?C.rdb:i.result==="fail"?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:mob?"pointer":"grab",opacity:inspDragId===i.id?0.4:1,transition:"opacity 0.15s"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:mob?14:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><div style={{display:"flex",alignItems:"center",gap:4}}><div data-status-dot="" style={{width:mob?8:6,height:mob?8:6,borderRadius:"50%",background:rC}}/><span data-result="" style={{fontSize:mob?12:10,color:rC}}>{rL}</span></div></div>
-                  <div data-type="" style={{fontSize:mob?13:11,color:C.bl,fontWeight:600}}>{fT(i.type,ct)}</div>
-                  <div data-detail="" style={{fontSize:mob?12:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
+                <div data-insp-row="" key={i.id} draggable={!mob} onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:mob?"12px 14px":"10px 16px",background:isOv?C.rdb:i.result==="fail"?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:mob?"pointer":"grab",opacity:inspDragId===i.id?0.4:1,transition:"opacity 0.15s, background 0.1s"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span data-name="" style={{fontSize:mob?14:13,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><div style={{display:"flex",alignItems:"center",gap:6}}><div data-status-dot="" style={{width:mob?8:8,height:mob?8:8,borderRadius:"50%",background:rC}}/><span data-result="" style={{fontSize:mob?12:12,color:rC,fontWeight:600}}>{rL}</span></div></div>
+                  <div data-type="" style={{fontSize:mob?13:13,color:C.bl,fontWeight:600}}>{fT(i.type,ct)}</div>
+                  <div data-detail="" style={{fontSize:mob?12:12,color:C.w3,marginTop:3}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
                 </div>);})}
             </div>;})}
             {pend.length>0&&<><div data-pend-header="" style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return(
@@ -337,14 +337,14 @@ function AppMain({user}){
         </>;})()}
 
         {pg==="projects"&&!selP&&<>
-          <div style={{...S.fxsb,marginBottom:16}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>Projects</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{proj.length} jobs</p></div><button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("proj")}>+ New</button></div>
+          <div style={{...S.fxsb,marginBottom:20}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Projects</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>{proj.length} jobs</p></div><button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("proj")}>+ New</button></div>
           <input style={{...S.inp,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search..."/>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(250px,1fr))",gap:mob?8:10}}>
+          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(320px,1fr))",gap:mob?8:14}}>
             {proj.filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=>
               <div key={p.id} style={{...S.cd,cursor:"pointer",borderLeft:`3px solid ${(p.revisions||[]).some(r=>r.status==="Open")||(p.changeOrders||[]).some(co=>co.status==="Pending")?C.rd:p.hoa?C.or:C.bl}`}} onClick={()=>sSP(p.id)}>
-                <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4}}>{(p.revisions||[]).filter(r=>r.status==="Open").length>0&&<span style={S.bg(C.orb,C.or)}>↺ {(p.revisions||[]).filter(r=>r.status==="Open").length} REV</span>}{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>$ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
-                <div style={{fontSize:11,color:C.w3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</div>
-                {p.permitNum&&<div style={{fontSize:10,color:C.bl,marginTop:2}}>{p.permitNum}</div>}
+                <div style={{...S.fxsb,marginBottom:6}}><span style={{fontSize:14,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{(p.revisions||[]).filter(r=>r.status==="Open").length>0&&<span style={S.bg(C.orb,C.or)}>↺ {(p.revisions||[]).filter(r=>r.status==="Open").length} REV</span>}{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>$ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
+                <div style={{fontSize:12,color:C.w3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</div>
+                {p.permitNum&&<div style={{fontSize:11,color:C.bl,marginTop:3}}>{p.permitNum}</div>}
                 {p.scopes&&p.scopes.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{p.scopes.map(sc=><span key={sc} style={{fontSize:9,fontWeight:600,padding:"3px 9px",borderRadius:12,background:sc==="Structural"?"#2D1F4E":sc==="Plumbing"?C.bll:sc==="Electrical"?C.rdb:sc==="Roofing"?"#3B2410":sc==="Windows & Doors"?C.grl:C.b3,color:sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:C.w2}}>{sc}</span>)}</div>}
               </div>)}
           </div>
@@ -377,7 +377,7 @@ function AppMain({user}){
           const actColor={added:C.gr,scheduled:C.bl,updated:C.or,deleted:C.rd,passed:C.gr,failed:C.rd,reset:C.w3,uploaded:C.bl,moved:C.or,removed:C.rd};
           const getVerb=(a)=>{const w=a.toLowerCase().split(" ")[0];return actColor[w]||C.w2;};
           return <>
-            <div style={{...S.fxsb,marginBottom:16,alignItems:"center"}}><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>Activity Log</h1><button onClick={loadLog} style={{...S.bs,fontSize:11}}>Refresh</button></div>
+            <div style={{...S.fxsb,marginBottom:20,alignItems:"center"}}><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Activity Log</h1><button onClick={loadLog} style={{...S.bs,fontSize:11}}>Refresh</button></div>
             {!actLog.length&&<p style={{color:C.w3,fontSize:13}}>No activity recorded yet.</p>}
             {actLog.map(a=><div key={a.id} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:`1px solid ${C.bd}`,alignItems:"flex-start"}}>
               <div style={{width:6,height:6,borderRadius:"50%",background:getVerb(a.action),marginTop:6,flexShrink:0}}/>
@@ -390,12 +390,12 @@ function AppMain({user}){
           </>;
         })()}
 
-        {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+        {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":560,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
           {modal==="insp"&&<InspF pr={proj} ok={items=>{setI(v=>[...v,...items.map(i=>({...i,id:uid(),createdAt:td(),completed:false}))]);const pName=proj.find(x=>x.id===items[0]?.projectId)?.clientName;logAct("scheduled "+items.length+" inspection"+(items.length>1?"s":""),pName?`for ${pName}`:"");sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
           {modal==="proj"&&<PF ok={p=>{setP(v=>[...v,{...p,id:uid(),comments:[],createdAt:td()}]);logAct("added project",p.clientName);sM(null);}}/>}
         </div></div>}
-        {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":460,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+        {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":560,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Edit Project</h2><button onClick={()=>sEP(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
           <EF p={editP} ok={u=>{setP(v=>v.map(p=>p.id===editP.id?{...p,...u}:p));logAct("updated project",editP.clientName);sEP(null);}}/>
         </div></div>}
@@ -920,7 +920,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct}){
           </div>
 
           {/* Quick info row */}
-          <div style={{...S.fx,gap:12,flexWrap:"wrap",marginBottom:8,fontSize:11,color:C.w3}}>
+          <div style={{...S.fx,gap:14,flexWrap:"wrap",marginBottom:10,fontSize:12,color:C.w3}}>
             {pm.specWriter&&<span>Spec: <b style={{color:C.w2}}>{pm.specWriter}</b></span>}
             {pm.dateSubmitted&&<span>Submitted: <b style={{color:C.w2}}>{fmt(pm.dateSubmitted)}</b></span>}
             {pm.dateApproved&&<span>Approved: <b style={{color:C.gr}}>{fmt(pm.dateApproved)}</b></span>}
@@ -986,7 +986,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct}){
       })}
 
       {/* Add Permit Modal */}
-      {modal==="addPermit"&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":24,width:"100%",maxWidth:mob?"100%":420,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+      {modal==="addPermit"&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":540,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
         <div style={{...S.fxsb,marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Add Permit — {p.clientName}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
         <QuickPermitForm city={p.city} ok={pm=>{setPermits(v=>[...v,{...pm,id:uid(),projectId:selProj,clientName:p.clientName,city:p.city||pm.city,comments:[],files:[],actionNeeded:false,createdAt:td(),updatedAt:td()}]);if(logAct)logAct("added permit",`${pm.permitType||"permit"} for ${p.clientName}`);sM(null);}}/>
       </div></div>}
@@ -1000,7 +1000,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct}){
 
   return <>
     <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}>
-      <div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>PERMITS</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{permits.length} permits across {projsWithPermits.length} projects</p></div>
+      <div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>PERMITS</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{permits.length} permits across {projsWithPermits.length} projects</p></div>
     </div>
     <input style={{...S.inp,maxWidth:mob?"100%":300,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search projects..."/>
 
@@ -1074,7 +1074,7 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
   const activeCount=todos.filter(t=>!t.done).length;const doneCount=todos.filter(t=>t.done).length;
   return <>
     <div style={{...S.fxsb,marginBottom:16,alignItems:"center",flexWrap:"wrap",gap:8}}>
-      <h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>To Do <span style={{fontSize:13,fontWeight:500,color:C.w3}}>({activeCount} open)</span></h1>
+      <h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>To Do <span style={{fontSize:14,fontWeight:500,color:C.w3}}>({activeCount} open)</span></h1>
     </div>
     <div style={{...S.cd,marginBottom:16}}>
       <input style={{...S.inp,marginBottom:8,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} placeholder="What needs to be done?"/>
