@@ -32,7 +32,7 @@ const PRINT_CSS=`@media print{
 const useMobile=()=>{const[m,sM]=useState(window.innerWidth<768);useEffect(()=>{const h=()=>sM(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m;};
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
-const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing"};
+const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing",M:"Mechanical"};
 const CREWS=[
 {id:"robin",name:"Robin",color:"#4ADE80"},{id:"robinjr",name:"Robin Jr",color:"#3B8BF5"},{id:"onel",name:"Onel",color:"#2DD4BF"},{id:"alfredo",name:"Alfredo",color:"#818CF8"},{id:"renee",name:"Rene",color:"#C084FC"},
 {id:"marcos",name:"Marcos Roofing",color:"#FB923C"},{id:"jose",name:"Jose Roofing",color:"#FBBF24"},
@@ -142,13 +142,18 @@ function AppMain({user}){
   useEffect(()=>{if(ok){const j=JSON.stringify(todos);if(j!==lastFs.current.sYtd){lastFs.current.sYtd=j;svFs("sYtd",todos);localStorage.setItem("sYtd",j);}}},[todos,ok]);
 
   // One-time: add new jobs from 2026 spreadsheet
-  useEffect(()=>{if(!ok||!proj.length)return;const newJobs=[
-    {clientName:"Peacox",city:"Ft Lauderdale",scopes:["Windows & Doors","Roofing","Structural"],hoa:false,scopeNotes:"Windows; (2) ext doors; Sloped roof; OHGD; AC C/O",status:"Not signed"},
-    {clientName:"Centeno",city:"Cooper City",scopes:["Windows & Doors","Roofing","Electrical"],hoa:false,scopeNotes:"Windows + (1) SGD; FD 1/4 lite; Slope+flat roof; AC C/O; Electrical upgrade",status:"Not signed"},
-    {clientName:"Perez-Millan",city:"West Park",scopes:["Windows & Doors","Electrical"],hoa:false,scopeNotes:"Windows; (6) 1/2 lite doors; AC C/O; Electrical upgrade; Ext paint",status:"Not signed"},
-    {clientName:"Lopez",city:"Weston",scopes:["Windows & Doors","Roofing"],hoa:true,scopeNotes:"Windows + (1) SGD; 1 6-panel door; Tile roof; Gutters",status:"Not signed"},
-  ];const toAdd=newJobs.filter(nj=>!proj.some(p=>p.clientName.toLowerCase()===nj.clientName.toLowerCase()));
-  if(toAdd.length)setP(v=>[...v,...toAdd.map(j=>({id:uid(),address:"TBD",permitNum:"",assignee:"",comments:[],createdAt:td(),...j}))]);},[ok]);
+  const migratedRef=useRef(false);
+  useEffect(()=>{
+    if(!ok||!proj.length||migratedRef.current)return;
+    migratedRef.current=true;
+    const newJobs=[
+      {clientName:"Peacox",city:"Ft Lauderdale",scopes:["Windows & Doors","Roofing","Structural","Mechanical"],hoa:false,scopeNotes:"Windows; (2) ext doors; Sloped roof; OHGD; AC C/O",status:"Not signed"},
+      {clientName:"Centeno",city:"Cooper City",scopes:["Windows & Doors","Roofing","Electrical","Mechanical"],hoa:false,scopeNotes:"Windows + (1) SGD; FD 1/4 lite; Slope+flat roof; AC C/O; Electrical upgrade",status:"Not signed"},
+      {clientName:"Perez-Millan",city:"West Park",scopes:["Windows & Doors","Electrical","Mechanical"],hoa:false,scopeNotes:"Windows; (6) 1/2 lite doors; AC C/O; Electrical upgrade; Ext paint",status:"Not signed"},
+      {clientName:"Lopez",city:"Weston",scopes:["Windows & Doors","Roofing"],hoa:true,scopeNotes:"Windows + (1) SGD; 1 6-panel door; Tile roof; Gutters",status:"Not signed"},
+    ];
+    setP(cur=>{const toAdd=newJobs.filter(nj=>!cur.some(p=>p.clientName.toLowerCase()===nj.clientName.toLowerCase()));return toAdd.length?[...cur,...toAdd.map(j=>({id:uid(),address:"TBD",permitNum:"",assignee:"",comments:[],createdAt:td(),...j}))]:cur;});
+  },[ok,proj.length]);
 
   const logAct=(action,detail)=>{try{addDoc(collection(db,"activityLog"),{user:user.displayName||"Unknown",action,detail:detail||"",ts:new Date().toISOString()});}catch(e){console.error("Log error:",e);}};
   const isAdmin=user.email==="sheldon@sbc.app"||user.email==="tim@sbc.app";
@@ -213,8 +218,8 @@ function AppMain({user}){
 
         {pg==="dashboard"&&(()=>{
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
-          const cols=["Windows & Doors","Roofing","Structural","Electrical","Plumbing"];
-          const colC={"Windows & Doors":C.gr,Roofing:"#FB923C",Structural:"#A78BFA",Electrical:C.rd,Plumbing:C.bl};
+          const cols=["Windows & Doors","Roofing","Structural","Electrical","Plumbing","Mechanical"];
+          const colC={"Windows & Doors":C.gr,Roofing:"#FB923C",Structural:"#A78BFA",Electrical:C.rd,Plumbing:C.bl,Mechanical:"#FCD34D"};
           const sorted=[...proj].sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
           const active=sorted.filter(p=>(p.status||"")!=="CLOSED");
           const closed=sorted.filter(p=>(p.status||"")==="CLOSED");
@@ -248,7 +253,7 @@ function AppMain({user}){
                 <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600,color:C.w}}>{p.clientName}</span><span style={{fontSize:11,color:C.w3}}>{p.city}</span></div>
                 {p.address&&p.address!=="TBD"&&<div style={{fontSize:11,color:C.w2,marginBottom:4}}>{p.address}</div>}
                 <div style={{fontSize:11,color:isRev(p.status)?C.or:C.w2,fontWeight:isRev(p.status)?700:400,marginBottom:6}}>{p.status||"—"}</div>
-                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{cols.filter(c=>(p.scopes||[]).includes(c)).map(c=>{const sn={"Windows & Doors":"W/D",Roofing:"ROOF",Structural:"STRUCT",Electrical:"ELEC",Plumbing:"PLMB"};return <span key={c} style={{fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:10,background:colC[c]+"22",color:colC[c]}}>{sn[c]}</span>;})}</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{cols.filter(c=>(p.scopes||[]).includes(c)).map(c=>{const sn={"Windows & Doors":"W/D",Roofing:"ROOF",Structural:"STRUCT",Electrical:"ELEC",Plumbing:"PLMB",Mechanical:"MECH"};return <span key={c} style={{fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:10,background:colC[c]+"22",color:colC[c]}}>{sn[c]}</span>;})}</div>
               </div>)}
               {closed.length>0&&<details style={{marginTop:6,padding:"0 4px"}}><summary style={{fontSize:11,color:C.w3,cursor:"pointer",padding:"6px 0"}}>Closed ({closed.length})</summary>{closed.map(p=><div key={p.id} style={{padding:"6px 12px",borderBottom:`1px solid ${C.bd}`,opacity:0.5}}><span style={{fontSize:12,color:C.w3}}>{p.clientName}</span><span style={{fontSize:10,color:C.w3,marginLeft:8}}>{p.city}</span></div>)}</details>}
               </div>
@@ -258,7 +263,7 @@ function AppMain({user}){
                   <th style={{padding:"10px 12px",textAlign:"left",fontWeight:700,color:C.w,borderBottom:`1px solid ${C.bd}`,minWidth:100}}>CITY</th>
                   <th style={{padding:"10px 12px",textAlign:"left",fontWeight:700,color:C.w2,borderBottom:`1px solid ${C.bd}`,minWidth:180}}>ADDRESS</th>
                   <th style={{padding:"10px 12px",textAlign:"left",fontWeight:700,color:C.w2,borderBottom:`1px solid ${C.bd}`,minWidth:220}}>STATUS</th>
-                  {cols.map(c=>{const sn={"Windows & Doors":"W/D",Roofing:"ROOF",Structural:"STRUCT",Electrical:"ELEC",Plumbing:"PLMB"};return <th key={c} style={{padding:"10px 8px",textAlign:"center",fontWeight:700,color:colC[c],borderBottom:`1px solid ${C.bd}`,minWidth:65}}>{sn[c]||c}</th>;})}
+                  {cols.map(c=>{const sn={"Windows & Doors":"W/D",Roofing:"ROOF",Structural:"STRUCT",Electrical:"ELEC",Plumbing:"PLMB",Mechanical:"MECH"};return <th key={c} style={{padding:"10px 8px",textAlign:"center",fontWeight:700,color:colC[c],borderBottom:`1px solid ${C.bd}`,minWidth:65}}>{sn[c]||c}</th>;})}
                 </tr></thead>
                 <tbody>
                   {active.map((p,idx)=><tr key={p.id} style={{background:isRev(p.status)?C.rdb:idx%2===0?C.b2:"transparent",borderBottom:`1px solid ${C.bd}`,transition:"background 0.1s",cursor:"default"}}>
@@ -354,7 +359,7 @@ function AppMain({user}){
                 <div style={{...S.fxsb,marginBottom:6}}><span style={{fontSize:14,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{(p.revisions||[]).filter(r=>r.status==="Open").length>0&&<span style={S.bg(C.orb,C.or)}>↺ {(p.revisions||[]).filter(r=>r.status==="Open").length} REV</span>}{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>$ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
                 <div style={{fontSize:12,color:C.w3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</div>
                 {p.permitNum&&<div style={{fontSize:11,color:C.bl,marginTop:3}}>{p.permitNum}</div>}
-                {p.scopes&&p.scopes.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{p.scopes.map(sc=><span key={sc} style={{fontSize:9,fontWeight:600,padding:"3px 9px",borderRadius:12,background:sc==="Structural"?"#2D1F4E":sc==="Plumbing"?C.bll:sc==="Electrical"?C.rdb:sc==="Roofing"?"#3B2410":sc==="Windows & Doors"?C.grl:C.b3,color:sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:C.w2}}>{sc}</span>)}</div>}
+                {p.scopes&&p.scopes.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{p.scopes.map(sc=><span key={sc} style={{fontSize:9,fontWeight:600,padding:"3px 9px",borderRadius:12,background:sc==="Structural"?"#2D1F4E":sc==="Plumbing"?C.bll:sc==="Electrical"?C.rdb:sc==="Roofing"?"#3B2410":sc==="Windows & Doors"?C.grl:sc==="Mechanical"?C.orb:C.b3,color:sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:sc==="Mechanical"?"#FCD34D":C.w2}}>{sc}</span>)}</div>}
               </div>)}
           </div>
         </>}
@@ -575,8 +580,8 @@ function InspF({pr,ok,ct=[],aC,pre}){
 }
 function PF({ok}){
   const[f,s]=useState({clientName:"",address:"",city:"",hoa:false,permitNum:"",permitStatus:"",scopeNotes:"",assignee:"",scopes:[]});
-  const allSc=["Structural","Plumbing","Electrical","Roofing","Windows & Doors"];
-  const scC={Structural:"#A78BFA",Plumbing:C.bl,Electrical:C.rd,Roofing:"#FB923C","Windows & Doors":C.gr};
+  const allSc=["Structural","Plumbing","Electrical","Roofing","Windows & Doors","Mechanical"];
+  const scC={Structural:"#A78BFA",Plumbing:C.bl,Electrical:C.rd,Roofing:"#FB923C","Windows & Doors":C.gr,Mechanical:"#FCD34D"};
   const togSc=sc=>{s({...f,scopes:f.scopes.includes(sc)?f.scopes.filter(x=>x!==sc):[...f.scopes,sc]});};
   return <div>
     {[["Client *","clientName",""],["City *","city","Plantation"],["Address","address","1234 NW 10 ST"],["Permit #","permitNum",""],["Assigned To","assignee","Team member"]].map(([l,k,p])=><div key={k}><div style={S.lb}>{l}</div><input style={S.inp} value={f[k]} onChange={e=>s({...f,[k]:e.target.value})} placeholder={p}/></div>)}
@@ -591,8 +596,8 @@ function PF({ok}){
 }
 function EF({p,ok}){
   const[f,s]=useState({clientName:p.clientName,address:p.address||"",city:p.city||"",hoa:p.hoa||false,permitNum:p.permitNum||"",permitStatus:p.permitStatus||"",status:p.status||"",scopeNotes:p.scopeNotes||"",assignee:p.assignee||"",scopes:p.scopes||[]});
-  const allSc=["Structural","Plumbing","Electrical","Roofing","Windows & Doors"];
-  const scC={Structural:"#A78BFA",Plumbing:C.bl,Electrical:C.rd,Roofing:"#FB923C","Windows & Doors":C.gr};
+  const allSc=["Structural","Plumbing","Electrical","Roofing","Windows & Doors","Mechanical"];
+  const scC={Structural:"#A78BFA",Plumbing:C.bl,Electrical:C.rd,Roofing:"#FB923C","Windows & Doors":C.gr,Mechanical:"#FCD34D"};
   const togSc=sc=>{s({...f,scopes:f.scopes.includes(sc)?f.scopes.filter(x=>x!==sc):[...f.scopes,sc]});};
   return <div>
     {[["Client","clientName"],["City","city"],["Address","address"],["Permit #","permitNum"],["Assigned To","assignee"],["Job Status","status"]].map(([l,k])=><div key={k}><div style={S.lb}>{l}</div><input style={S.inp} value={f[k]} onChange={e=>s({...f,[k]:e.target.value})}/></div>)}
