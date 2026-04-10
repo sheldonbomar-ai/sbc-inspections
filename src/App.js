@@ -104,7 +104,7 @@ export default function App(){
 
 function AppMain({user}){
   const[pg,setPg]=useState("dashboard");
-  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);
+  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);const[companyDocs,setCompanyDocs]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
@@ -114,7 +114,7 @@ function AppMain({user}){
   const lastFs=useRef({});
 
   useEffect(()=>{
-    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos]];
+    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos],["sYcd",setCompanyDocs]];
     let loaded=0;
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
@@ -140,6 +140,7 @@ function AppMain({user}){
   useEffect(()=>{if(ok){const j=JSON.stringify(sched);if(j!==lastFs.current.sYs){lastFs.current.sYs=j;svFs("sYs",sched);localStorage.setItem("sYs",j);}}},[sched,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(permits);if(j!==lastFs.current.sYpm){lastFs.current.sYpm=j;svFs("sYpm",permits);localStorage.setItem("sYpm",j);}}},[permits,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(todos);if(j!==lastFs.current.sYtd){lastFs.current.sYtd=j;svFs("sYtd",todos);localStorage.setItem("sYtd",j);}}},[todos,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(companyDocs);if(j!==lastFs.current.sYcd){lastFs.current.sYcd=j;svFs("sYcd",companyDocs);localStorage.setItem("sYcd",j);}}},[companyDocs,ok]);
 
   // One-time: add new jobs from 2026 spreadsheet
   const migratedRef=useRef(false);
@@ -382,7 +383,7 @@ function AppMain({user}){
         </>;})()}
 
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
-        {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct}/>}
+        {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} mob={mob} logAct={logAct} user={user}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
@@ -886,11 +887,12 @@ const PERMIT_STATUSES=["Not Submitted","Submitted","In Review","Comments Receive
 const SPEC_WRITERS=["Lamar","Tanner","Habitat","CRA","Beth","Jay","Jim","Jenn","SOFI","Igo","Tabber"];
 const pStatColor=s=>s==="Issued"||s==="Approved"?C.gr:s==="Comments Received"?C.rd:s==="In Review"||s==="Submitted"?C.or:s==="Closed"?C.w3:"#22D3EE";
 
-function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct}){
+function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,setCompanyDocs,user}){
   const[selProj,setSelProj]=useState(null);
   const[modal,sM]=useState(null);
   const[search,sSr]=useState("");
   const[addingComment,setAddingComment]=useState(null);
+  const[showDocs,setShowDocs]=useState(false);
 
   const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const projPermits=pid=>permits.filter(p=>p.projectId===pid);
@@ -1015,7 +1017,9 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct}){
   return <>
     <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}>
       <div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>PERMITS</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{permits.length} permits across {projsWithPermits.length} projects</p></div>
+      <button style={{...S.bs,padding:mob?"10px 14px":"8px 16px",fontSize:mob?13:13,background:showDocs?C.bll:C.b2,color:showDocs?C.bl:C.w2,borderColor:showDocs?C.bl:C.bd}} onClick={()=>setShowDocs(!showDocs)}>📁 Company Docs ({companyDocs.filter(d=>!d.isFolder).length})</button>
     </div>
+    {showDocs&&<CompanyDocsSection docs={companyDocs} setDocs={setCompanyDocs} mob={mob} user={user} logAct={logAct}/>}
     <input style={{...S.inp,maxWidth:mob?"100%":300,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search projects..."/>
 
     {/* Projects with permits */}
@@ -1070,6 +1074,68 @@ function QuickPermitForm({city,ok}){
     <div style={S.lb}>Portal URL</div>
     <input style={S.inp} value={f.portalUrl} onChange={e=>s({...f,portalUrl:e.target.value})} placeholder="https://..."/>
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>ok(f)}>Add Permit</button></div>
+  </div>;
+}
+
+function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
+  const CATS=[{id:"noa",label:"NOAs",color:C.bl},{id:"insurance",label:"Insurance",color:C.gr},{id:"license",label:"Licenses",color:"#FCD34D"},{id:"template",label:"Templates",color:"#A78BFA"},{id:"other",label:"Other",color:C.w3}];
+  const[cat,setCat]=useState("noa");const[search,setSearch]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[uploadErr,setUploadErr]=useState("");
+  const me=user?.displayName||"User";
+  const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";return"📄";};
+  const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
+  const handleUpload=async(e)=>{
+    const files=e.target.files;if(!files||!files.length)return;
+    setUploading(true);setUploadErr("");
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      const path=`company/${cat}/${Date.now()}_${file.name}`;
+      const sRef=ref(storage,path);
+      try{
+        const task=uploadBytesResumable(sRef,file);
+        await new Promise((resolve,reject)=>{
+          task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>{reject(err);},async()=>{
+            const dlUrl=await getDownloadURL(task.snapshot.ref);
+            setDocs(v=>[...v,{id:uid(),label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:cat,uploadedBy:me,uploadedAt:td()}]);
+            if(logAct)logAct("uploaded company doc",`${file.name} (${cat})`);
+            resolve();
+          });
+        });
+      }catch(err){setUploadErr(err.code+": "+err.message);}
+    }
+    setUploading(false);setProg(0);e.target.value="";
+  };
+  const handleDel=async(d)=>{
+    if(!window.confirm(`Delete "${d.label}"?`))return;
+    if(d.storagePath){try{await deleteObject(ref(storage,d.storagePath));}catch(e){console.error("Delete error:",e);}}
+    setDocs(v=>v.filter(x=>x.id!==d.id));
+    if(logAct)logAct("deleted company doc",d.label);
+  };
+  const filtered=docs.filter(d=>d.category===cat&&(!search||d.label.toLowerCase().includes(search.toLowerCase())));
+  const catColor=CATS.find(c=>c.id===cat)?.color||C.bl;
+  return <div style={{...S.cd,marginBottom:16,borderLeft:`3px solid ${catColor}`}}>
+    <div style={{...S.fxsb,marginBottom:12,alignItems:"center",flexWrap:"wrap",gap:8}}>
+      <h3 style={{fontSize:mob?14:16,fontWeight:700,margin:0}}>📁 Company Documents</h3>
+      <label style={{...S.btn,padding:mob?"10px 14px":"8px 16px",fontSize:mob?13:13,cursor:uploading?"default":"pointer",opacity:uploading?0.6:1,display:"inline-block"}}>
+        {uploading?`Uploading... ${progress}%`:"+ Upload File"}
+        <input type="file" multiple onChange={handleUpload} disabled={uploading} style={{display:"none"}}/>
+      </label>
+    </div>
+    <div style={{...S.fx,gap:6,marginBottom:12,flexWrap:"wrap"}}>
+      {CATS.map(c=>{const count=docs.filter(d=>d.category===c.id).length;return <button key={c.id} onClick={()=>setCat(c.id)} style={{...S.bs,padding:mob?"10px 14px":"8px 14px",fontSize:mob?13:12,background:cat===c.id?c.color+"22":"transparent",color:cat===c.id?c.color:C.w3,borderColor:cat===c.id?c.color:C.bd}}>{c.label} ({count})</button>;})}
+    </div>
+    <input style={{...S.inp,fontSize:mob?16:13,padding:mob?"12px 14px":"10px 14px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${CATS.find(c=>c.id===cat)?.label}...`}/>
+    {uploadErr&&<div style={{fontSize:11,color:C.rd,marginBottom:8}}>{uploadErr}</div>}
+    {!filtered.length&&<p style={{fontSize:13,color:C.w3,margin:"12px 0 0",textAlign:"center"}}>No {CATS.find(c=>c.id===cat)?.label.toLowerCase()} uploaded yet.</p>}
+    {filtered.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:8,marginTop:4}}>
+      {filtered.sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||"")).map(d=><div key={d.id} style={{background:C.bg,borderRadius:8,padding:mob?12:14,border:`1px solid ${C.bd}`,display:"flex",alignItems:"flex-start",gap:10}}>
+        <span style={{fontSize:24,flexShrink:0}}>{icon(d.label)}</span>
+        <div style={{flex:1,minWidth:0}}>
+          <a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:mob?14:13,color:C.bl,fontWeight:600,textDecoration:"none",wordBreak:"break-word",display:"block"}}>{d.label}</a>
+          <div style={{fontSize:11,color:C.w3,marginTop:3}}>{fmtSize(d.fileSize)} · {d.uploadedBy||"?"} · {fmt(d.uploadedAt)}</div>
+        </div>
+        <button onClick={()=>handleDel(d)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:mob?16:14,padding:"4px 6px",flexShrink:0}}>✕</button>
+      </div>)}
+    </div>}
   </div>;
 }
 
