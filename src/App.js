@@ -41,6 +41,7 @@ const CREWS=[
 {id:"pete",name:"Pete Plumbing",color:"#22D3EE"},{id:"lashawn",name:"Lashawn Electrical",color:"#F87171"},{id:"richard",name:"Richard Barba Mechanical",color:"#FCD34D"}
 ];
 const fT=(t,ct=[])=>{const f=[...DT,...ct].find(x=>x.l===t);return f?`${f.p}- ${f.l}`:t;};
+const AddrLink=({a,c})=>!a||a==="TBD"?null:<a href={`https://maps.apple.com/?q=${encodeURIComponent(c?a+", "+c:a)}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:"inherit",textDecoration:"underline",textDecorationStyle:"dotted",textUnderlineOffset:2}}>{a}</a>;
 const SD="Ashley|Pompano Beach|2921 NW 8 ST|0|0|W,E|⚠ REVISION: CGI NOA now PGT by Sparta;Barrant|Sunrise|4008 Del Rio Way|0|1|W,R,E|In permitting;Beckles|Pembroke Pines|12017 NW 11 ST|0|1|W,S,E,P|In permitting;Bryan|Sunrise|11701 NW 30 PL|R-STRT-003473|0|R,S,E,P|Pending building final - work done;Burke|Margate|7708 Margate Blvd Apt C3-6|0|1||CLOSED;Bursztyn|Davie|3745 SW 59 AVE|2025-7435|1|W,S,E,P|Pending finals - job done;Camacho|Plantation|7501 NW 16 ST Unit 3305|P25-1025|0|W,S,E,P|Need appliances AC kitchen sink then finals;Campbell|Margate|1835 Vista Way|0|1|R,S,E|Roof permit in review - other permits issued;Ceasar|Margate|6130 SW 3 ST|0|0|W,R|CLOSED;Clover|Deerfield Beach|516 SW Natura AVE|0|1|R|Roof permit in review;Courts|Deerfield Beach|225 Ventor Q|0|1|W,S,E,P|About to commence;Cox|Deerfield Beach|330 NW 1 AVE|0|0|W,R,S,E,P|Roof in progress - rest about to commence;Davila|Pembroke Pines|1026 NW 159 AVE|0|1|W,R,S,P|Window permit issued - roof in review;Davilsaint|Ft Lauderdale||0|0|R|On pause - insurance issue;Derek-Towriss|Ft Lauderdale|1649 NE 3 CT|0|0||Pending final inspections;Goberdhan|Plantation|7820 NW 14 ST|0|0|W,S,E,P|Win+elec+AC done - bath drywall+appliances+doors left;Gonzalez|Sunrise|9801 Sunrise Lakes Blvd Unit 207|0|1|W,S,E,P|Permit to be issued within 2 weeks;Knight|Pompano Beach|1570 NW 4 AVE|0|0|E|Exterior paint last thing - permits closed;Ledgister|Plantation|103 NW 68 AVE|B25-04632|0|W,S,E,P|All done besides appliances;Mel|Miami||0|0|R|On pause - insurance issue;Mistler|Plantation|5301 SW 8 ST|B25-04835|0|S|Roof work commenced;Morgan|Pembroke Pines|1000 Colony Point Cir #420|0|1|S,E,P|Permit in progress;Moye-Barnett|Davie|7520 NW 31st Place|0|1|W,R,S,E,P|CLOSED;Nora Sanchez|Deerfield Beach|222 Prescott L|0|1|W,S,E,P|About to commence;NSP Swap Shop|Ft Lauderdale|3090 NW 11 ST|18-00205|0|W,R,S,E,P|In progress - big job;NSP WP|West Park|28 Allen RD|WP25-000446|0|W,R,S,E,P|In progress - big job;Phillips|Pembroke Pines|7347 NW 22 DR|0|1|W,R,S,E,P|In permitting;Pifalo|Plantation|8536 NW 10 ST Unit D78|B25-05040|1|W,S,E,P|⚠ REVISION: NOA wrong on window+door - missing plmb permit for WH;Qatar|Sunrise|13800 NW 14 ST Suite 160|0|0|S,E,P|Insurance issue - working to start;Rhoda|Plantation|501 N Pine Island Rd Unit 1|0|0|W,S,E,P|Very active - lots of work to do;Soto|Sunrise|11301 NW 17 ST|0|0|W,R|In review;Stone|Davie|4791 SW 55 AVE|0|0|W,R,S,P|Permit to be closed soon;Peacox|Ft Lauderdale||0|0|W,R,S|Not signed — Windows; (2) ext doors; Sloped roof; OHGD; AC C/O;Centeno|Cooper City||0|0|W,R,E|Not signed — Windows + (1) SGD; FD 1/4 lite; Slope+flat roof; AC C/O; Electrical upgrade;Perez-Millan|West Park||0|0|W,E|Not signed — Windows; (6) 1/2 lite doors; AC C/O; Electrical upgrade; Ext paint;Lopez|Weston||0|1|W,R|Not signed — Windows + (1) SGD; 1 6-panel door; Tile roof; Gutters";
 const uid=()=>Math.random().toString(36).substr(2,9);
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
@@ -252,7 +253,7 @@ function AppMain({user}){
               <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><h3 style={{fontSize:14,fontWeight:700,margin:0}}>Job Scope Matrix</h3><span style={{fontSize:11,color:C.w3}}>{active.length} active · {closed.length} closed</span></div>
               {mob?<div style={{padding:8}}>{active.map((p,idx)=><div key={p.id} style={{padding:"10px 12px",background:isRev(p.status)?C.rdb:idx%2===0?C.b3:"transparent",borderBottom:`1px solid ${C.bd}`,borderRadius:6,marginBottom:4}}>
                 <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600,color:C.w}}>{p.clientName}</span><span style={{fontSize:11,color:C.w3}}>{p.city}</span></div>
-                {p.address&&p.address!=="TBD"&&<div style={{fontSize:11,color:C.w2,marginBottom:4}}>{p.address}</div>}
+                {p.address&&p.address!=="TBD"&&<div style={{fontSize:11,color:C.w2,marginBottom:4}}><AddrLink a={p.address} c={p.city}/></div>}
                 <div style={{fontSize:11,color:isRev(p.status)?C.or:C.w2,fontWeight:isRev(p.status)?700:400,marginBottom:6}}>{p.status||"—"}</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{cols.filter(c=>(p.scopes||[]).includes(c)).map(c=>{const sn={"Windows & Doors":"W/D",Roofing:"ROOF",Structural:"STRUCT",Electrical:"ELEC",Plumbing:"PLMB",Mechanical:"MECH"};return <span key={c} style={{fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:10,background:colC[c]+"22",color:colC[c]}}>{sn[c]}</span>;})}</div>
               </div>)}
@@ -270,7 +271,7 @@ function AppMain({user}){
                   {active.map((p,idx)=><tr key={p.id} style={{background:isRev(p.status)?C.rdb:idx%2===0?C.b2:"transparent",borderBottom:`1px solid ${C.bd}`,transition:"background 0.1s",cursor:"default"}}>
                     <td style={{padding:"8px 14px",fontWeight:600,color:C.w,whiteSpace:"nowrap"}}>{p.clientName}</td>
                     <td style={{padding:"8px 12px",color:C.w3,fontSize:12}}>{p.city}</td>
-                    <td style={{padding:"8px 12px",color:C.w2,fontSize:12}}>{p.address&&p.address!=="TBD"?p.address:"—"}</td>
+                    <td style={{padding:"8px 12px",color:C.w2,fontSize:12}}>{p.address&&p.address!=="TBD"?<AddrLink a={p.address} c={p.city}/>:"—"}</td>
                     <td style={{padding:"8px 12px",fontSize:12,color:isRev(p.status)?C.or:C.w2,fontWeight:isRev(p.status)?700:400}}>{p.status||"—"}</td>
                     {cols.map(c=>{const has=(p.scopes||[]).includes(c);return <td key={c} style={{padding:"8px 8px",textAlign:"center"}}>{has?<span style={{display:"inline-block",width:10,height:10,borderRadius:"50%",background:colC[c]}}/>:<span style={{color:C.b3}}>—</span>}</td>;})}
                   </tr>)}
@@ -278,7 +279,7 @@ function AppMain({user}){
                   {closed.map((p,idx)=><tr key={p.id} style={{background:"transparent",borderBottom:`1px solid ${C.bd}`,opacity:0.5}}>
                     <td style={{padding:"5px 12px",fontWeight:600,color:C.w3,whiteSpace:"nowrap"}}>{p.clientName}</td>
                     <td style={{padding:"5px 8px",color:C.w3,fontSize:10}}>{p.city}</td>
-                    <td style={{padding:"5px 8px",color:C.w3,fontSize:10}}>{p.address&&p.address!=="TBD"?p.address:"—"}</td>
+                    <td style={{padding:"5px 8px",color:C.w3,fontSize:10}}>{p.address&&p.address!=="TBD"?<AddrLink a={p.address} c={p.city}/>:"—"}</td>
                     <td style={{padding:"5px 8px",fontSize:10,color:C.w3}}>CLOSED</td>
                     {cols.map(c=>{const has=(p.scopes||[]).includes(c);return <td key={c} style={{padding:"5px 6px",textAlign:"center"}}>{has?<span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:C.w3}}/>:<span style={{color:C.b3}}>—</span>}</td>;})}
                   </tr>)}</>}
@@ -325,14 +326,14 @@ function AppMain({user}){
                 <div data-insp-row="" key={i.id} draggable={!mob} onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:mob?"12px 14px":"10px 16px",background:isOv?C.rdb:i.result==="fail"?C.rdb:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:mob?"pointer":"grab",opacity:inspDragId===i.id?0.4:1,transition:"opacity 0.15s, background 0.1s"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span data-name="" style={{fontSize:mob?14:13,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><div style={{display:"flex",alignItems:"center",gap:6}}><div data-status-dot="" style={{width:mob?8:8,height:mob?8:8,borderRadius:"50%",background:rC}}/><span data-result="" style={{fontSize:mob?12:12,color:rC,fontWeight:600}}>{rL}</span></div></div>
                   <div data-type="" style={{fontSize:mob?13:13,color:C.bl,fontWeight:600}}>{fT(i.type,ct)}</div>
-                  <div data-detail="" style={{fontSize:mob?12:12,color:C.w3,marginTop:3}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
+                  <div data-detail="" style={{fontSize:mob?12:12,color:C.w3,marginTop:3}}>{p?.city}{p?.address&&p?.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
                 </div>);})}
             </div>;})}
             {pend.length>0&&<><div data-pend-header="" style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return(
               <div data-insp-row="" key={i.id} draggable onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:"8px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"grab",opacity:inspDragId===i.id?0.4:1}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><span data-result="" style={{fontSize:10,color:C.or}}>Pending</span></div>
                 <div data-type="" style={{fontSize:11,color:C.or,fontWeight:600}}>{fT(i.type,ct)}</div>
-                <div data-detail="" style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?` · ${p.address}`:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
+                <div data-detail="" style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
               </div>);})}</>}
           </>;
         })()}
@@ -358,7 +359,7 @@ function AppMain({user}){
             {proj.filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=>
               <div key={p.id} style={{...S.cd,cursor:"pointer",borderLeft:`3px solid ${(p.revisions||[]).some(r=>r.status==="Open")||(p.changeOrders||[]).some(co=>co.status==="Pending")?C.rd:p.hoa?C.or:C.bl}`}} onClick={()=>sSP(p.id)}>
                 <div style={{...S.fxsb,marginBottom:6}}><span style={{fontSize:14,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{(p.revisions||[]).filter(r=>r.status==="Open").length>0&&<span style={S.bg(C.orb,C.or)}>↺ {(p.revisions||[]).filter(r=>r.status==="Open").length} REV</span>}{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>$ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
-                <div style={{fontSize:12,color:C.w3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</div>
+                <div style={{fontSize:12,color:C.w3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>
                 {p.permitNum&&<div style={{fontSize:11,color:C.bl,marginTop:3}}>{p.permitNum}</div>}
                 {p.scopes&&p.scopes.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{p.scopes.map(sc=><span key={sc} style={{fontSize:9,fontWeight:600,padding:"3px 9px",borderRadius:12,background:sc==="Structural"?"#2D1F4E":sc==="Plumbing"?C.bll:sc==="Electrical"?C.rdb:sc==="Roofing"?"#3B2410":sc==="Windows & Doors"?C.grl:sc==="Mechanical"?C.orb:C.b3,color:sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:sc==="Mechanical"?"#FCD34D":C.w2}}>{sc}</span>)}</div>}
               </div>)}
@@ -367,7 +368,7 @@ function AppMain({user}){
 
         {pg==="projects"&&selP&&(()=>{const p=proj.find(x=>x.id===selP);if(!p)return null;const pi=insp.filter(i=>i.projectId===selP);return <>
           <button style={{...S.bs,marginBottom:14}} onClick={()=>sSP(null)}>← Back</button>
-          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?` · ${p.address}`:""}</p></div><div style={{...S.fx,gap:6}}><button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sEP(p)}>Edit</button><button style={{...S.btn,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
+          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</p></div><div style={{...S.fx,gap:6}}><button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sEP(p)}>Edit</button><button style={{...S.btn,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
           <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
           <RevisionSection revisions={p.revisions||[]} onUpdate={revs=>setP(v=>v.map(x=>x.id===selP?{...x,revisions:revs}:x))} logAct={logAct} projectName={p.clientName} mob={mob} inspections={insp.filter(i=>i.projectId===selP)} ct={ct} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
           <COSection changeOrders={p.changeOrders||[]} onUpdate={cos=>setP(v=>v.map(x=>x.id===selP?{...x,changeOrders:cos}:x))} logAct={logAct} projectName={p.clientName} mob={mob} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
@@ -637,7 +638,7 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
             <div style={{...S.fxc,gap:6,marginBottom:6}}><div style={{width:10,height:10,borderRadius:"50%",background:cr.color}}/><span style={{fontSize:13,fontWeight:700,color:cr.color}}>{cr.name}</span></div>
             {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return(
               <div key={a.id} style={{background:cr.color+"14",border:`1px solid ${cr.color}33`,borderRadius:8,padding:"8px 12px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:11,color:C.w3,marginTop:2}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:11,color:cr.color,marginTop:3,fontWeight:500}}>{a.notes}</div>}</div>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:11,color:C.w3,marginTop:2}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>}{a.notes&&<div style={{fontSize:11,color:cr.color,marginTop:3,fontWeight:500}}>{a.notes}</div>}</div>
                 <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:14,padding:"6px",marginLeft:8}} onClick={()=>rmAssign(a.id)}>✕</button>
               </div>);})}
           </div>;})}
@@ -663,7 +664,7 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
                     <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
                   </div>:
                   <div key={a.id} style={{background:cr.color+"18",border:`1px solid ${cr.color}44`,borderRadius:6,padding:"4px 8px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:9,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>}{a.notes&&<div style={{fontSize:9,color:cr.color,marginTop:1}}>{a.notes}</div>}</div>
+                    <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:9,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>}{a.notes&&<div style={{fontSize:9,color:cr.color,marginTop:1}}>{a.notes}</div>}</div>
                     <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
                   </div>;})}
                 <div style={{display:"flex",gap:4}}>
@@ -740,7 +741,7 @@ function AssignPicker({projects,onPick}){
     <div style={{maxHeight:200,overflow:"auto",marginBottom:10}}>
       {fl.map(p=><div key={p.id} onClick={()=>sPid(p.id)} style={{padding:"8px 12px",cursor:"pointer",background:pid===p.id?C.bll:"transparent",borderBottom:`1px solid ${C.bd}`,borderRadius:pid===p.id?6:0}}>
         <div style={{fontSize:12,fontWeight:pid===p.id?700:500,color:pid===p.id?C.bl:C.w}}>{p.clientName}</div>
-        <div style={{fontSize:10,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</div>
+        <div style={{fontSize:10,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>
       </div>)}
       {!fl.length&&<p style={{fontSize:11,color:C.w3,padding:8}}>No matching projects</p>}
     </div>
@@ -908,7 +909,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
       <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}>
         <div>
           <h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1>
-          <p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address&&p.address!=="TBD"?` · ${p.address}`:""}</p>
+          <p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</p>
         </div>
         <button style={S.btn} onClick={()=>sM("addPermit")}>+ Add Permit</button>
       </div>
