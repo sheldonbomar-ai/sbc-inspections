@@ -46,7 +46,8 @@ const SD="Ashley|Pompano Beach|2921 NW 8 ST|0|0|W,E|⚠ REVISION: CGI NOA now PG
 const uid=()=>Math.random().toString(36).substr(2,9);
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
 const fDay=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"long"}).toUpperCase():"";
-const td=()=>new Date().toISOString().split("T")[0];
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const td=()=>ymd(new Date());
 const svFs=async(k,v)=>{try{await setDoc(doc(db,"data",k),{value:JSON.stringify(v)});}catch(e){console.error("Firestore save error:",e);}};
 const ldLocal=(k,f)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):f;}catch{return f;}};
 const mkSeed=()=>SD.split(";").map(r=>{const p=r.split("|");const st=p[6]||"";const dashIdx=st.indexOf("—");return{id:uid(),clientName:p[0],city:p[1],address:p[2]||"TBD",permitNum:p[3]==="0"?"":p[3],hoa:p[4]==="1",scopes:p[5]?p[5].split(",").map(x=>SM[x]).filter(Boolean):[],scopeNotes:dashIdx>-1?st.slice(dashIdx+2).trim():"",status:dashIdx>-1?st.slice(0,dashIdx).trim():st,assignee:"",comments:[],createdAt:td()};});
@@ -108,7 +109,7 @@ function AppMain({user}){
   const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);const[companyDocs,setCompanyDocs]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
-  const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().split("T")[0];});
+  const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return ymd(d);});
   const[resetting,setResetting]=useState(false);
   const[inspDragId,setInspDragId]=useState(null);const[inspDropDay,setInspDropDay]=useState(null);const inspDragRef=useRef(null);
   const mob=useMobile();
@@ -308,7 +309,7 @@ function AppMain({user}){
         })()}
 
         {pg==="sheet"&&!selI&&(()=>{
-          const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d.toISOString().split("T")[0];});
+          const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return ymd(d);});
           const pend=insp.filter(i=>!i.completed&&(!i.date||i.date<days[0]||i.date>days[4]));
           const iDragStart=(e,id)=>{inspDragRef.current=id;setInspDragId(id);e.dataTransfer.setData("text/plain",id);e.dataTransfer.effectAllowed="move";};
           const iDragEnd=()=>{inspDragRef.current=null;setInspDragId(null);setInspDropDay(null);};
@@ -317,7 +318,7 @@ function AppMain({user}){
           return <>
             <div data-print-header="" style={{display:"none",justifyContent:"center",alignItems:"center",marginBottom:14,paddingBottom:10,borderBottom:"3px solid #000",textAlign:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,letterSpacing:1}}>Stacy Bomar Construction</div><div style={{fontSize:12,fontWeight:600,letterSpacing:2,marginTop:4,textTransform:"uppercase"}}>Inspection List — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
             <div style={{...S.fxsb,marginBottom:20,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>{fmt(days[0])} — {fmt(days[4])}</p></div><div data-noprint="" style={{display:"flex",gap:6}}>{!mob&&<button style={S.bs} onClick={()=>window.print()}>Print</button>}<button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Schedule</button></div></div>
-            <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12}}><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
+            <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12}}><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(ymd(d));}}>←</button><button style={{...S.bs,color:C.bl,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(ymd(d));}}>This Week</button><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(ymd(d));}}>→</button></div>
             {!mob&&<div data-col-header="" data-noprint="" style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>}
             {days.map(d=>{const di=insp.filter(i=>i.date===d);const isT=d===td();const isDrop=inspDropDay===d;return <div key={d} onDragOver={e=>iDragOver(e,d)} onDragLeave={()=>setInspDropDay(null)} onDrop={e=>iDrop(e,d)}>
               <div data-day-header="" style={{...S.fxc,gap:6,background:isDrop?C.bl+"55":isT?C.bll:C.b3,padding:mob?"10px 14px":"6px 14px",borderBottom:`1px solid ${C.bd}`,border:isDrop?`2px solid ${C.bl}`:"2px solid transparent",transition:"background 0.15s, border 0.15s"}}><span style={{fontSize:mob?13:11,fontWeight:700,color:isT?C.bl:C.w}}>{fmt(d)}</span><span style={{fontSize:mob?12:10,color:isT?C.bl:C.w3}}>{fDay(d)}</span>{isT&&<span style={S.bg(C.bl,"#fff")}>TODAY</span>}{isDrop&&<span style={{fontSize:10,color:C.bl,marginLeft:4}}>Drop here</span>}<span style={{fontSize:mob?12:10,color:C.w3,marginLeft:"auto"}}>{di.length}</span></div>
@@ -618,14 +619,14 @@ function EF({p,ok}){
 }
 function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
   const[assignCrew,setAssignCrew]=useState(null);
-  const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d.toISOString().split("T")[0];});
+  const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return ymd(d);});
   const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const getAssign=(crewId,date)=>sched.filter(s=>s.crewId===crewId&&s.date===date);
   const addAssign=(crewId,date,projectId,notes)=>{setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||""}]);const cr=CREWS.find(c=>c.id===crewId);const p=proj.find(x=>x.id===projectId);if(logAct)logAct("scheduled crew",`${cr?.name||crewId} → ${p?.clientName||"?"} on ${fmt(date)}`);};
   const rmAssign=(id)=>{const a=sched.find(s=>s.id===id);const cr=CREWS.find(c=>c.id===a?.crewId);const p=proj.find(x=>x.id===a?.projectId);if(logAct)logAct("removed crew assignment",`${cr?.name||"?"} from ${p?.clientName||"?"}`);setSched(v=>v.filter(s=>s.id!==id));};
   return <>
     <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>CREW SCHEDULING</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div></div>
-    <div style={{...S.fx,gap:6,marginBottom:16}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
+    <div style={{...S.fx,gap:6,marginBottom:16}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(ymd(d));}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(ymd(d));}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(ymd(d));}}>→</button></div>
 
     {mob?
       days.map(d=>{const isT=d===td();const dayAssigns=sched.filter(s=>s.date===d);const crewsWithWork=CREWS.filter(cr=>dayAssigns.some(s=>s.crewId===cr.id));const crewsOff=CREWS.filter(cr=>{const a=getAssign(cr.id,d);return a.length>0&&a.every(x=>x.projectId==="OFF");});return <div key={d} style={{marginBottom:14}}>
