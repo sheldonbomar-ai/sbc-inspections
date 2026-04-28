@@ -223,7 +223,7 @@ function AppMain({user}){
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
           const cols=["Windows & Doors","Roofing","Structural","Electrical","Plumbing","Mechanical"];
           const colC={"Windows & Doors":C.gr,Roofing:"#FB923C",Structural:"#A78BFA",Electrical:C.rd,Plumbing:C.bl,Mechanical:"#FCD34D"};
-          const sorted=[...proj].sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
+          const sorted=[...proj].sort((a,b)=>projSort==="newest"?(b.createdAt||"").localeCompare(a.createdAt||""):a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
           const active=sorted.filter(p=>(p.status||"")!=="CLOSED");
           const closed=sorted.filter(p=>(p.status||"")==="CLOSED");
           const isRev=s=>(s||"").includes("REVISION");
@@ -251,7 +251,7 @@ function AppMain({user}){
 
             {/* SPREADSHEET TABLE / MOBILE CARDS */}
             <div style={{...S.cd,padding:0,overflow:"auto",marginBottom:16}}>
-              <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><h3 style={{fontSize:14,fontWeight:700,margin:0}}>Job Scope Matrix</h3><span style={{fontSize:11,color:C.w3}}>{active.length} active · {closed.length} closed</span></div>
+              <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}><h3 style={{fontSize:14,fontWeight:700,margin:0}}>Job Scope Matrix</h3><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{display:"flex",gap:4}}>{[["alpha","A-Z"],["newest","Newest"]].map(([k,l])=><button key={k} style={{...S.bs,padding:"4px 10px",fontSize:11,background:projSort===k?C.bl:C.b3,color:projSort===k?"#fff":C.w2,border:projSort===k?"none":`1px solid ${C.bd}`}} onClick={()=>setProjSort(k)}>{l}</button>)}</div><span style={{fontSize:11,color:C.w3}}>{active.length} active · {closed.length} closed</span></div></div>
               {mob?<div style={{padding:8}}>{active.map((p,idx)=><div key={p.id} style={{padding:"10px 12px",background:isRev(p.status)?C.rdb:idx%2===0?C.b3:"transparent",borderBottom:`1px solid ${C.bd}`,borderRadius:6,marginBottom:4}}>
                 <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600,color:C.w}}>{p.clientName}</span><span style={{fontSize:11,color:C.w3}}>{p.city}</span></div>
                 {p.address&&p.address!=="TBD"&&<div style={{fontSize:11,color:C.w2,marginBottom:4}}><AddrLink a={p.address} c={p.city}/></div>}
