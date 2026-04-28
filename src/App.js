@@ -1096,6 +1096,7 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
   const CATS=[{id:"noa",label:"NOAs",color:C.bl},{id:"insurance",label:"Insurance",color:C.gr},{id:"license",label:"Licenses",color:"#FCD34D"},{id:"template",label:"Templates",color:"#A78BFA"},{id:"other",label:"Other",color:C.w3}];
   const[cat,setCat]=useState("noa");const[search,setSearch]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[uploadErr,setUploadErr]=useState("");
   const[openFolder,setOpenFolder]=useState(null);const[newFolderName,setNewFolderName]=useState("");const[showNewFolder,setShowNewFolder]=useState(false);const[renameId,setRenameId]=useState(null);const[renameName,setRenameName]=useState("");
+  const[dragId,setDragId]=useState(null);const[dropTarget,setDropTarget]=useState(null);const dragRef=useRef(null);
   const me=user?.displayName||"User";
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";return"📄";};
   const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
@@ -1147,6 +1148,10 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
     if(logAct)logAct("renamed "+(d.isFolder?"folder":"doc"),`${d.label} → ${renameName.trim()}`);
     setRenameId(null);
   };
+  const onDragStart=(e,id)=>{dragRef.current=id;setDragId(id);e.dataTransfer.setData("text/plain",id);e.dataTransfer.effectAllowed="move";};
+  const onDragEnd=()=>{dragRef.current=null;setDragId(null);setDropTarget(null);};
+  const onDropFolder=(e,folderId)=>{e.preventDefault();setDropTarget(null);const id=dragRef.current||e.dataTransfer.getData("text/plain");if(!id)return;const d=docs.find(x=>x.id===id);if(!d||d.isFolder)return;if(d.folderId===folderId)return;setDocs(v=>v.map(x=>x.id===id?{...x,folderId:folderId}:x));const folderName=folderId?docs.find(x=>x.id===folderId)?.label:"root";if(logAct)logAct("moved file",`${d.label} → ${folderName||CATS.find(c=>c.id===cat)?.label}`);dragRef.current=null;setDragId(null);};
+  const onDragOverDrop=(e,target)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDropTarget(target);};
   const folders=docs.filter(d=>d.isFolder&&d.category===cat&&(!search||d.label.toLowerCase().includes(search.toLowerCase())));
   const curFolder=openFolder?docs.find(d=>d.id===openFolder):null;
   const files=docs.filter(d=>!d.isFolder&&d.category===cat&&(openFolder?(d.folderId===openFolder):(!d.folderId||d.folderId===""))&&(!search||d.label.toLowerCase().includes(search.toLowerCase())));
@@ -1176,17 +1181,17 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
       <button style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:16,padding:"4px 8px"}} onClick={()=>{setShowNewFolder(false);setNewFolderName("");}}>✕</button>
     </div>}
 
-    {/* Breadcrumb when inside folder */}
-    {openFolder&&curFolder&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:14,padding:"10px 14px",background:C.b2,borderRadius:8,border:`1px solid ${C.bd}`}}>
+    {/* Breadcrumb when inside folder — also a drop zone to move files to root */}
+    {openFolder&&curFolder&&<div onDragOver={e=>onDragOverDrop(e,"root")} onDragLeave={()=>setDropTarget(null)} onDrop={e=>onDropFolder(e,"")} style={{display:"flex",alignItems:"center",gap:6,marginBottom:14,padding:"10px 14px",background:dropTarget==="root"?C.bll:C.b2,borderRadius:8,border:`2px solid ${dropTarget==="root"?C.bl:C.bd}`,transition:"all 0.15s"}}>
       <button style={{background:"none",border:"none",color:C.bl,cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit",padding:0}} onClick={()=>setOpenFolder(null)}>{CATS.find(c=>c.id===cat)?.label}</button>
       <span style={{color:C.w3,fontSize:12}}>/</span>
       <span style={{fontSize:13,fontWeight:700}}>📂 {curFolder.label}</span>
-      <span style={{fontSize:11,color:C.w3,marginLeft:"auto"}}>{files.length} file{files.length!==1?"s":""}</span>
+      <span style={{fontSize:11,color:C.w3,marginLeft:"auto"}}>{dragId?<span style={{color:dropTarget==="root"?C.bl:C.w3}}>Drop here to move out</span>:<>{files.length} file{files.length!==1?"s":""}</>}</span>
     </div>}
 
     {/* Folders grid */}
     {!openFolder&&!search&&folders.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8,marginBottom:14}}>
-      {folders.sort((a,b)=>a.label.localeCompare(b.label,undefined,{sensitivity:"base"})).map(f=>{const fc=docs.filter(d=>!d.isFolder&&d.folderId===f.id).length;return <div key={f.id} style={{background:C.b2,borderRadius:10,padding:mob?"12px":"14px 16px",border:`1px solid ${C.bd}`,cursor:"pointer",transition:"border-color 0.15s"}} onClick={()=>setOpenFolder(f.id)} onMouseEnter={e=>e.currentTarget.style.borderColor=catColor} onMouseLeave={e=>e.currentTarget.style.borderColor=C.bd}>
+      {folders.sort((a,b)=>a.label.localeCompare(b.label,undefined,{sensitivity:"base"})).map(f=>{const fc=docs.filter(d=>!d.isFolder&&d.folderId===f.id).length;const isDT=dropTarget===f.id;return <div key={f.id} onDragOver={e=>onDragOverDrop(e,f.id)} onDragLeave={()=>setDropTarget(null)} onDrop={e=>onDropFolder(e,f.id)} style={{background:isDT?catColor+"18":C.b2,borderRadius:10,padding:mob?"12px":"14px 16px",border:`2px solid ${isDT?catColor:C.bd}`,cursor:"pointer",transition:"all 0.15s"}} onClick={()=>setOpenFolder(f.id)} onMouseEnter={e=>{if(!dragId)e.currentTarget.style.borderColor=catColor;}} onMouseLeave={e=>{if(!dragId)e.currentTarget.style.borderColor=C.bd;}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
           <span style={{fontSize:20}}>📂</span>
           <div style={{flex:1,minWidth:0}}>
@@ -1214,11 +1219,11 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
       <p style={{fontSize:13,margin:0}}>This folder is empty — upload files above</p>
     </div>}
     {files.length>0&&<div style={{display:"flex",flexDirection:"column",gap:6}}>
-      {files.sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||"")).map(d=><div key={d.id} style={{background:C.b2,borderRadius:8,padding:mob?"12px":"10px 16px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"center",gap:mob?10:12}}>
+      {files.sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||"")).map(d=><div key={d.id} draggable onDragStart={e=>onDragStart(e,d.id)} onDragEnd={onDragEnd} style={{background:C.b2,borderRadius:8,padding:mob?"12px":"10px 16px",border:`1px solid ${dragId===d.id?C.bl:C.bd}`,display:"flex",alignItems:"center",gap:mob?10:12,cursor:"grab",opacity:dragId===d.id?0.5:1,transition:"opacity 0.15s, border-color 0.15s"}}>
         <span style={{fontSize:mob?22:20,flexShrink:0}}>{icon(d.label)}</span>
         <div style={{flex:1,minWidth:0}}>
           {renameId===d.id?<div style={{display:"flex",gap:4}}><input style={{...S.inp,marginBottom:0,fontSize:12,padding:"4px 8px",flex:1,minWidth:80}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(d);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:10}} onClick={()=>doRename(d)}>OK</button></div>
-          :<><a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:mob?14:13,color:C.bl,fontWeight:600,textDecoration:"none",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label}</a>
+          :<><a href={d.url} target="_blank" rel="noopener noreferrer" onClick={e=>dragId&&e.preventDefault()} style={{fontSize:mob?14:13,color:C.bl,fontWeight:600,textDecoration:"none",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label}</a>
           <div style={{fontSize:10,color:C.w3,marginTop:2}}>{fmtSize(d.fileSize)} · {d.uploadedBy||"?"} · {fmt(d.uploadedAt)}</div></>}
         </div>
         <div style={{display:"flex",gap:4,flexShrink:0}}>
