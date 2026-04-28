@@ -5,7 +5,8 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebas
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
-const PRINT_CSS=`@media print{
+const PRINT_CSS=`*,*::before,*::after{box-sizing:border-box;}
+@media print{
   @page{size:portrait;margin:0.4in;}
   body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0!important;padding:0!important;}
   [data-sidebar],[data-mobnav],[data-noprint]{display:none!important;}
@@ -55,8 +56,8 @@ const S={
   app:{display:"flex",height:"100vh",fontFamily:"system-ui,sans-serif",background:C.bg,color:C.w,overflow:"hidden"},
   side:{width:240,minWidth:240,background:C.b2,borderRight:`1px solid ${C.bd}`,display:"flex",flexDirection:"column",padding:"16px 0"},
   nav:a=>({display:"flex",alignItems:"center",gap:10,padding:"12px 16px",border:"none",background:a?C.bll:"transparent",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:a?700:500,color:a?C.bl:C.w3,width:"100%",textAlign:"left",marginBottom:4,fontFamily:"inherit",transition:"background 0.15s",letterSpacing:0.3}),
-  cd:{background:C.b2,borderRadius:10,padding:18,border:`1px solid ${C.bd}`,marginBottom:14,transition:"box-shadow 0.15s"},
-  inp:{width:"100%",padding:"10px 14px",borderRadius:7,border:`1px solid ${C.bd}`,background:C.bg,color:C.w,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:10,transition:"border-color 0.15s"},
+  cd:{background:C.b2,borderRadius:10,padding:18,border:`1px solid ${C.bd}`,marginBottom:14,transition:"box-shadow 0.15s",overflow:"hidden"},
+  inp:{width:"100%",padding:"10px 14px",borderRadius:7,border:`1px solid ${C.bd}`,background:C.bg,color:C.w,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:10,transition:"border-color 0.15s",boxSizing:"border-box"},
   btn:{padding:"8px 16px",borderRadius:6,border:"none",background:C.bl,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"opacity 0.15s"},
   bs:{padding:"8px 16px",borderRadius:6,border:`1px solid ${C.bd}`,background:C.b2,color:C.w2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"background 0.15s"},
   bg:(b,c)=>({fontSize:11,fontWeight:600,padding:"3px 9px",borderRadius:5,background:b,color:c,whiteSpace:"nowrap"}),
@@ -217,7 +218,7 @@ function AppMain({user}){
         </div>
         <button onClick={()=>signOut(auth)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:11,fontFamily:"inherit",padding:"5px 10px"}}>Sign Out</button>
       </div>}
-      <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"24px 40px",maxWidth:mob?"100%":1400}}>
+      <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0,minWidth:0}}><div style={{padding:mob?"14px 12px":"24px 40px",maxWidth:mob?"100%":1400,width:"100%"}}>
 
         {pg==="dashboard"&&(()=>{
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
@@ -250,7 +251,7 @@ function AppMain({user}){
             </div>}
 
             {/* SPREADSHEET TABLE / MOBILE CARDS */}
-            <div style={{...S.cd,padding:0,overflow:"auto",marginBottom:16}}>
+            <div style={{...S.cd,padding:0,overflow:"auto",marginBottom:16,maxWidth:"100%"}}>
               <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}><h3 style={{fontSize:14,fontWeight:700,margin:0}}>Job Scope Matrix</h3><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{display:"flex",gap:4}}>{[["alpha","A-Z"],["newest","Newest"]].map(([k,l])=><button key={k} style={{...S.bs,padding:"4px 10px",fontSize:11,background:projSort===k?C.bl:C.b3,color:projSort===k?"#fff":C.w2,border:projSort===k?"none":`1px solid ${C.bd}`}} onClick={()=>setProjSort(k)}>{l}</button>)}</div><span style={{fontSize:11,color:C.w3}}>{active.length} active · {closed.length} closed</span></div></div>
               {mob?<div style={{padding:8}}>{active.map((p,idx)=><div key={p.id} style={{padding:"10px 12px",background:isRev(p.status)?C.rdb:idx%2===0?C.b3:"transparent",borderBottom:`1px solid ${C.bd}`,borderRadius:6,marginBottom:4}}>
                 <div style={{...S.fxsb,marginBottom:4}}><span style={{fontSize:13,fontWeight:600,color:C.w}}>{p.clientName}</span><span style={{fontSize:11,color:C.w3}}>{p.city}</span></div>
@@ -1049,7 +1050,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
     {/* Projects without permits */}
     {projsWithout.filter(searchFl).length>0&&<>
       <div style={{fontSize:11,fontWeight:700,color:C.w3,letterSpacing:1,marginTop:16,marginBottom:8}}>PROJECTS WITHOUT PERMITS ({projsWithout.filter(searchFl).length})</div>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:8}}>
+      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
         {projsWithout.filter(searchFl).map(p=><div key={p.id} style={{...S.cd,cursor:"pointer",padding:"10px 14px"}} onClick={()=>setSelProj(p.id)}>
           <div style={{fontSize:13,fontWeight:600}}>{p.clientName}</div>
           <div style={{fontSize:10,color:C.w3}}>{p.city}</div>
@@ -1140,56 +1141,56 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
   const files=docs.filter(d=>!d.isFolder&&d.category===cat&&(openFolder?(d.folderId===openFolder):(!d.folderId||d.folderId===""))&&(!search||d.label.toLowerCase().includes(search.toLowerCase())));
   const catColor=CATS.find(c=>c.id===cat)?.color||C.bl;
   const fileCount=docs.filter(d=>!d.isFolder&&d.category===cat).length;
-  return <div style={{...S.cd,marginBottom:16,borderLeft:`3px solid ${catColor}`}}>
+  return <div style={{...S.cd,marginBottom:16,borderLeft:`3px solid ${catColor}`,overflow:"visible"}}>
     <div style={{...S.fxsb,marginBottom:12,alignItems:"center",flexWrap:"wrap",gap:8}}>
       <h3 style={{fontSize:mob?14:16,fontWeight:700,margin:0}}>📁 Company Documents</h3>
-      <div style={{display:"flex",gap:6}}>
-        <button style={S.bs} onClick={()=>setShowNewFolder(!showNewFolder)}>+ Folder</button>
-        <label style={{...S.btn,padding:mob?"10px 14px":"8px 16px",fontSize:mob?13:13,cursor:uploading?"default":"pointer",opacity:uploading?0.6:1,display:"inline-block"}}>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        <button style={{...S.bs,padding:mob?"10px 14px":"6px 12px",fontSize:mob?13:12}} onClick={()=>setShowNewFolder(!showNewFolder)}>+ Folder</button>
+        <label style={{...S.btn,padding:mob?"10px 14px":"6px 12px",fontSize:mob?13:12,cursor:uploading?"default":"pointer",opacity:uploading?0.6:1,display:"inline-block"}}>
           {uploading?`Uploading... ${progress}%`:"+ Upload File"}
           <input type="file" multiple onChange={handleUpload} disabled={uploading} style={{display:"none"}}/>
         </label>
       </div>
     </div>
     <div style={{...S.fx,gap:6,marginBottom:12,flexWrap:"wrap"}}>
-      {CATS.map(c=>{const count=docs.filter(d=>!d.isFolder&&d.category===c.id).length;return <button key={c.id} onClick={()=>{setCat(c.id);setOpenFolder(null);}} style={{...S.bs,padding:mob?"10px 14px":"8px 14px",fontSize:mob?13:12,background:cat===c.id?c.color+"22":"transparent",color:cat===c.id?c.color:C.w3,borderColor:cat===c.id?c.color:C.bd}}>{c.label} ({count})</button>;})}
+      {CATS.map(c=>{const count=docs.filter(d=>!d.isFolder&&d.category===c.id).length;return <button key={c.id} onClick={()=>{setCat(c.id);setOpenFolder(null);}} style={{...S.bs,padding:mob?"8px 10px":"6px 10px",fontSize:mob?12:11,background:cat===c.id?c.color+"22":"transparent",color:cat===c.id?c.color:C.w3,borderColor:cat===c.id?c.color:C.bd}}>{c.label} ({count})</button>;})}
     </div>
-    {showNewFolder&&<div style={{...S.fx,gap:6,marginBottom:10}}>
-      <input style={{...S.inp,flex:1,marginBottom:0,fontSize:mob?16:13,padding:mob?"12px 14px":"10px 14px"}} value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Folder name..." onKeyDown={e=>e.key==="Enter"&&createFolder()} autoFocus/>
+    {showNewFolder&&<div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+      <input style={{...S.inp,flex:1,minWidth:mob?0:200,marginBottom:0,fontSize:mob?16:13,padding:mob?"12px 14px":"10px 14px"}} value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Folder name..." onKeyDown={e=>e.key==="Enter"&&createFolder()} autoFocus/>
       <button style={{...S.btn,padding:mob?"10px 14px":"8px 14px",whiteSpace:"nowrap"}} onClick={createFolder}>Create</button>
       <button style={{...S.bs,padding:mob?"10px 14px":"8px 14px"}} onClick={()=>{setShowNewFolder(false);setNewFolderName("");}}>Cancel</button>
     </div>}
-    <input style={{...S.inp,fontSize:mob?16:13,padding:mob?"12px 14px":"10px 14px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${CATS.find(c=>c.id===cat)?.label}...`}/>
+    <input style={{...S.inp,fontSize:mob?16:13,padding:mob?"10px 14px":"8px 12px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${CATS.find(c=>c.id===cat)?.label}...`}/>
     {uploadErr&&<div style={{fontSize:11,color:C.rd,marginBottom:8}}>{uploadErr}</div>}
     {openFolder&&curFolder&&<button style={{...S.bs,marginBottom:10,padding:mob?"10px 14px":"6px 12px",fontSize:mob?13:12}} onClick={()=>setOpenFolder(null)}>← Back to {CATS.find(c=>c.id===cat)?.label}</button>}
     {openFolder&&curFolder&&<div style={{fontSize:14,fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>📂 {curFolder.label}<span style={{fontSize:11,fontWeight:400,color:C.w3}}>{files.length} file{files.length!==1?"s":""}</span></div>}
-    {!openFolder&&!search&&folders.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(220px,1fr))",gap:8,marginBottom:files.length?12:0}}>
-      {folders.sort((a,b)=>a.label.localeCompare(b.label,undefined,{sensitivity:"base"})).map(f=>{const fc=docs.filter(d=>!d.isFolder&&d.folderId===f.id).length;return <div key={f.id} style={{background:C.bg,borderRadius:8,padding:mob?12:14,border:`1px solid ${C.bd}`,cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"border-color 0.15s"}} onClick={()=>setOpenFolder(f.id)} onMouseEnter={e=>e.currentTarget.style.borderColor=catColor} onMouseLeave={e=>e.currentTarget.style.borderColor=C.bd}>
-        <span style={{fontSize:28,flexShrink:0}}>📂</span>
+    {!openFolder&&!search&&folders.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8,marginBottom:files.length?12:0}}>
+      {folders.sort((a,b)=>a.label.localeCompare(b.label,undefined,{sensitivity:"base"})).map(f=>{const fc=docs.filter(d=>!d.isFolder&&d.folderId===f.id).length;return <div key={f.id} style={{background:C.bg,borderRadius:8,padding:mob?"10px 12px":"10px 12px",border:`1px solid ${C.bd}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"border-color 0.15s"}} onClick={()=>setOpenFolder(f.id)} onMouseEnter={e=>e.currentTarget.style.borderColor=catColor} onMouseLeave={e=>e.currentTarget.style.borderColor=C.bd}>
+        <span style={{fontSize:22,flexShrink:0}}>📂</span>
         <div style={{flex:1,minWidth:0}}>
-          {renameId===f.id?<div style={{...S.fx,gap:4}} onClick={e=>e.stopPropagation()}><input style={{...S.inp,marginBottom:0,fontSize:13,padding:"4px 8px"}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(f);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:11}} onClick={()=>doRename(f)}>Save</button></div>
-          :<><div style={{fontSize:mob?14:13,fontWeight:600,color:C.w,wordBreak:"break-word"}}>{f.label}</div>
-          <div style={{fontSize:11,color:C.w3,marginTop:2}}>{fc} file{fc!==1?"s":""} · {f.createdBy||"?"} · {fmt(f.createdAt)}</div></>}
+          {renameId===f.id?<div style={{display:"flex",gap:4,flexWrap:"wrap"}} onClick={e=>e.stopPropagation()}><input style={{...S.inp,marginBottom:0,fontSize:12,padding:"4px 8px",flex:1,minWidth:80}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(f);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:11}} onClick={()=>doRename(f)}>Save</button></div>
+          :<><div style={{fontSize:13,fontWeight:600,color:C.w,wordBreak:"break-word",overflow:"hidden",textOverflow:"ellipsis"}}>{f.label}</div>
+          <div style={{fontSize:10,color:C.w3,marginTop:2}}>{fc} file{fc!==1?"s":""} · {fmt(f.createdAt)}</div></>}
         </div>
         <div style={{display:"flex",gap:2,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-          <button onClick={()=>{setRenameId(f.id);setRenameName(f.label);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:mob?14:12,padding:"4px 4px"}}>✏️</button>
-          <button onClick={()=>handleDel(f)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:mob?14:12,padding:"4px 4px"}}>✕</button>
+          <button onClick={()=>{setRenameId(f.id);setRenameName(f.label);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✏️</button>
+          <button onClick={()=>handleDel(f)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✕</button>
         </div>
       </div>;})}
     </div>}
     {!files.length&&!folders.length&&!openFolder&&<p style={{fontSize:13,color:C.w3,margin:"12px 0 0",textAlign:"center"}}>No {CATS.find(c=>c.id===cat)?.label.toLowerCase()} yet. Create a folder or upload files.</p>}
     {!files.length&&openFolder&&<p style={{fontSize:13,color:C.w3,margin:"12px 0 0",textAlign:"center"}}>This folder is empty. Upload files above.</p>}
-    {files.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:8,marginTop:4}}>
-      {files.sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||"")).map(d=><div key={d.id} style={{background:C.bg,borderRadius:8,padding:mob?12:14,border:`1px solid ${C.bd}`,display:"flex",alignItems:"flex-start",gap:10}}>
-        <span style={{fontSize:24,flexShrink:0}}>{icon(d.label)}</span>
-        <div style={{flex:1,minWidth:0}}>
-          {renameId===d.id?<div style={{...S.fx,gap:4}}><input style={{...S.inp,marginBottom:0,fontSize:13,padding:"4px 8px"}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(d);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:11}} onClick={()=>doRename(d)}>Save</button></div>
-          :<><a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:mob?14:13,color:C.bl,fontWeight:600,textDecoration:"none",wordBreak:"break-word",display:"block"}}>{d.label}</a>
-          <div style={{fontSize:11,color:C.w3,marginTop:3}}>{fmtSize(d.fileSize)} · {d.uploadedBy||"?"} · {fmt(d.uploadedAt)}</div></>}
+    {files.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(260px,1fr))",gap:8,marginTop:4}}>
+      {files.sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||"")).map(d=><div key={d.id} style={{background:C.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"flex-start",gap:8,minWidth:0}}>
+        <span style={{fontSize:20,flexShrink:0}}>{icon(d.label)}</span>
+        <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
+          {renameId===d.id?<div style={{display:"flex",gap:4,flexWrap:"wrap"}}><input style={{...S.inp,marginBottom:0,fontSize:12,padding:"4px 8px",flex:1,minWidth:80}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(d);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:11}} onClick={()=>doRename(d)}>Save</button></div>
+          :<><a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:13,color:C.bl,fontWeight:600,textDecoration:"none",wordBreak:"break-word",display:"block",overflow:"hidden",textOverflow:"ellipsis"}}>{d.label}</a>
+          <div style={{fontSize:10,color:C.w3,marginTop:2}}>{fmtSize(d.fileSize)} · {d.uploadedBy||"?"} · {fmt(d.uploadedAt)}</div></>}
         </div>
         <div style={{display:"flex",gap:2,flexShrink:0}}>
-          <button onClick={()=>{setRenameId(d.id);setRenameName(d.label);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:mob?14:12,padding:"4px 4px"}}>✏️</button>
-          <button onClick={()=>handleDel(d)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:mob?16:14,padding:"4px 4px"}}>✕</button>
+          <button onClick={()=>{setRenameId(d.id);setRenameName(d.label);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✏️</button>
+          <button onClick={()=>handleDel(d)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✕</button>
         </div>
       </div>)}
     </div>}
