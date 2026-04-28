@@ -896,7 +896,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
   const[modal,sM]=useState(null);
   const[search,sSr]=useState("");
   const[addingComment,setAddingComment]=useState(null);
-  const[showDocs,setShowDocs]=useState(false);
+  const[view,setView]=useState("permits");
 
   const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const projPermits=pid=>permits.filter(p=>p.projectId===pid);
@@ -1019,43 +1019,54 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
   const searchFl=p=>{if(!search)return true;const s=search.toLowerCase();return p.clientName.toLowerCase().includes(s)||p.city.toLowerCase().includes(s)||(p.address||"").toLowerCase().includes(s);};
 
   return <>
-    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}>
-      <div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>PERMITS</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{permits.length} permits across {projsWithPermits.length} projects</p></div>
-      <button style={{...S.bs,padding:mob?"10px 14px":"8px 16px",fontSize:mob?13:13,background:showDocs?C.bll:C.b2,color:showDocs?C.bl:C.w2,borderColor:showDocs?C.bl:C.bd}} onClick={()=>setShowDocs(!showDocs)}>📁 Company Docs ({companyDocs.filter(d=>!d.isFolder).length})</button>
-    </div>
-    {showDocs&&<CompanyDocsSection docs={companyDocs} setDocs={setCompanyDocs} mob={mob} user={user} logAct={logAct}/>}
-    <input style={{...S.inp,maxWidth:mob?"100%":300,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search projects..."/>
-
-    {/* Projects with permits */}
-    {projsWithPermits.filter(searchFl).map(p=>{
-      const pPerms=projPermits(p.id);
-      const unresolved=unresolvedFor(p.id);
-      const statuses=pPerms.map(pm=>pm.status);
-      const hasComments=statuses.includes("Comments Received");
-      return <div key={p.id} style={{...S.cd,marginBottom:10,cursor:"pointer",borderLeft:`3px solid ${hasComments?C.rd:unresolved?C.or:C.bl}`}} onClick={()=>setSelProj(p.id)}>
-        <div style={{...S.fxsb,marginBottom:4}}>
-          <div>
-            <span style={{fontSize:14,fontWeight:700}}>{p.clientName}</span>
-            <span style={{fontSize:11,color:C.w3,marginLeft:8}}>{p.city}</span>
-          </div>
-          <div style={{...S.fxc,gap:6}}>
-            {unresolved>0&&<span style={S.bg(C.rdb,C.rd)}>{unresolved} unresolved</span>}
-            <span style={{fontSize:11,color:C.bl,fontWeight:600}}>{pPerms.length} permit{pPerms.length!==1?"s":""} →</span>
-          </div>
-        </div>
-        <div style={{...S.fx,gap:6,flexWrap:"wrap"}}>{pPerms.map(pm=>{const stC=pStatColor(pm.status);return <span key={pm.id} style={{...S.bg(stC+"22",stC),fontSize:10,padding:"3px 8px"}}>{pm.permitType}{pm.permitNumber?` · ${pm.permitNumber}`:""} — {pm.status}</span>;})}</div>
-      </div>;
-    })}
-
-    {/* Projects without permits */}
-    {projsWithout.filter(searchFl).length>0&&<>
-      <div style={{fontSize:11,fontWeight:700,color:C.w3,letterSpacing:1,marginTop:16,marginBottom:8}}>PROJECTS WITHOUT PERMITS ({projsWithout.filter(searchFl).length})</div>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
-        {projsWithout.filter(searchFl).map(p=><div key={p.id} style={{...S.cd,cursor:"pointer",padding:"10px 14px"}} onClick={()=>setSelProj(p.id)}>
-          <div style={{fontSize:13,fontWeight:600}}>{p.clientName}</div>
-          <div style={{fontSize:10,color:C.w3}}>{p.city}</div>
-        </div>)}
+    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8,alignItems:"center"}}>
+      <h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>PERMITS & DOCS</h1>
+      <div style={{display:"flex",gap:4,background:C.b3,borderRadius:8,padding:3}}>
+        {[["permits","Permits"],["docs","Company Docs"]].map(([k,l])=><button key={k} style={{padding:mob?"8px 14px":"6px 14px",borderRadius:6,border:"none",background:view===k?C.bl:"transparent",color:view===k?"#fff":C.w3,fontSize:mob?13:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}} onClick={()=>setView(k)}>{l}</button>)}
       </div>
+    </div>
+
+    {view==="docs"&&<CompanyDocsSection docs={companyDocs} setDocs={setCompanyDocs} mob={mob} user={user} logAct={logAct}/>}
+
+    {view==="permits"&&<>
+      <div style={{...S.fxsb,marginBottom:12,flexWrap:"wrap",gap:8,alignItems:"center"}}>
+        <p style={{fontSize:12,color:C.w3,margin:0}}>{permits.length} permits across {projsWithPermits.length} projects</p>
+        <input style={{...S.inp,maxWidth:mob?"100%":280,fontSize:mob?16:12,padding:mob?"10px 14px":"8px 12px",marginBottom:0}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search projects..."/>
+      </div>
+
+      {projsWithPermits.filter(searchFl).map(p=>{
+        const pPerms=projPermits(p.id);
+        const unresolved=unresolvedFor(p.id);
+        const hasComments=pPerms.some(pm=>pm.status==="Comments Received");
+        const borderC=hasComments?C.rd:unresolved?C.or:C.bl;
+        return <div key={p.id} style={{background:C.b2,borderRadius:10,border:`1px solid ${C.bd}`,marginBottom:10,cursor:"pointer",transition:"border-color 0.15s",borderLeft:`3px solid ${borderC}`}} onClick={()=>setSelProj(p.id)}>
+          <div style={{padding:mob?"14px 14px 10px":"14px 18px 10px"}}>
+            <div style={{...S.fxsb,alignItems:"center",marginBottom:6}}>
+              <div><span style={{fontSize:mob?15:16,fontWeight:700}}>{p.clientName}</span><span style={{fontSize:12,color:C.w3,marginLeft:8}}>{p.city}</span></div>
+              <div style={{...S.fxc,gap:6}}>
+                {unresolved>0&&<span style={{fontSize:10,fontWeight:700,color:C.rd,background:C.rdb,padding:"3px 8px",borderRadius:5}}>{unresolved} unresolved</span>}
+                <span style={{fontSize:12,color:C.bl,fontWeight:600}}>{pPerms.length} →</span>
+              </div>
+            </div>
+          </div>
+          <div style={{padding:mob?"0 14px 12px":"0 18px 14px",display:"flex",gap:6,flexWrap:"wrap"}}>
+            {pPerms.map(pm=>{const stC=pStatColor(pm.status);return <div key={pm.id} style={{background:C.bg,borderRadius:6,padding:"6px 10px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"center",gap:6}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:stC,flexShrink:0}}/>
+              <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{pm.permitType}</div><div style={{fontSize:10,color:C.w3}}>{pm.permitNumber||"No #"} · {pm.status}</div></div>
+            </div>;})}
+          </div>
+        </div>;
+      })}
+
+      {projsWithout.filter(searchFl).length>0&&<>
+        <div style={{fontSize:10,fontWeight:700,color:C.w3,letterSpacing:1,marginTop:20,marginBottom:10,textTransform:"uppercase"}}>Without Permits ({projsWithout.filter(searchFl).length})</div>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(auto-fill,minmax(180px,1fr))",gap:6}}>
+          {projsWithout.filter(searchFl).map(p=><div key={p.id} style={{background:C.b2,borderRadius:8,border:`1px solid ${C.bd}`,padding:"10px 12px",cursor:"pointer",transition:"border-color 0.15s"}} onClick={()=>setSelProj(p.id)}>
+            <div style={{fontSize:13,fontWeight:600}}>{p.clientName}</div>
+            <div style={{fontSize:10,color:C.w3}}>{p.city}</div>
+          </div>)}
+        </div>
+      </>}
     </>}
   </>;
 }
@@ -1140,60 +1151,83 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
   const curFolder=openFolder?docs.find(d=>d.id===openFolder):null;
   const files=docs.filter(d=>!d.isFolder&&d.category===cat&&(openFolder?(d.folderId===openFolder):(!d.folderId||d.folderId===""))&&(!search||d.label.toLowerCase().includes(search.toLowerCase())));
   const catColor=CATS.find(c=>c.id===cat)?.color||C.bl;
-  return <div style={{...S.cd,marginBottom:16,borderLeft:`3px solid ${catColor}`}}>
-    <div style={{...S.fxsb,marginBottom:12,alignItems:"center",flexWrap:"wrap",gap:8}}>
-      <h3 style={{fontSize:mob?14:16,fontWeight:700,margin:0}}>📁 Company Documents</h3>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-        <button style={{...S.bs,padding:mob?"10px 14px":"6px 12px",fontSize:mob?13:12}} onClick={()=>setShowNewFolder(!showNewFolder)}>+ Folder</button>
-        <label style={{...S.btn,padding:mob?"10px 14px":"6px 12px",fontSize:mob?13:12,cursor:uploading?"default":"pointer",opacity:uploading?0.6:1,display:"inline-block"}}>
-          {uploading?`Uploading... ${progress}%`:"+ Upload File"}
-          <input type="file" multiple onChange={handleUpload} disabled={uploading} style={{display:"none"}}/>
-        </label>
-      </div>
+  return <>
+    {/* Category tabs */}
+    <div style={{display:"flex",gap:4,marginBottom:16,background:C.b3,borderRadius:8,padding:3,flexWrap:"wrap"}}>
+      {CATS.map(c=>{const count=docs.filter(d=>!d.isFolder&&d.category===c.id).length;return <button key={c.id} onClick={()=>{setCat(c.id);setOpenFolder(null);setSearch("");}} style={{padding:mob?"8px 12px":"6px 12px",borderRadius:6,border:"none",background:cat===c.id?c.color+"22":"transparent",color:cat===c.id?c.color:C.w3,fontSize:mob?12:12,fontWeight:cat===c.id?700:500,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>{c.label} {count>0&&<span style={{opacity:0.7}}>({count})</span>}</button>;})}
     </div>
-    <div style={{...S.fx,gap:6,marginBottom:12,flexWrap:"wrap"}}>
-      {CATS.map(c=>{const count=docs.filter(d=>!d.isFolder&&d.category===c.id).length;return <button key={c.id} onClick={()=>{setCat(c.id);setOpenFolder(null);}} style={{...S.bs,padding:mob?"8px 10px":"6px 10px",fontSize:mob?12:11,background:cat===c.id?c.color+"22":"transparent",color:cat===c.id?c.color:C.w3,borderColor:cat===c.id?c.color:C.bd}}>{c.label} ({count})</button>;})}
+
+    {/* Toolbar */}
+    <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+      <input style={{...S.inp,flex:1,minWidth:mob?0:200,marginBottom:0,fontSize:mob?16:13,padding:mob?"10px 14px":"8px 12px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${CATS.find(c=>c.id===cat)?.label}...`}/>
+      <button style={{...S.bs,padding:mob?"10px 14px":"8px 14px",fontSize:mob?13:12,whiteSpace:"nowrap"}} onClick={()=>setShowNewFolder(!showNewFolder)}>+ Folder</button>
+      <label style={{...S.btn,padding:mob?"10px 14px":"8px 14px",fontSize:mob?13:12,cursor:uploading?"default":"pointer",opacity:uploading?0.6:1,display:"inline-block",whiteSpace:"nowrap"}}>
+        {uploading?`${progress}%`:"+ Upload"}
+        <input type="file" multiple onChange={handleUpload} disabled={uploading} style={{display:"none"}}/>
+      </label>
     </div>
-    {showNewFolder&&<div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
-      <input style={{...S.inp,flex:1,minWidth:mob?0:200,marginBottom:0,fontSize:mob?16:13,padding:mob?"12px 14px":"10px 14px"}} value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Folder name..." onKeyDown={e=>e.key==="Enter"&&createFolder()} autoFocus/>
-      <button style={{...S.btn,padding:mob?"10px 14px":"8px 14px",whiteSpace:"nowrap"}} onClick={createFolder}>Create</button>
-      <button style={{...S.bs,padding:mob?"10px 14px":"8px 14px"}} onClick={()=>{setShowNewFolder(false);setNewFolderName("");}}>Cancel</button>
-    </div>}
-    <input style={{...S.inp,fontSize:mob?16:13,padding:mob?"10px 14px":"8px 12px"}} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${CATS.find(c=>c.id===cat)?.label}...`}/>
     {uploadErr&&<div style={{fontSize:11,color:C.rd,marginBottom:8}}>{uploadErr}</div>}
-    {openFolder&&curFolder&&<button style={{...S.bs,marginBottom:10,padding:mob?"10px 14px":"6px 12px",fontSize:mob?13:12}} onClick={()=>setOpenFolder(null)}>← Back to {CATS.find(c=>c.id===cat)?.label}</button>}
-    {openFolder&&curFolder&&<div style={{fontSize:14,fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>📂 {curFolder.label}<span style={{fontSize:11,fontWeight:400,color:C.w3}}>{files.length} file{files.length!==1?"s":""}</span></div>}
-    {!openFolder&&!search&&folders.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8,marginBottom:files.length?12:0}}>
-      {folders.sort((a,b)=>a.label.localeCompare(b.label,undefined,{sensitivity:"base"})).map(f=>{const fc=docs.filter(d=>!d.isFolder&&d.folderId===f.id).length;return <div key={f.id} style={{background:C.bg,borderRadius:8,padding:mob?"10px 12px":"10px 12px",border:`1px solid ${C.bd}`,cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"border-color 0.15s"}} onClick={()=>setOpenFolder(f.id)} onMouseEnter={e=>e.currentTarget.style.borderColor=catColor} onMouseLeave={e=>e.currentTarget.style.borderColor=C.bd}>
-        <span style={{fontSize:22,flexShrink:0}}>📂</span>
-        <div style={{flex:1,minWidth:0}}>
-          {renameId===f.id?<div style={{display:"flex",gap:4,flexWrap:"wrap"}} onClick={e=>e.stopPropagation()}><input style={{...S.inp,marginBottom:0,fontSize:12,padding:"4px 8px",flex:1,minWidth:80}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(f);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:11}} onClick={()=>doRename(f)}>Save</button></div>
-          :<><div style={{fontSize:13,fontWeight:600,color:C.w,wordBreak:"break-word",overflow:"hidden",textOverflow:"ellipsis"}}>{f.label}</div>
-          <div style={{fontSize:10,color:C.w3,marginTop:2}}>{fc} file{fc!==1?"s":""} · {fmt(f.createdAt)}</div></>}
+
+    {/* New folder input */}
+    {showNewFolder&&<div style={{background:C.b2,borderRadius:10,border:`1px solid ${C.bl}`,padding:mob?14:12,marginBottom:14,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+      <span style={{fontSize:18}}>📂</span>
+      <input style={{...S.inp,flex:1,minWidth:mob?120:200,marginBottom:0,fontSize:mob?16:13,padding:mob?"10px 14px":"8px 12px"}} value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Folder name..." onKeyDown={e=>e.key==="Enter"&&createFolder()} autoFocus/>
+      <button style={{...S.btn,padding:"8px 16px",whiteSpace:"nowrap"}} onClick={createFolder}>Create</button>
+      <button style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:16,padding:"4px 8px"}} onClick={()=>{setShowNewFolder(false);setNewFolderName("");}}>✕</button>
+    </div>}
+
+    {/* Breadcrumb when inside folder */}
+    {openFolder&&curFolder&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:14,padding:"10px 14px",background:C.b2,borderRadius:8,border:`1px solid ${C.bd}`}}>
+      <button style={{background:"none",border:"none",color:C.bl,cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit",padding:0}} onClick={()=>setOpenFolder(null)}>{CATS.find(c=>c.id===cat)?.label}</button>
+      <span style={{color:C.w3,fontSize:12}}>/</span>
+      <span style={{fontSize:13,fontWeight:700}}>📂 {curFolder.label}</span>
+      <span style={{fontSize:11,color:C.w3,marginLeft:"auto"}}>{files.length} file{files.length!==1?"s":""}</span>
+    </div>}
+
+    {/* Folders grid */}
+    {!openFolder&&!search&&folders.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8,marginBottom:14}}>
+      {folders.sort((a,b)=>a.label.localeCompare(b.label,undefined,{sensitivity:"base"})).map(f=>{const fc=docs.filter(d=>!d.isFolder&&d.folderId===f.id).length;return <div key={f.id} style={{background:C.b2,borderRadius:10,padding:mob?"12px":"14px 16px",border:`1px solid ${C.bd}`,cursor:"pointer",transition:"border-color 0.15s"}} onClick={()=>setOpenFolder(f.id)} onMouseEnter={e=>e.currentTarget.style.borderColor=catColor} onMouseLeave={e=>e.currentTarget.style.borderColor=C.bd}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+          <span style={{fontSize:20}}>📂</span>
+          <div style={{flex:1,minWidth:0}}>
+            {renameId===f.id?<div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}><input style={{...S.inp,marginBottom:0,fontSize:12,padding:"4px 8px",flex:1,minWidth:60}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(f);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:10}} onClick={()=>doRename(f)}>OK</button></div>
+            :<div style={{fontSize:13,fontWeight:600,color:C.w,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.label}</div>}
+          </div>
         </div>
-        <div style={{display:"flex",gap:2,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-          <button onClick={()=>{setRenameId(f.id);setRenameName(f.label);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✏️</button>
-          <button onClick={()=>handleDel(f)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✕</button>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:2}}>
+          <span style={{fontSize:10,color:C.w3}}>{fc} file{fc!==1?"s":""}</span>
+          <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>{setRenameId(f.id);setRenameName(f.label);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:11,padding:"2px"}}>✏️</button>
+            <button onClick={()=>handleDel(f)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:11,padding:"2px"}}>✕</button>
+          </div>
         </div>
       </div>;})}
     </div>}
-    {!files.length&&!folders.length&&!openFolder&&<p style={{fontSize:13,color:C.w3,margin:"12px 0 0",textAlign:"center"}}>No {CATS.find(c=>c.id===cat)?.label.toLowerCase()} yet. Create a folder or upload files.</p>}
-    {!files.length&&openFolder&&<p style={{fontSize:13,color:C.w3,margin:"12px 0 0",textAlign:"center"}}>This folder is empty. Upload files above.</p>}
-    {files.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(260px,1fr))",gap:8,marginTop:4}}>
-      {files.sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||"")).map(d=><div key={d.id} style={{background:C.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"flex-start",gap:8,minWidth:0}}>
-        <span style={{fontSize:20,flexShrink:0}}>{icon(d.label)}</span>
-        <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
-          {renameId===d.id?<div style={{display:"flex",gap:4,flexWrap:"wrap"}}><input style={{...S.inp,marginBottom:0,fontSize:12,padding:"4px 8px",flex:1,minWidth:80}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(d);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:11}} onClick={()=>doRename(d)}>Save</button></div>
-          :<><a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:13,color:C.bl,fontWeight:600,textDecoration:"none",wordBreak:"break-word",display:"block",overflow:"hidden",textOverflow:"ellipsis"}}>{d.label}</a>
+
+    {/* Files list */}
+    {!files.length&&!folders.length&&!openFolder&&<div style={{textAlign:"center",padding:mob?"30px 14px":"40px 20px",color:C.w3}}>
+      <div style={{fontSize:32,marginBottom:8}}>📁</div>
+      <p style={{fontSize:14,margin:"0 0 4px"}}>No {CATS.find(c=>c.id===cat)?.label.toLowerCase()} yet</p>
+      <p style={{fontSize:12,margin:0}}>Create a folder or upload files to get started</p>
+    </div>}
+    {!files.length&&openFolder&&<div style={{textAlign:"center",padding:"30px 14px",color:C.w3}}>
+      <p style={{fontSize:13,margin:0}}>This folder is empty — upload files above</p>
+    </div>}
+    {files.length>0&&<div style={{display:"flex",flexDirection:"column",gap:6}}>
+      {files.sort((a,b)=>(b.uploadedAt||"").localeCompare(a.uploadedAt||"")).map(d=><div key={d.id} style={{background:C.b2,borderRadius:8,padding:mob?"12px":"10px 16px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"center",gap:mob?10:12}}>
+        <span style={{fontSize:mob?22:20,flexShrink:0}}>{icon(d.label)}</span>
+        <div style={{flex:1,minWidth:0}}>
+          {renameId===d.id?<div style={{display:"flex",gap:4}}><input style={{...S.inp,marginBottom:0,fontSize:12,padding:"4px 8px",flex:1,minWidth:80}} value={renameName} onChange={e=>setRenameName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")doRename(d);if(e.key==="Escape")setRenameId(null);}} autoFocus/><button style={{...S.btn,padding:"4px 8px",fontSize:10}} onClick={()=>doRename(d)}>OK</button></div>
+          :<><a href={d.url} target="_blank" rel="noopener noreferrer" style={{fontSize:mob?14:13,color:C.bl,fontWeight:600,textDecoration:"none",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label}</a>
           <div style={{fontSize:10,color:C.w3,marginTop:2}}>{fmtSize(d.fileSize)} · {d.uploadedBy||"?"} · {fmt(d.uploadedAt)}</div></>}
         </div>
-        <div style={{display:"flex",gap:2,flexShrink:0}}>
+        <div style={{display:"flex",gap:4,flexShrink:0}}>
           <button onClick={()=>{setRenameId(d.id);setRenameName(d.label);}} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✏️</button>
           <button onClick={()=>handleDel(d)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:12,padding:"4px"}}>✕</button>
         </div>
       </div>)}
     </div>}
-  </div>;
+  </>;
 }
 
 function TodoTab({todos,setTodos,proj,mob,logAct,user}){
