@@ -108,7 +108,7 @@ function AppMain({user}){
   const[pg,setPg]=useState("dashboard");
   const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);const[companyDocs,setCompanyDocs]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
-  const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
+  const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);const[projSort,setProjSort]=useState("alpha");
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return ymd(d);});
   const[resetting,setResetting]=useState(false);
   const[inspDragId,setInspDragId]=useState(null);const[inspDropDay,setInspDropDay]=useState(null);const inspDragRef=useRef(null);
@@ -355,9 +355,10 @@ function AppMain({user}){
 
         {pg==="projects"&&!selP&&<>
           <div style={{...S.fxsb,marginBottom:20}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Projects</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>{proj.length} jobs</p></div><button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("proj")}>+ New</button></div>
-          <input style={{...S.inp,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search..."/>
+          <div style={{...S.fx,gap:8,marginBottom:8,alignItems:"center"}}><input style={{...S.inp,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px",flex:1,marginBottom:0}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search..."/>
+            <div style={{...S.fx,gap:4}}>{[["alpha","A-Z"],["newest","Newest"]].map(([k,l])=><button key={k} style={{...S.bs,padding:mob?"10px 12px":"6px 10px",fontSize:mob?12:11,background:projSort===k?C.bl:C.b3,color:projSort===k?"#fff":C.w2,border:projSort===k?"none":`1px solid ${C.bd}`}} onClick={()=>setProjSort(k)}>{l}</button>)}</div></div>
           <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(320px,1fr))",gap:mob?8:14}}>
-            {proj.filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=>
+            {proj.filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>projSort==="newest"?(b.createdAt||"").localeCompare(a.createdAt||""):a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=>
               <div key={p.id} style={{...S.cd,cursor:"pointer",borderLeft:`3px solid ${(p.revisions||[]).some(r=>r.status==="Open")||(p.changeOrders||[]).some(co=>co.status==="Pending")?C.rd:p.hoa?C.or:C.bl}`}} onClick={()=>sSP(p.id)}>
                 <div style={{...S.fxsb,marginBottom:6}}><span style={{fontSize:14,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{(p.revisions||[]).filter(r=>r.status==="Open").length>0&&<span style={S.bg(C.orb,C.or)}>↺ {(p.revisions||[]).filter(r=>r.status==="Open").length} REV</span>}{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>$ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
                 <div style={{fontSize:12,color:C.w3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>
