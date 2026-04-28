@@ -1140,7 +1140,6 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
   const curFolder=openFolder?docs.find(d=>d.id===openFolder):null;
   const files=docs.filter(d=>!d.isFolder&&d.category===cat&&(openFolder?(d.folderId===openFolder):(!d.folderId||d.folderId===""))&&(!search||d.label.toLowerCase().includes(search.toLowerCase())));
   const catColor=CATS.find(c=>c.id===cat)?.color||C.bl;
-  const fileCount=docs.filter(d=>!d.isFolder&&d.category===cat).length;
   return <div style={{...S.cd,marginBottom:16,borderLeft:`3px solid ${catColor}`}}>
     <div style={{...S.fxsb,marginBottom:12,alignItems:"center",flexWrap:"wrap",gap:8}}>
       <h3 style={{fontSize:mob?14:16,fontWeight:700,margin:0}}>📁 Company Documents</h3>
