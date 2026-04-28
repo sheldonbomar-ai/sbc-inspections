@@ -56,7 +56,7 @@ const S={
   app:{display:"flex",height:"100vh",fontFamily:"system-ui,sans-serif",background:C.bg,color:C.w,overflow:"hidden"},
   side:{width:240,minWidth:240,background:C.b2,borderRight:`1px solid ${C.bd}`,display:"flex",flexDirection:"column",padding:"16px 0"},
   nav:a=>({display:"flex",alignItems:"center",gap:10,padding:"12px 16px",border:"none",background:a?C.bll:"transparent",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:a?700:500,color:a?C.bl:C.w3,width:"100%",textAlign:"left",marginBottom:4,fontFamily:"inherit",transition:"background 0.15s",letterSpacing:0.3}),
-  cd:{background:C.b2,borderRadius:10,padding:18,border:`1px solid ${C.bd}`,marginBottom:14,transition:"box-shadow 0.15s",overflow:"hidden"},
+  cd:{background:C.b2,borderRadius:10,padding:18,border:`1px solid ${C.bd}`,marginBottom:14,transition:"box-shadow 0.15s"},
   inp:{width:"100%",padding:"10px 14px",borderRadius:7,border:`1px solid ${C.bd}`,background:C.bg,color:C.w,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:10,transition:"border-color 0.15s",boxSizing:"border-box"},
   btn:{padding:"8px 16px",borderRadius:6,border:"none",background:C.bl,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"opacity 0.15s"},
   bs:{padding:"8px 16px",borderRadius:6,border:`1px solid ${C.bd}`,background:C.b2,color:C.w2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"background 0.15s"},
@@ -1141,7 +1141,7 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
   const files=docs.filter(d=>!d.isFolder&&d.category===cat&&(openFolder?(d.folderId===openFolder):(!d.folderId||d.folderId===""))&&(!search||d.label.toLowerCase().includes(search.toLowerCase())));
   const catColor=CATS.find(c=>c.id===cat)?.color||C.bl;
   const fileCount=docs.filter(d=>!d.isFolder&&d.category===cat).length;
-  return <div style={{...S.cd,marginBottom:16,borderLeft:`3px solid ${catColor}`,overflow:"visible"}}>
+  return <div style={{...S.cd,marginBottom:16,borderLeft:`3px solid ${catColor}`}}>
     <div style={{...S.fxsb,marginBottom:12,alignItems:"center",flexWrap:"wrap",gap:8}}>
       <h3 style={{fontSize:mob?14:16,fontWeight:700,margin:0}}>📁 Company Documents</h3>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
