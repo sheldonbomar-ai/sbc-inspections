@@ -234,9 +234,17 @@ function AppMain({user}){
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
                 <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
             </div>
-            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
-              {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Comments Need Response",needResp?C.or:C.w3],[pend30,"Pending > 30 Days",pend30?C.rd:C.w3]].map(([v,l,c],i)=>
-                <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer",padding:mob?16:20}} onClick={()=>setPg("permits")}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
+            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>{const a=permitAge(p);return a!==null&&a>=30&&a<60;}).length;const pend60=activeP.filter(p=>{const a=permitAge(p);return a!==null&&a>=60;}).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:14,marginBottom:20}}>
+              {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Need Response",needResp?C.or:C.w3],[pend30,"30-60 Days",pend30?C.or:C.w3],[pend60,"60+ Days",pend60?C.rd:C.w3]].map(([v,l,c],i)=>
+                <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer",padding:mob?14:20}} onClick={()=>setPg("permits")}><div style={{fontSize:mob?26:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
+            </div>;})()}
+
+            {(()=>{const aging=permits.filter(p=>{const a=permitAge(p);return a!==null&&a>=30;}).sort((a,b)=>(permitAge(b)||0)-(permitAge(a)||0));if(!aging.length)return null;return <div style={{...S.cd,borderLeft:`3px solid ${C.or}`,marginBottom:20,padding:mob?16:20}}>
+              <div style={{...S.fxsb,marginBottom:10}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:18}}>⏱</span><span style={{fontSize:mob?14:16,fontWeight:700,color:C.or}}>PERMIT AGE TRACKER</span></div><span style={{fontSize:12,color:C.w3}}>{aging.length} pending 30+ days</span></div>
+              {aging.map(pm=>{const age=permitAge(pm);const ac=ageColor(age);const p=proj.find(x=>x.id===pm.projectId);return <div key={pm.id} style={{...S.fxsb,padding:"8px 0",borderTop:`1px solid ${C.bd}`,alignItems:"center",cursor:"pointer"}} onClick={()=>setPg("permits")}>
+                <div><span style={{fontSize:13,fontWeight:600,color:C.w}}>{p?.clientName||pm.clientName}</span><span style={{fontSize:11,color:C.w3,marginLeft:6}}>{pm.permitType}</span>{pm.permitNumber&&<span style={{fontSize:10,color:C.bl,marginLeft:6}}>{pm.permitNumber}</span>}</div>
+                <div style={{...S.fxc,gap:6}}><span style={{fontSize:10,color:C.w3}}>{pm.status}</span><span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,background:ageBg(age),color:ac}}>{age}d</span></div>
+              </div>;})}
             </div>;})()}
 
             {pendTotal>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.rd}`,marginBottom:20,background:C.rdb,padding:mob?16:20}}>
@@ -890,6 +898,9 @@ const PERMIT_TYPES=["Building","Electrical","Mechanical","Plumbing","Roofing"];
 const PERMIT_STATUSES=["Not Submitted","Submitted","In Review","Comments Received","Approved","Issued","Closed"];
 const SPEC_WRITERS=["Lamar","Tanner","Habitat","CRA","Beth","Jay","Jim","Jenn","SOFI","Igo","Tabber"];
 const pStatColor=s=>s==="Issued"||s==="Approved"?C.gr:s==="Comments Received"?C.rd:s==="In Review"||s==="Submitted"?C.or:s==="Closed"?C.w3:"#22D3EE";
+const permitAge=pm=>{if(!pm.dateSubmitted||["Issued","Closed","Approved"].includes(pm.status))return null;const days=Math.floor((new Date()-new Date(pm.dateSubmitted+"T00:00:00"))/(1e3*86400));return days;};
+const ageColor=days=>{if(days===null)return null;if(days>=60)return C.rd;if(days>=30)return C.or;return C.gr;};
+const ageBg=days=>{if(days===null)return null;if(days>=60)return C.rdb;if(days>=30)return C.orb;return C.grl;};
 
 function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,setCompanyDocs,user}){
   const[selProj,setSelProj]=useState(null);
@@ -940,9 +951,10 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
           </div>
 
           {/* Quick info row */}
-          <div style={{...S.fx,gap:14,flexWrap:"wrap",marginBottom:10,fontSize:12,color:C.w3}}>
+          <div style={{...S.fx,gap:14,flexWrap:"wrap",marginBottom:10,fontSize:12,color:C.w3,alignItems:"center"}}>
             {pm.specWriter&&<span>Spec: <b style={{color:C.w2}}>{pm.specWriter}</b></span>}
             {pm.dateSubmitted&&<span>Submitted: <b style={{color:C.w2}}>{fmt(pm.dateSubmitted)}</b></span>}
+            {(()=>{const age=permitAge(pm);if(age===null)return null;return <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:5,background:ageBg(age),color:ageColor(age)}}>{age}d pending</span>;})()}
             {pm.dateApproved&&<span>Approved: <b style={{color:C.gr}}>{fmt(pm.dateApproved)}</b></span>}
             {pm.portalUrl&&<a href={pm.portalUrl} target="_blank" rel="noopener noreferrer" style={{color:C.bl,cursor:"pointer",textDecoration:"underline"}}>City Portal</a>}
           </div>
@@ -1050,9 +1062,9 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
             </div>
           </div>
           <div style={{padding:mob?"0 14px 12px":"0 18px 14px",display:"flex",gap:6,flexWrap:"wrap"}}>
-            {pPerms.map(pm=>{const stC=pStatColor(pm.status);return <div key={pm.id} style={{background:C.bg,borderRadius:6,padding:"6px 10px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"center",gap:6}}>
+            {pPerms.map(pm=>{const stC=pStatColor(pm.status);const age=permitAge(pm);return <div key={pm.id} style={{background:C.bg,borderRadius:6,padding:"6px 10px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"center",gap:6}}>
               <div style={{width:7,height:7,borderRadius:"50%",background:stC,flexShrink:0}}/>
-              <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{pm.permitType}</div><div style={{fontSize:10,color:C.w3}}>{pm.permitNumber||"No #"} · {pm.status}</div></div>
+              <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{pm.permitType}</div><div style={{fontSize:10,color:C.w3}}>{pm.permitNumber||"No #"} · {pm.status}{age!==null&&<span style={{color:ageColor(age),fontWeight:600}}> · {age}d</span>}</div></div>
             </div>;})}
           </div>
         </div>;
