@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { db, storage, auth } from "./firebase";
+import { db, storage, auth, functions } from "./firebase";
 import { doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
 const PRINT_CSS=`*,*::before,*::after{box-sizing:border-box;}
@@ -50,6 +51,21 @@ const fDay=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"lon
 const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const td=()=>ymd(new Date());
 const svFs=async(k,v)=>{try{await setDoc(doc(db,"data",k),{value:JSON.stringify(v)});}catch(e){console.error("Firestore save error:",e);}};
+const runSafeMigration=async(migId,dataKey,current,migrateFn,desc)=>{
+  const applied=ldLocal("mig_"+migId,false);if(applied)return{changed:false,data:current};
+  try{
+    // Save pre-migration snapshot
+    await addDoc(collection(db,"migrationSnapshots"),{migId,dataKey,desc,timestamp:new Date().toISOString(),status:"pending",recordCount:current.length,snapshot:JSON.stringify(current)});
+    // Run migration
+    const result=migrateFn(current);
+    if(!result||JSON.stringify(result)===JSON.stringify(current)){localStorage.setItem("mig_"+migId,"true");return{changed:false,data:current};}
+    // Safety: abort if deleting >20% of records
+    if(result.length<current.length*0.8){console.error("Migration "+migId+" aborted: would delete >20% of records");return{changed:false,data:current};}
+    localStorage.setItem("mig_"+migId,"true");
+    console.log("Migration "+migId+": "+desc+" ("+current.length+"→"+result.length+" records)");
+    return{changed:true,data:result};
+  }catch(e){console.error("Migration "+migId+" failed:",e);return{changed:false,data:current};}
+};
 const ldLocal=(k,f)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):f;}catch{return f;}};
 const mkSeed=()=>SD.split(";").filter(r=>r.includes("|")).map(r=>{const p=r.split("|");const st=p[6]||"";const dashIdx=st.indexOf("—");return{id:uid(),clientName:p[0].trim(),city:p[1],address:p[2]||"TBD",permitNum:p[3]==="0"?"":p[3],hoa:p[4]==="1",scopes:p[5]?p[5].split(",").map(x=>SM[x]).filter(Boolean):[],scopeNotes:dashIdx>-1?st.slice(dashIdx+2).trim():"",status:dashIdx>-1?st.slice(0,dashIdx).trim():st,assignee:"",comments:[],createdAt:td()};});
 const S={
@@ -145,7 +161,7 @@ function AppMain({user}){
   useEffect(()=>{if(ok){const j=JSON.stringify(todos);if(j!==lastFs.current.sYtd){lastFs.current.sYtd=j;svFs("sYtd",todos);localStorage.setItem("sYtd",j);}}},[todos,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(companyDocs);if(j!==lastFs.current.sYcd){lastFs.current.sYcd=j;svFs("sYcd",companyDocs);localStorage.setItem("sYcd",j);}}},[companyDocs,ok]);
 
-  // One-time: add new jobs from 2026 spreadsheet + cleanup junk entries
+  // One-time migrations (wrapped in safety layer)
   const migratedRef=useRef(false);
   useEffect(()=>{
     if(!ok||!proj.length||migratedRef.current)return;
@@ -156,16 +172,16 @@ function AppMain({user}){
       {clientName:"Perez-Millan",city:"West Park",scopes:["Windows & Doors","Electrical","Mechanical"],hoa:false,scopeNotes:"Windows; (6) 1/2 lite doors; AC C/O; Electrical upgrade; Ext paint",status:"Not signed"},
       {clientName:"Lopez",city:"Weston",scopes:["Windows & Doors","Roofing"],hoa:true,scopeNotes:"Windows + (1) SGD; 1 6-panel door; Tile roof; Gutters",status:"Not signed"},
     ];
-    // Cleanup: remove junk entries created by semicolons in seed data scope notes
     const junkNames=["(2) ext doors","(6) 1/2 lite doors","1 6-panel door","AC C/O","Electrical upgrade","Ext paint","FD 1/4 lite","Gutters","OHGD","Slope+flat roof","Sloped roof","Tile roof","Windows","Windows + (1) SGD"];
-    setP(cur=>{
+    runSafeMigration("2026-add-jobs-cleanup-v2","sYp",proj,(cur)=>{
       let updated=[...cur];
       const hadJunk=updated.some(p=>junkNames.includes(p.clientName.trim()));
       if(hadJunk)updated=updated.filter(p=>!junkNames.includes(p.clientName.trim()));
       const toAdd=newJobs.filter(nj=>!updated.some(p=>p.clientName.toLowerCase()===nj.clientName.toLowerCase()));
       if(toAdd.length)updated=[...updated,...toAdd.map(j=>({id:uid(),address:"TBD",permitNum:"",assignee:"",comments:[],createdAt:td(),...j}))];
       return(hadJunk||toAdd.length)?updated:cur;
-    });
+    },"Add 2026 spreadsheet jobs + cleanup junk entries").then(r=>{if(r.changed)setP(r.data);});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[ok,proj.length]);
 
   const logAct=(action,detail)=>{try{addDoc(collection(db,"activityLog"),{user:user.displayName||"Unknown",action,detail:detail||"",ts:new Date().toISOString()});}catch(e){console.error("Log error:",e);}};
@@ -182,9 +198,9 @@ function AppMain({user}){
   const projWithIssues=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open"));
 
   const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
-  const navItems=isAdmin?[...navBase,["activity","Activity Log"]]:navBase;
+  const navItems=isAdmin?[...navBase,["activity","Activity Log"],["backups","Backups"]]:navBase;
   const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
-  const mobNavItems=isAdmin?[...mobBase,["activity","Log"]]:mobBase;
+  const mobNavItems=isAdmin?[...mobBase,["activity","Log"],["backups","Backups"]]:mobBase;
 
   return(
     <div data-app="" style={{...S.app,flexDirection:mob?"column":"row"}}>
@@ -195,7 +211,7 @@ function AppMain({user}){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>};return(
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>,backups:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
@@ -433,6 +449,8 @@ function AppMain({user}){
             </div>)}
           </>;
         })()}
+
+        {pg==="backups"&&isAdmin&&<BackupsPanel mob={mob}/>}
 
         {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":560,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
@@ -1326,5 +1344,36 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
       </div>
     </div>;})}
     </div>
+  </>;
+}
+
+function BackupsPanel({mob}){
+  const[backups,setBackups]=useState([]);const[loading,setLoading]=useState(true);const[acting,setActing]=useState(false);const[msg,setMsg]=useState("");
+  const fmtSize=b=>{if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
+  const fmtDate=d=>{const dt=new Date(d);return dt.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})+" "+dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
+  const load=async()=>{setLoading(true);try{const fn=httpsCallable(functions,"listBackups");const res=await fn();setBackups(res.data.backups||[]);}catch(e){setMsg("Error loading backups: "+e.message);}setLoading(false);};
+  const create=async()=>{setActing(true);setMsg("");try{const fn=httpsCallable(functions,"manualBackup");await fn();setMsg("Backup created successfully");await load();}catch(e){setMsg("Error: "+e.message);}setActing(false);};
+  const restore=async(path)=>{if(!window.confirm("Restore this backup? Current data will be overwritten.\n\nA pre-restore snapshot will be saved automatically."))return;setActing(true);setMsg("");try{const fn=httpsCallable(functions,"restoreBackup");await fn({backupPath:path});setMsg("Restored from "+path.split("/").pop()+". Refresh the page to see changes.");await load();}catch(e){setMsg("Error: "+e.message);}setActing(false);};
+  useEffect(()=>{load();},[]);
+  return <>
+    <div style={{...S.fxsb,marginBottom:20,flexWrap:"wrap",gap:8,alignItems:"center"}}>
+      <div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Backups</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>Daily automatic backups at 2 AM ET. 30-day retention.</p></div>
+      <button style={{...S.btn,opacity:acting?0.6:1}} onClick={create} disabled={acting}>{acting?"Working...":"Create Backup Now"}</button>
+    </div>
+    {msg&&<div style={{padding:"10px 14px",borderRadius:8,marginBottom:14,fontSize:13,background:msg.startsWith("Error")?C.rdb:C.grl,color:msg.startsWith("Error")?C.rd:C.gr,border:`1px solid ${msg.startsWith("Error")?C.rd:C.gr}`}}>{msg}</div>}
+    {loading?<p style={{color:C.w3,fontSize:13}}>Loading backups...</p>:
+    !backups.length?<div style={{textAlign:"center",padding:"40px 20px",color:C.w3}}><div style={{fontSize:32,marginBottom:8}}>💾</div><p style={{fontSize:14}}>No backups yet</p><p style={{fontSize:12}}>Click "Create Backup Now" to create your first snapshot</p></div>:
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      {backups.map(b=>{const name=b.path.split("/").pop();const trigger=name.split("-")[0];const tColor=trigger==="auto"?C.bl:trigger==="manual"?C.gr:C.or;return <div key={b.path} style={{background:C.b2,borderRadius:8,padding:mob?"14px":"12px 16px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+            <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,background:tColor+"22",color:tColor,textTransform:"uppercase"}}>{trigger}</span>
+            <span style={{fontSize:mob?14:13,fontWeight:600}}>{fmtDate(b.date)}</span>
+          </div>
+          <div style={{fontSize:11,color:C.w3}}>{fmtSize(b.size)}</div>
+        </div>
+        <button style={{...S.bs,color:C.or,fontSize:mob?13:12,padding:mob?"10px 14px":"6px 12px"}} onClick={()=>restore(b.path)} disabled={acting}>Restore</button>
+      </div>;})}
+    </div>}
   </>;
 }
