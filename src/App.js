@@ -134,7 +134,7 @@ function AppMain({user}){
 
   useEffect(()=>{
     const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos],["sYcd",setCompanyDocs]];
-    let loaded=0;
+    const loadedKeys=new Set();
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
       let val=d?JSON.parse(d.value):null;
@@ -143,13 +143,13 @@ function AppMain({user}){
       const json=JSON.stringify(val);
       localStorage.setItem(k,json);
       if(json!==lastFs.current[k]){lastFs.current[k]=json;setter(val);}
-      loaded++;if(loaded>=keys.length)setOk(true);
+      loadedKeys.add(k);if(loadedKeys.size>=keys.length)setOk(true);
     },(err)=>{
       console.error("Firestore listen error:",err);
       const val=ldLocal(k,k==="sYp"?mkSeed():[]);
       const json=JSON.stringify(val);
       lastFs.current[k]=json;
-      setter(val);loaded++;if(loaded>=keys.length)setOk(true);
+      setter(val);loadedKeys.add(k);if(loadedKeys.size>=keys.length)setOk(true);
     }));
     return ()=>unsubs.forEach(u=>u());
   },[]);
@@ -226,7 +226,7 @@ function AppMain({user}){
           </div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span>Broward County, FL</span>
-            {!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
+            {!isAdmin?null:!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
             <div style={{display:"flex",gap:4}}>
               <button onClick={async()=>{const p=mkSeed();setP(p);setI([]);setCt([]);setResetting(false);}} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4,fontWeight:600}}>Yes, reset all</button>
               <button onClick={()=>setResetting(false)} style={{background:"none",border:`1px solid ${C.bd}`,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4}}>Cancel</button>
