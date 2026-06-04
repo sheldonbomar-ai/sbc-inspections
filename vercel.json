@@ -1,4 +1,4 @@
 {
-  "buildCommand": "CI=false npm run build",
+  "buildCommand": "REACT_APP_GIT_SHA=$VERCEL_GIT_COMMIT_SHA REACT_APP_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) CI=false npm run build",
   "outputDirectory": "build"
 }

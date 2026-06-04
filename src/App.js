@@ -50,6 +50,8 @@ const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short"
 const fDay=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"long"}).toUpperCase():"";
 const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const td=()=>ymd(new Date());
+const BUILD_SHA=(process.env.REACT_APP_GIT_SHA||"").slice(0,7);
+const BUILD_LABEL=(()=>{try{const t=process.env.REACT_APP_BUILD_TIME;if(!t)return"";return new Date(t).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}catch{return"";}})();
 const svFs=async(k,v)=>{try{await setDoc(doc(db,"data",k),{value:JSON.stringify(v)});}catch(e){console.error("Firestore save error:",e);}};
 const runSafeMigration=async(migId,dataKey,current,migrateFn,desc)=>{
   const applied=ldLocal("mig_"+migId,false);if(applied)return{changed:false,data:current};
@@ -232,6 +234,7 @@ function AppMain({user}){
               <button onClick={()=>setResetting(false)} style={{background:"none",border:`1px solid ${C.bd}`,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px",borderRadius:4}}>Cancel</button>
             </div>}
           </div>
+          <div title={BUILD_SHA?"commit "+BUILD_SHA:""} style={{marginTop:6,fontSize:9,color:C.w3,opacity:0.55}}>Updated {BUILD_LABEL||"(dev build)"}{BUILD_SHA?" · "+BUILD_SHA:""}</div>
         </div>
       </div>}
 
