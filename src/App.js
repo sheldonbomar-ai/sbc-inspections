@@ -435,7 +435,7 @@ function AppMain({user}){
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
         {pg==="permitcards"&&<PermitCardsTab proj={proj} cards={permitCards} setCards={setPermitCards} mob={mob} logAct={logAct} user={user}/>}
-        {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} mob={mob} logAct={logAct} user={user}/>}
+        {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} setP={setP} mob={mob} logAct={logAct} user={user}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
           if(!actLog.length)loadLog();
@@ -1434,12 +1434,30 @@ function CompanyDocsSection({docs,setDocs,mob,user,logAct}){
   </>;
 }
 
-function TodoTab({todos,setTodos,proj,mob,logAct,user}){
-  const[text,setText]=useState("");const[project,setProject]=useState("");const[priority,setPriority]=useState("Normal");const[filter,setFilter]=useState("active");const[linkTo,setLinkTo]=useState("");
+function TodoTab({todos,setTodos,proj,setP,mob,logAct,user}){
+  const[text,setText]=useState("");const[project,setProject]=useState("");const[priority,setPriority]=useState("Normal");const[filter,setFilter]=useState("active");const[linkTo,setLinkTo]=useState("");const[itemType,setItemType]=useState("task");
   const me=user.displayName||"User";
   const allLinks=[];
   proj.forEach(p=>{(p.revisions||[]).filter(r=>r.status!=="Resolved").forEach(r=>allLinks.push({type:"revision",id:r.id,label:`Revision: ${r.description} — ${p.clientName}`,projectId:p.id}));(p.changeOrders||[]).filter(co=>co.status==="Pending").forEach(co=>allLinks.push({type:"changeOrder",id:co.id,label:`CO: ${co.description} — ${p.clientName}`,projectId:p.id}));});
-  const add=()=>{if(!text.trim())return;const link=allLinks.find(l=>`${l.type}:${l.id}`===linkTo);const t={id:uid(),text:text.trim(),done:false,priority,projectId:link?link.projectId:(project||""),assignee:"",createdBy:me,createdAt:td(),doneAt:"",doneBy:"",linkedRevId:link&&link.type==="revision"?link.id:"",linkedCOId:link&&link.type==="changeOrder"?link.id:"",linkedType:link?link.type:""};setTodos(v=>[t,...v]);logAct("added todo",text.trim());setText("");setProject("");setPriority("Normal");setLinkTo("");};
+  const add=()=>{
+    if(!text.trim())return;
+    if(itemType!=="task"){
+      if(!project)return;
+      const pj=proj.find(p=>p.id===project);const pname=pj?.clientName||"";
+      if(itemType==="revision"){
+        const revId=uid();
+        setP(v=>v.map(p=>p.id===project?{...p,revisions:[...(p.revisions||[]),{id:revId,description:text.trim(),inspection:"",notes:"",status:"Open",createdAt:td()}]}:p));
+        const t={id:uid(),text:`Revision: ${text.trim()} — ${pname}`,done:false,priority:"High",projectId:project,assignee:"",createdBy:me,createdAt:td(),doneAt:"",doneBy:"",linkedRevId:revId,linkedType:"revision"};
+        setTodos(v=>[t,...v]);logAct("added revision",`"${text.trim()}" for ${pname}`);
+      }else{
+        const coId=uid();
+        setP(v=>v.map(p=>p.id===project?{...p,changeOrders:[...(p.changeOrders||[]),{id:coId,description:text.trim(),cost:"",reason:"",status:"Pending",createdAt:td()}]}:p));
+        const t={id:uid(),text:`CO: ${text.trim()} — ${pname}`,done:false,priority:"High",projectId:project,assignee:"",createdBy:me,createdAt:td(),doneAt:"",doneBy:"",linkedCOId:coId,linkedType:"changeOrder"};
+        setTodos(v=>[t,...v]);logAct("added change order",`"${text.trim()}" for ${pname}`);
+      }
+      setText("");setProject("");setPriority("Normal");setLinkTo("");setItemType("task");return;
+    }
+    const link=allLinks.find(l=>`${l.type}:${l.id}`===linkTo);const t={id:uid(),text:text.trim(),done:false,priority,projectId:link?link.projectId:(project||""),assignee:"",createdBy:me,createdAt:td(),doneAt:"",doneBy:"",linkedRevId:link&&link.type==="revision"?link.id:"",linkedCOId:link&&link.type==="changeOrder"?link.id:"",linkedType:link?link.type:""};setTodos(v=>[t,...v]);logAct("added todo",text.trim());setText("");setProject("");setPriority("Normal");setLinkTo("");};
   const toggle=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,done:!t.done,doneAt:!t.done?td():"",doneBy:!t.done?me:""}:t));
   const take=(id)=>setTodos(v=>v.map(t=>t.id===id?{...t,assignee:t.assignee===me?"":me}:t));
   const del=(id)=>{const t=todos.find(x=>x.id===id);setTodos(v=>v.filter(x=>x.id!==id));if(t)logAct("deleted todo",t.text);};
@@ -1452,18 +1470,22 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
       <h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>To Do <span style={{fontSize:14,fontWeight:500,color:C.w3}}>({activeCount} open)</span></h1>
     </div>
     <div style={{...S.cd,marginBottom:16}}>
-      <input style={{...S.inp,marginBottom:8,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} placeholder="What needs to be done?"/>
+      <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+        {[["task","Task"],["revision","Revision"],["changeOrder","Change Order"]].map(([k,l])=>{const active=itemType===k;const col=k==="revision"?C.or:k==="changeOrder"?C.rd:C.bl;return <button key={k} onClick={()=>setItemType(k)} style={{...S.bs,fontSize:mob?13:12,padding:mob?"8px 14px":"6px 14px",background:active?col:C.b3,color:active?"#fff":C.w2,border:active?"none":`1px solid ${C.bd}`,fontWeight:active?700:500}}>{l}</button>;})}
+      </div>
+      <input style={{...S.inp,marginBottom:8,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} placeholder={itemType==="revision"?"What needs to be revised? (e.g. Wrong NOA on window permit)":itemType==="changeOrder"?"Change order description (e.g. Add SGD to master suite)":"What needs to be done?"}/>
       <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"auto auto 1fr auto",gap:8,alignItems:"center"}}>
-        <select style={{...S.inp,marginBottom:0,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={priority} onChange={e=>setPriority(e.target.value)}>
+        <select disabled={itemType!=="task"} style={{...S.inp,marginBottom:0,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px",opacity:itemType!=="task"?0.5:1}} value={itemType!=="task"?"High":priority} onChange={e=>setPriority(e.target.value)}>
           <option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option>
         </select>
-        <select style={{...S.inp,marginBottom:0,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={project} onChange={e=>setProject(e.target.value)}>
-          <option value="">No project</option>
+        <select style={{...S.inp,marginBottom:0,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px",border:itemType!=="task"&&!project?`1px solid ${C.rd}`:`1px solid ${C.bd}`}} value={project} onChange={e=>setProject(e.target.value)}>
+          <option value="">{itemType!=="task"?"Select a job (required)":"No project"}</option>
           {[...proj].sort((a,b)=>a.clientName.localeCompare(b.clientName)).map(p=><option key={p.id} value={p.id}>{p.clientName}</option>)}
         </select>
-        <button style={{...S.btn,padding:mob?"12px 14px":"6px 14px",fontSize:mob?14:12,gridColumn:mob?"1 / -1":"auto"}} onClick={add}>Add To Do</button>
+        <button style={{...S.btn,padding:mob?"12px 14px":"6px 14px",fontSize:mob?14:12,gridColumn:mob?"1 / -1":"auto",opacity:(itemType!=="task"&&!project)?0.5:1}} onClick={add}>{itemType==="revision"?"Add Revision":itemType==="changeOrder"?"Add Change Order":"Add To Do"}</button>
       </div>
-      {allLinks.length>0&&<select style={{...S.inp,marginBottom:0,marginTop:8,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={linkTo} onChange={e=>setLinkTo(e.target.value)}>
+      {itemType!=="task"&&<div style={{fontSize:11,color:C.w3,marginTop:8}}>Adds to <b style={{color:C.w2}}>{proj.find(p=>p.id===project)?.clientName||"the job"}</b>'s {itemType==="revision"?"Revisions":"Change Orders"} and creates a linked High-priority to-do.</div>}
+      {itemType==="task"&&allLinks.length>0&&<select style={{...S.inp,marginBottom:0,marginTop:8,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={linkTo} onChange={e=>setLinkTo(e.target.value)}>
         <option value="">Link to revision or change order (optional)</option>
         {allLinks.map(l=><option key={`${l.type}:${l.id}`} value={`${l.type}:${l.id}`}>{l.label}</option>)}
       </select>}
