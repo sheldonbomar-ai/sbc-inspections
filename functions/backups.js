@@ -4,10 +4,13 @@ const admin = require("firebase-admin");
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
+// Explicit bucket name: this project's default bucket uses the newer
+// .firebasestorage.app naming, so admin.storage().bucket() (which defaults
+// to <project>.appspot.com) points at a bucket that doesn't exist.
+const bucket = admin.storage().bucket("stacy-bomar-tracker.firebasestorage.app");
 
 const ADMIN_EMAILS = ["sheldon@sbc.app", "tim@sbc.app"];
-const DATA_KEYS = ["sYp", "sYi", "sYc", "sYs", "sYpm", "sYtd", "sYcd"];
+const DATA_KEYS = ["sYp", "sYi", "sYc", "sYs", "sYpm", "sYtd", "sYcd", "sYpc"];
 
 // Daily automatic backup at 2 AM ET
 exports.dailyBackup = onSchedule(
