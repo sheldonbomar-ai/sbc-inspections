@@ -200,9 +200,9 @@ function AppMain({user}){
   const pendTotal=pendCO+pendRev;
   const projWithIssues=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open"));
 
-  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["permitcards","Permit Cards"],["scheduling","Scheduling"],["todos","To Do"]];
+  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"],["backups","Backups"]]:navBase;
-  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["permitcards","Cards"],["scheduling","Scheduling"],["todos","To Do"]];
+  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const mobNavItems=isAdmin?[...mobBase,["activity","Log"],["backups","Backups"]]:mobBase;
 
   return(
@@ -432,14 +432,13 @@ function AppMain({user}){
             </div>
             <div style={{...S.fx,gap:6}}><input id="cm" style={{...S.inp,marginBottom:0,flex:1}} placeholder={`Message as ${user.displayName||user.email}…`} onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){addNote(e.target.value.trim());e.target.value="";}}} /><button style={S.btn} onClick={()=>{const el=document.getElementById("cm");if(el?.value.trim()){addNote(el.value.trim());el.value="";}}}>Send</button></div>
           </div>
-          <LinksSection mob={mob} links={p.links||[]} projectId={selP} logAct={logAct} projectName={p.clientName} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))} onUpdate={(lid,upd)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).map(l=>l.id===lid?{...l,...upd}:l)}:x))}/>
+          <LinksSection mob={mob} links={p.links||[]} projectId={selP} logAct={logAct} projectName={p.clientName} permitCards={permitCards} setPermitCards={setPermitCards} clientName={p.clientName} permitNum={p.permitNum} onAdd={(lk)=>setP(v=>v.map(x=>x.id===selP?{...x,links:[...(x.links||[]),{id:uid(),...lk,date:td()}]}:x))} onDel={(lid)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).filter(l=>l.id!==lid)}:x))} onUpdate={(lid,upd)=>setP(v=>v.map(x=>x.id===selP?{...x,links:(x.links||[]).map(l=>l.id===lid?{...l,...upd}:l)}:x))}/>
           <h4 style={{fontSize:13,fontWeight:700,margin:"12px 0 8px"}}>Inspections ({pi.length})</h4>
           {pi.map(i=>{const rc=i.result==="pass"?C.gr:i.result==="fail"?C.rd:C.or;const rl=i.result==="pass"?"Pass":i.result==="fail"?"Fail":"Open";const rb=i.result==="pass"?C.grl:i.result==="fail"?C.rdb:C.orb;return <div key={i.id} style={S.rw}><div style={{width:6,height:6,borderRadius:"50%",background:rc}}/><div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{fT(i.type,ct)}</div><div style={{fontSize:10,color:C.w3}}>{fmt(i.date)} · {i.permitNum||"—"}</div></div><span style={S.bg(rb,rc)}>{rl}</span></div>;})}
         </>;})()}
 
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
-        {pg==="permitcards"&&<PermitCardsTab proj={proj} cards={permitCards} setCards={setPermitCards} mob={mob} logAct={logAct} user={user}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} setP={setP} mob={mob} logAct={logAct} user={user}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
@@ -807,7 +806,7 @@ function AssignPicker({projects,onPick}){
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:pid?1:0.5}} onClick={()=>{if(pid)onPick(pid,notes);}}>Assign</button></div>
   </div>;
 }
-function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectName}){
+function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectName,permitCards,setPermitCards,clientName,permitNum}){
   const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");const[addCat,setAddCat]=useState("pre");const[addFolder,setAddFolder]=useState("");
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
   const isImg=l=>/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(l||"");
@@ -856,9 +855,31 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
     }
     setPhotoUploading(false);setPhotoProg(0);e.target.value="";
   };
+  const handlePcUpload=async(e)=>{
+    const files=e.target.files;if(!files||!files.length)return;
+    setPcUploading(true);setUploadErr("");
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      const path=`permitCards/${projectId}/${Date.now()}_${file.name}`;
+      const sRef=ref(storage,path);
+      try{
+        const task=uploadBytesResumable(sRef,file);
+        await new Promise((resolve,reject)=>{
+          task.on("state_changed",(snap)=>{setPcProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>reject(err),async()=>{
+            const dlUrl=await getDownloadURL(task.snapshot.ref);
+            if(setPermitCards)setPermitCards(v=>[...v,{id:uid(),projectId,clientName:clientName||projectName||"",permitNum:permitNum||"",label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,uploadedBy:"",uploadedAt:td()}]);
+            if(logAct)logAct("uploaded permit card",`${file.name} for ${projectName}`);
+            resolve();
+          });
+        });
+      }catch(err){setUploadErr(err.code+": "+err.message);}
+    }
+    setPcUploading(false);setPcProg(0);e.target.value="";
+  };
+  const delPc=async(c)=>{if(c.storagePath){try{await deleteObject(ref(storage,c.storagePath));}catch(e){console.error("Delete error:",e);}}if(setPermitCards)setPermitCards(v=>v.filter(x=>x.id!==c.id));if(logAct)logAct("deleted permit card",`${c.label} for ${projectName}`);};
   const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim(),category:addCat,folder:addFolder||""});sL("");sU("");}};
   const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
-  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);const[dragId,setDragId]=useState(null);const[dragOver,setDragOver]=useState(null);const[actionMenu,setActionMenu]=useState(null);const[lb,setLb]=useState(null);const[photoUploading,setPhotoUploading]=useState(false);const[photoProg,setPhotoProg]=useState(0);const[photoView,setPhotoView]=useState("All");
+  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);const[dragId,setDragId]=useState(null);const[dragOver,setDragOver]=useState(null);const[actionMenu,setActionMenu]=useState(null);const[lb,setLb]=useState(null);const[photoUploading,setPhotoUploading]=useState(false);const[photoProg,setPhotoProg]=useState(0);const[photoView,setPhotoView]=useState("All");const[pcUploading,setPcUploading]=useState(false);const[pcProg,setPcProg]=useState(0);
   const PHOTO_CATS=["General","Electrical","Mechanical","Plumbing","Structural"];
   const preFiles=links.filter(l=>(l.category||"pre")==="pre"&&(l.isFolder||!isImg(l.label)));
   const postFiles=links.filter(l=>l.category==="post"&&(l.isFolder||!isImg(l.label)));
@@ -945,6 +966,18 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
   </label>;
   const visiblePhotos=photoView==="All"?photos:photos.filter(l=>photoCatOf(l)===photoView);
   const uploadTarget=photoView==="All"?"General":photoView;
+  const myCards=(permitCards||[]).filter(c=>c.projectId===projectId);
+  const pcInputBtn=(big)=><label style={big?{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,padding:mob?"28px 16px":"24px 16px",borderRadius:10,border:`2px dashed ${C.bl}`,cursor:pcUploading?"default":"pointer",color:C.bl,fontSize:mob?14:13,fontWeight:600,background:C.bll,textAlign:"center"}:{display:"inline-flex",alignItems:"center",gap:5,padding:mob?"8px 14px":"6px 12px",borderRadius:6,border:"none",background:C.bl,color:"#fff",cursor:pcUploading?"default":"pointer",fontSize:mob?13:11,fontWeight:600}}>
+    <input type="file" accept="application/pdf,image/*" multiple style={{display:"none"}} onChange={handlePcUpload} disabled={pcUploading}/>
+    <span style={{fontSize:big?24:14}}>📋</span>{big?(mob?"Tap to add permit card":"Add Permit Card"):"Add"}
+  </label>;
+  const pcTile=(c)=>{const img=isImg(c.label);return <div key={c.id} style={{borderRadius:8,overflow:"hidden",border:`1px solid ${C.bd}`,background:C.bg}}>
+    {img?<div onClick={()=>setLb(c.url)} style={{height:mob?100:90,background:`#000 center/cover no-repeat url("${c.url}")`,cursor:"zoom-in"}}/>:<a href={c.url} target="_blank" rel="noopener noreferrer" style={{height:mob?100:90,display:"flex",alignItems:"center",justifyContent:"center",background:C.b3,textDecoration:"none"}}><span style={{fontSize:32}}>📋</span></a>}
+    <div style={{display:"flex",alignItems:"center",gap:4,padding:"5px 6px"}}>
+      <a href={c.url} target="_blank" rel="noopener noreferrer" style={{flex:1,minWidth:0,fontSize:11,color:C.bl,fontWeight:600,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</a>
+      <button onClick={()=>delPc(c)} title="Delete" style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:13,padding:"0 2px",lineHeight:1}}>✕</button>
+    </div>
+  </div>;};
   return <div style={S.cd}>
     <div style={{...S.fxsb,marginBottom:12,flexWrap:"wrap",gap:8,alignItems:"center"}}>
       <h4 style={{fontSize:mob?15:13,fontWeight:700,margin:0,display:"flex",alignItems:"center",gap:8}}><span>📷</span>Photos<span style={{fontSize:10,fontWeight:500,color:C.w3}}>({photos.length})</span></h4>
@@ -957,6 +990,15 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
     {uploadErr&&!uploading&&<div style={{fontSize:12,color:C.rd,marginBottom:12,padding:8,background:C.rdb,borderRadius:6,wordBreak:"break-all"}}>{uploadErr}</div>}
     {visiblePhotos.length?<div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(auto-fill,minmax(96px,1fr))",gap:6,marginBottom:16}}>{visiblePhotos.map(photoTile)}</div>:photoInputBtn(uploadTarget,true)}
     <div style={{borderBottom:`1px solid ${C.bd}`,marginBottom:16,marginTop:4}}/>
+    {setPermitCards&&<>
+      <div style={{...S.fxsb,marginBottom:10,alignItems:"center",gap:8}}>
+        <h4 style={{fontSize:mob?15:13,fontWeight:700,margin:0,display:"flex",alignItems:"center",gap:8}}><span>📋</span>Permit Cards<span style={{fontSize:10,fontWeight:500,color:C.w3}}>({myCards.length})</span></h4>
+        {myCards.length>0&&pcInputBtn(false)}
+      </div>
+      {pcUploading&&<div style={{marginBottom:12}}><div style={{fontSize:11,color:C.bl,marginBottom:4}}>Uploading… {pcProg}%</div><div style={{height:4,background:C.bd,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:C.bl,width:`${pcProg}%`,transition:"width 0.2s"}}/></div></div>}
+      {myCards.length?<div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(120px,1fr))",gap:8,marginBottom:16}}>{myCards.map(pcTile)}</div>:pcInputBtn(true)}
+      <div style={{borderBottom:`1px solid ${C.bd}`,marginBottom:16,marginTop:4}}/>
+    </>}
     <h4 style={{fontSize:mob?15:13,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📄</span>Documents & Links</h4>
     <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:mob?10:12,marginBottom:12}}>
       {renderSide(preFiles,preFolders,"pre","post",C.or,"PRE JOB")}
@@ -1003,97 +1045,6 @@ const permitAge=pm=>{if(!pm.dateSubmitted||["Issued","Closed","Approved"].includ
 const ageColor=days=>{if(days===null)return null;if(days>=60)return C.rd;if(days>=30)return C.or;return C.gr;};
 const ageBg=days=>{if(days===null)return null;if(days>=60)return C.rdb;if(days>=30)return C.orb;return C.grl;};
 
-function PermitCardsTab({proj,cards,setCards,mob,logAct,user}){
-  const[search,sSr]=useState("");
-  const[upProj,setUpProj]=useState("");
-  const[uploading,setUploading]=useState(false);
-  const[progress,setProg]=useState(0);
-  const[upErr,setUpErr]=useState("");
-  const[lb,setLb]=useState(null);
-  const[showUpload,setShowUpload]=useState(false);
-  const me=user?.displayName||user?.email||"Unknown";
-  const isImg=l=>/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(l||"")||/image\//i.test(l||"");
-  const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
-  const sortedProj=[...proj].sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
-  const handleUpload=async(e)=>{
-    const files=e.target.files;if(!files||!files.length||!upProj)return;
-    const p=proj.find(x=>x.id===upProj);
-    setUploading(true);setUpErr("");
-    for(let i=0;i<files.length;i++){
-      const file=files[i];
-      const path=`permitCards/${upProj}/${Date.now()}_${file.name}`;
-      const sRef=ref(storage,path);
-      try{
-        const task=uploadBytesResumable(sRef,file);
-        await new Promise((resolve,reject)=>{
-          task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>reject(err),async()=>{
-            const dlUrl=await getDownloadURL(task.snapshot.ref);
-            setCards(v=>[...v,{id:uid(),projectId:upProj,clientName:p?.clientName||"",permitNum:p?.permitNum||"",label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,uploadedBy:me,uploadedAt:td()}]);
-            if(logAct)logAct("uploaded permit card",`${file.name} for ${p?.clientName||""}`);
-            resolve();
-          });
-        });
-      }catch(err){setUpErr(err.code+": "+err.message);}
-    }
-    setUploading(false);setProg(0);e.target.value="";
-  };
-  const del=async(c)=>{
-    if(c.storagePath){try{await deleteObject(ref(storage,c.storagePath));}catch(e){console.error("Delete error:",e);}}
-    setCards(v=>v.filter(x=>x.id!==c.id));
-    if(logAct)logAct("deleted permit card",`${c.label} for ${c.clientName}`);
-  };
-  const q=search.trim().toLowerCase();
-  const groups=sortedProj.map(p=>({p,items:cards.filter(c=>c.projectId===p.id)})).filter(g=>g.items.length>0);
-  const filtered=q?groups.filter(g=>g.p.clientName.toLowerCase().includes(q)||(g.p.permitNum||"").toLowerCase().includes(q)||g.items.some(c=>(c.permitNum||"").toLowerCase().includes(q)||(c.label||"").toLowerCase().includes(q))):groups;
-  const orphans=cards.filter(c=>!proj.some(p=>p.id===c.projectId));
-  return <>
-    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8,alignItems:"center"}}>
-      <div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>Permit Cards</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>Upload permit cards as PDF or photo, organized by job</p></div>
-      <button style={S.btn} onClick={()=>setShowUpload(s=>!s)}>{showUpload?"Close":"+ Upload Card"}</button>
-    </div>
-    {showUpload&&<div style={{...S.cd,border:`1px solid ${C.bl}`}}>
-      <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Upload Permit Card</div>
-      <select style={{...S.inp}} value={upProj} onChange={e=>setUpProj(e.target.value)}>
-        <option value="">Select a job…</option>
-        {sortedProj.map(p=><option key={p.id} value={p.id}>{p.clientName}{p.permitNum?` — ${p.permitNum}`:""}</option>)}
-      </select>
-      <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:mob?18:14,borderRadius:10,border:`2px dashed ${C.bd}`,cursor:(!upProj||uploading)?"not-allowed":"pointer",color:C.w3,opacity:upProj?1:0.5,fontSize:mob?14:12,background:C.bg}}>
-        <input type="file" accept="application/pdf,image/*" multiple style={{display:"none"}} onChange={handleUpload} disabled={!upProj||uploading}/>
-        {uploading?<span style={{color:C.bl}}>Uploading… {progress}%</span>:<span>{upProj?(mob?"Tap to choose PDF or photos":"Click to choose PDF or photos"):"Select a job first"}</span>}
-      </label>
-      {uploading&&<div style={{height:4,background:C.bd,borderRadius:2,marginTop:8,overflow:"hidden"}}><div style={{height:"100%",background:C.bl,borderRadius:2,width:`${progress}%`,transition:"width 0.2s"}}/></div>}
-      {upErr&&<div style={{fontSize:12,color:C.rd,marginTop:6,padding:8,background:C.rdb,borderRadius:6,wordBreak:"break-all"}}>{upErr}</div>}
-    </div>}
-    <input style={{...S.inp,marginBottom:14}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search by job or permit #…"/>
-    {filtered.length===0&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>{q?"No permit cards match your search":"No permit cards yet — click “+ Upload Card” to add one"}</p></div>}
-    {filtered.map(({p,items})=><div key={p.id} style={{...S.cd,marginBottom:12}}>
-      <div style={{...S.fxsb,marginBottom:10,flexWrap:"wrap",gap:6,alignItems:"center"}}>
-        <div style={{...S.fxc,gap:8}}><span style={{fontSize:14,fontWeight:700}}>{p.clientName}</span>{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}<span style={{fontSize:11,color:C.w3}}>{p.city}</span></div>
-        <span style={{fontSize:11,color:C.w3}}>{items.length} card{items.length!==1?"s":""}</span>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
-        {items.map(c=>{const img=isImg(c.label||c.fileType);return <div key={c.id} style={{background:C.bg,borderRadius:8,border:`1px solid ${C.bd}`,overflow:"hidden"}}>
-          {img?
-            <div onClick={()=>setLb(c.url)} style={{height:110,background:`#000 center/cover no-repeat url("${c.url}")`,cursor:"zoom-in"}}/>
-            :<a href={c.url} target="_blank" rel="noopener noreferrer" style={{height:110,display:"flex",alignItems:"center",justifyContent:"center",background:C.b3,textDecoration:"none"}}><span style={{fontSize:34}}>📋</span></a>
-          }
-          <div style={{padding:"6px 8px"}}>
-            <a href={c.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.bl,fontWeight:600,textDecoration:"none",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</a>
-            <div style={{...S.fxsb,marginTop:2,alignItems:"center"}}><span style={{fontSize:9,color:C.w3}}>{fmtSize(c.fileSize)}</span><button onClick={()=>del(c)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 4px"}}>✕</button></div>
-          </div>
-        </div>;})}
-      </div>
-    </div>)}
-    {orphans.length>0&&<div style={{...S.cd,marginBottom:12,borderLeft:`3px solid ${C.or}`}}>
-      <div style={{fontSize:13,fontWeight:700,marginBottom:8,color:C.or}}>Unlinked cards ({orphans.length})</div>
-      <p style={{fontSize:11,color:C.w3,marginTop:0}}>These cards' jobs were deleted. You can remove them.</p>
-      {orphans.map(c=><div key={c.id} style={{...S.fxsb,padding:"6px 0",borderTop:`1px solid ${C.bd}`,alignItems:"center"}}><a href={c.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.bl}}>{c.label}</a><button onClick={()=>del(c)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11}}>✕</button></div>)}
-    </div>}
-    {lb&&<div onClick={()=>setLb(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.9)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,cursor:"zoom-out",padding:20}}>
-      <img src={lb} alt="" style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",borderRadius:8}}/>
-    </div>}
-  </>;
-}
 function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,setCompanyDocs,user}){
   const[selProj,setSelProj]=useState(null);
   const[modal,sM]=useState(null);
