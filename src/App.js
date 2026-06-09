@@ -125,7 +125,7 @@ export default function App(){
 
 function AppMain({user}){
   const[pg,setPg]=useState("dashboard");
-  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);const[companyDocs,setCompanyDocs]=useState([]);
+  const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);const[companyDocs,setCompanyDocs]=useState([]);const[permitCards,setPermitCards]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);const[projSort,setProjSort]=useState("alpha");const[reassignId,setReassignId]=useState(null);
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return ymd(d);});
@@ -135,7 +135,7 @@ function AppMain({user}){
   const lastFs=useRef({});
 
   useEffect(()=>{
-    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos],["sYcd",setCompanyDocs]];
+    const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos],["sYcd",setCompanyDocs],["sYpc",setPermitCards]];
     const loadedKeys=new Set();
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
@@ -162,6 +162,7 @@ function AppMain({user}){
   useEffect(()=>{if(ok){const j=JSON.stringify(permits);if(j!==lastFs.current.sYpm){lastFs.current.sYpm=j;svFs("sYpm",permits);localStorage.setItem("sYpm",j);}}},[permits,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(todos);if(j!==lastFs.current.sYtd){lastFs.current.sYtd=j;svFs("sYtd",todos);localStorage.setItem("sYtd",j);}}},[todos,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(companyDocs);if(j!==lastFs.current.sYcd){lastFs.current.sYcd=j;svFs("sYcd",companyDocs);localStorage.setItem("sYcd",j);}}},[companyDocs,ok]);
+  useEffect(()=>{if(ok){const j=JSON.stringify(permitCards);if(j!==lastFs.current.sYpc){lastFs.current.sYpc=j;svFs("sYpc",permitCards);localStorage.setItem("sYpc",j);}}},[permitCards,ok]);
 
   // One-time migrations (wrapped in safety layer)
   const migratedRef=useRef(false);
@@ -199,9 +200,9 @@ function AppMain({user}){
   const pendTotal=pendCO+pendRev;
   const projWithIssues=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open"));
 
-  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["permitcards","Permit Cards"],["scheduling","Scheduling"],["todos","To Do"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"],["backups","Backups"]]:navBase;
-  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["permitcards","Cards"],["scheduling","Scheduling"],["todos","To Do"]];
   const mobNavItems=isAdmin?[...mobBase,["activity","Log"],["backups","Backups"]]:mobBase;
 
   return(
@@ -213,7 +214,7 @@ function AppMain({user}){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>,backups:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>};return(
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>,backups:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,permitcards:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M14 9h4"/><path d="M14 13h4"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
@@ -432,6 +433,7 @@ function AppMain({user}){
 
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
+        {pg==="permitcards"&&<PermitCardsTab proj={proj} cards={permitCards} setCards={setPermitCards} mob={mob} logAct={logAct} user={user}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} mob={mob} logAct={logAct} user={user}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
@@ -802,6 +804,7 @@ function AssignPicker({projects,onPick}){
 function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectName}){
   const[label,sL]=useState("");const[url,sU]=useState("");const[uploading,setUploading]=useState(false);const[progress,setProg]=useState(0);const[mode,setMode]=useState("upload");const[uploadErr,setUploadErr]=useState("");const[addCat,setAddCat]=useState("pre");const[addFolder,setAddFolder]=useState("");
   const icon=l=>{const k=(l||"").toLowerCase();if(k.match(/\.(jpg|jpeg|png|gif|webp|heic)$/))return"📷";if(k.match(/\.(pdf)$/))return"📋";if(k.match(/\.(doc|docx)$/))return"📝";if(k.match(/\.(xls|xlsx|csv)$/))return"📊";if(k.includes("photo")||k.includes("image"))return"📷";if(k.includes("plan"))return"📐";if(k.includes("permit"))return"📋";return"📄";};
+  const isImg=l=>/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(l||"");
   const handleUpload=async(e)=>{
     const files=e.target.files;if(!files||!files.length)return;
     setUploading(true);setUploadErr("");
@@ -828,9 +831,11 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
   };
   const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim(),category:addCat,folder:addFolder||""});sL("");sU("");}};
   const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
-  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);const[dragId,setDragId]=useState(null);const[dragOver,setDragOver]=useState(null);const[actionMenu,setActionMenu]=useState(null);
-  const preFiles=links.filter(l=>(l.category||"pre")==="pre");
-  const postFiles=links.filter(l=>l.category==="post");
+  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);const[dragId,setDragId]=useState(null);const[dragOver,setDragOver]=useState(null);const[actionMenu,setActionMenu]=useState(null);const[lb,setLb]=useState(null);
+  const preFiles=links.filter(l=>(l.category||"pre")==="pre"&&(l.isFolder||!isImg(l.label)));
+  const postFiles=links.filter(l=>l.category==="post"&&(l.isFolder||!isImg(l.label)));
+  const beforePhotos=links.filter(l=>!l.isFolder&&isImg(l.label)&&(l.category||"pre")==="pre");
+  const afterPhotos=links.filter(l=>!l.isFolder&&isImg(l.label)&&l.category==="post");
   const getFolders=(files)=>{const folders=new Set();files.forEach(f=>{if(f.folder)folders.add(f.folder);});return[...folders].sort();};
   const preFolders=getFolders(preFiles);
   const postFolders=getFolders(postFiles);
@@ -897,7 +902,24 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
       {files.filter(f=>!f.isFolder).length===0&&folders.length===0&&<p style={{fontSize:mob?12:10,color:C.w3,margin:0}}>No files yet</p>}
     </div>;
   };
-  return <div style={S.cd}><h4 style={{fontSize:mob?15:13,fontWeight:700,marginBottom:12}}>Files & Links</h4>
+  const photoTile=(lk)=><div key={lk.id} style={{position:"relative",borderRadius:8,overflow:"hidden",border:`1px solid ${C.bd}`,background:"#000"}}>
+    <div onClick={()=>setLb(lk.url)} title={lk.label} style={{height:mob?96:84,background:`#000 center/cover no-repeat url("${lk.url}")`,cursor:"zoom-in"}}/>
+    <div style={{position:"absolute",top:3,right:3,display:"flex",gap:3}}>
+      <button onClick={()=>onUpdate(lk.id,{category:(lk.category||"pre")==="pre"?"post":"pre"})} title={(lk.category||"pre")==="pre"?"Move to After":"Move to Before"} style={{background:"rgba(0,0,0,.6)",border:"none",borderRadius:4,color:"#fff",cursor:"pointer",fontSize:10,padding:"2px 5px",lineHeight:1}}>{(lk.category||"pre")==="pre"?"→":"←"}</button>
+      <button onClick={()=>handleDel(lk)} title="Delete" style={{background:"rgba(0,0,0,.6)",border:"none",borderRadius:4,color:C.rd,cursor:"pointer",fontSize:10,padding:"2px 5px",lineHeight:1}}>✕</button>
+    </div>
+  </div>;
+  const gallerySide=(photos,color,title)=><div style={{flex:1,minWidth:0}}>
+    <div style={{...S.fxc,gap:8,marginBottom:8}}><div style={{width:10,height:10,borderRadius:"50%",background:color}}/><span style={{fontSize:mob?13:11,fontWeight:700,color:color,letterSpacing:0.5}}>{title}</span><span style={{fontSize:mob?11:9,color:C.w3,background:C.b3,borderRadius:10,padding:"2px 8px"}}>{photos.length}</span></div>
+    {photos.length?<div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(auto-fill,minmax(84px,1fr))",gap:6}}>{photos.map(photoTile)}</div>:<p style={{fontSize:mob?11:9,color:C.w3,margin:0}}>No photos</p>}
+  </div>;
+  return <div style={S.cd}>
+    <h4 style={{fontSize:mob?15:13,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📷</span>Photos<span style={{fontSize:10,fontWeight:500,color:C.w3}}>({beforePhotos.length+afterPhotos.length})</span></h4>
+    <div style={{display:"flex",flexDirection:mob?"column":"row",gap:mob?12:14,marginBottom:16,paddingBottom:16,borderBottom:`1px solid ${C.bd}`}}>
+      {gallerySide(beforePhotos,C.or,"BEFORE")}
+      {gallerySide(afterPhotos,C.gr,"AFTER")}
+    </div>
+    <h4 style={{fontSize:mob?15:13,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📄</span>Documents & Links</h4>
     <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:mob?10:12,marginBottom:12}}>
       {renderSide(preFiles,preFolders,"pre","post",C.or,"PRE JOB")}
       {renderSide(postFiles,postFolders,"post","pre",C.gr,"POST APPROVED")}
@@ -929,6 +951,9 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
       <input style={{...S.inp,marginBottom:0,flex:2,fontSize:mob?14:12,padding:mob?"10px 12px":"8px 12px"}} value={url} onChange={e=>sU(e.target.value)} placeholder="Paste link (Google Drive, etc.)" onKeyDown={e=>{if(e.key==="Enter")add();}}/>
       <button style={{...S.btn,fontSize:mob?14:12,padding:mob?"10px 14px":"6px 14px"}} onClick={add}>Add</button>
     </div>}
+    {lb&&<div onClick={()=>setLb(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.9)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,cursor:"zoom-out",padding:20}}>
+      <img src={lb} alt="" style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",borderRadius:8}}/>
+    </div>}
   </div>;
 }
 const CITIES=["Davie","Deerfield Beach","Fort Lauderdale","Hollywood","Margate","Miramar","Pembroke Pines","Plantation","Pompano Beach","Sunrise","Tamarac","West Park","Weston","Broward County"];
@@ -940,6 +965,97 @@ const permitAge=pm=>{if(!pm.dateSubmitted||["Issued","Closed","Approved"].includ
 const ageColor=days=>{if(days===null)return null;if(days>=60)return C.rd;if(days>=30)return C.or;return C.gr;};
 const ageBg=days=>{if(days===null)return null;if(days>=60)return C.rdb;if(days>=30)return C.orb;return C.grl;};
 
+function PermitCardsTab({proj,cards,setCards,mob,logAct,user}){
+  const[search,sSr]=useState("");
+  const[upProj,setUpProj]=useState("");
+  const[uploading,setUploading]=useState(false);
+  const[progress,setProg]=useState(0);
+  const[upErr,setUpErr]=useState("");
+  const[lb,setLb]=useState(null);
+  const[showUpload,setShowUpload]=useState(false);
+  const me=user?.displayName||user?.email||"Unknown";
+  const isImg=l=>/\.(jpg|jpeg|png|gif|webp|heic)$/i.test(l||"")||/image\//i.test(l||"");
+  const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
+  const sortedProj=[...proj].sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
+  const handleUpload=async(e)=>{
+    const files=e.target.files;if(!files||!files.length||!upProj)return;
+    const p=proj.find(x=>x.id===upProj);
+    setUploading(true);setUpErr("");
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      const path=`permitCards/${upProj}/${Date.now()}_${file.name}`;
+      const sRef=ref(storage,path);
+      try{
+        const task=uploadBytesResumable(sRef,file);
+        await new Promise((resolve,reject)=>{
+          task.on("state_changed",(snap)=>{setProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>reject(err),async()=>{
+            const dlUrl=await getDownloadURL(task.snapshot.ref);
+            setCards(v=>[...v,{id:uid(),projectId:upProj,clientName:p?.clientName||"",permitNum:p?.permitNum||"",label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,uploadedBy:me,uploadedAt:td()}]);
+            if(logAct)logAct("uploaded permit card",`${file.name} for ${p?.clientName||""}`);
+            resolve();
+          });
+        });
+      }catch(err){setUpErr(err.code+": "+err.message);}
+    }
+    setUploading(false);setProg(0);e.target.value="";
+  };
+  const del=async(c)=>{
+    if(c.storagePath){try{await deleteObject(ref(storage,c.storagePath));}catch(e){console.error("Delete error:",e);}}
+    setCards(v=>v.filter(x=>x.id!==c.id));
+    if(logAct)logAct("deleted permit card",`${c.label} for ${c.clientName}`);
+  };
+  const q=search.trim().toLowerCase();
+  const groups=sortedProj.map(p=>({p,items:cards.filter(c=>c.projectId===p.id)})).filter(g=>g.items.length>0);
+  const filtered=q?groups.filter(g=>g.p.clientName.toLowerCase().includes(q)||(g.p.permitNum||"").toLowerCase().includes(q)||g.items.some(c=>(c.permitNum||"").toLowerCase().includes(q)||(c.label||"").toLowerCase().includes(q))):groups;
+  const orphans=cards.filter(c=>!proj.some(p=>p.id===c.projectId));
+  return <>
+    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8,alignItems:"center"}}>
+      <div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>Permit Cards</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>Upload permit cards as PDF or photo, organized by job</p></div>
+      <button style={S.btn} onClick={()=>setShowUpload(s=>!s)}>{showUpload?"Close":"+ Upload Card"}</button>
+    </div>
+    {showUpload&&<div style={{...S.cd,border:`1px solid ${C.bl}`}}>
+      <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Upload Permit Card</div>
+      <select style={{...S.inp}} value={upProj} onChange={e=>setUpProj(e.target.value)}>
+        <option value="">Select a job…</option>
+        {sortedProj.map(p=><option key={p.id} value={p.id}>{p.clientName}{p.permitNum?` — ${p.permitNum}`:""}</option>)}
+      </select>
+      <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:mob?18:14,borderRadius:10,border:`2px dashed ${C.bd}`,cursor:(!upProj||uploading)?"not-allowed":"pointer",color:C.w3,opacity:upProj?1:0.5,fontSize:mob?14:12,background:C.bg}}>
+        <input type="file" accept="application/pdf,image/*" multiple style={{display:"none"}} onChange={handleUpload} disabled={!upProj||uploading}/>
+        {uploading?<span style={{color:C.bl}}>Uploading… {progress}%</span>:<span>{upProj?(mob?"Tap to choose PDF or photos":"Click to choose PDF or photos"):"Select a job first"}</span>}
+      </label>
+      {uploading&&<div style={{height:4,background:C.bd,borderRadius:2,marginTop:8,overflow:"hidden"}}><div style={{height:"100%",background:C.bl,borderRadius:2,width:`${progress}%`,transition:"width 0.2s"}}/></div>}
+      {upErr&&<div style={{fontSize:12,color:C.rd,marginTop:6,padding:8,background:C.rdb,borderRadius:6,wordBreak:"break-all"}}>{upErr}</div>}
+    </div>}
+    <input style={{...S.inp,marginBottom:14}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search by job or permit #…"/>
+    {filtered.length===0&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>{q?"No permit cards match your search":"No permit cards yet — click “+ Upload Card” to add one"}</p></div>}
+    {filtered.map(({p,items})=><div key={p.id} style={{...S.cd,marginBottom:12}}>
+      <div style={{...S.fxsb,marginBottom:10,flexWrap:"wrap",gap:6,alignItems:"center"}}>
+        <div style={{...S.fxc,gap:8}}><span style={{fontSize:14,fontWeight:700}}>{p.clientName}</span>{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}<span style={{fontSize:11,color:C.w3}}>{p.city}</span></div>
+        <span style={{fontSize:11,color:C.w3}}>{items.length} card{items.length!==1?"s":""}</span>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
+        {items.map(c=>{const img=isImg(c.label||c.fileType);return <div key={c.id} style={{background:C.bg,borderRadius:8,border:`1px solid ${C.bd}`,overflow:"hidden"}}>
+          {img?
+            <div onClick={()=>setLb(c.url)} style={{height:110,background:`#000 center/cover no-repeat url("${c.url}")`,cursor:"zoom-in"}}/>
+            :<a href={c.url} target="_blank" rel="noopener noreferrer" style={{height:110,display:"flex",alignItems:"center",justifyContent:"center",background:C.b3,textDecoration:"none"}}><span style={{fontSize:34}}>📋</span></a>
+          }
+          <div style={{padding:"6px 8px"}}>
+            <a href={c.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.bl,fontWeight:600,textDecoration:"none",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</a>
+            <div style={{...S.fxsb,marginTop:2,alignItems:"center"}}><span style={{fontSize:9,color:C.w3}}>{fmtSize(c.fileSize)}</span><button onClick={()=>del(c)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11,padding:"2px 4px"}}>✕</button></div>
+          </div>
+        </div>;})}
+      </div>
+    </div>)}
+    {orphans.length>0&&<div style={{...S.cd,marginBottom:12,borderLeft:`3px solid ${C.or}`}}>
+      <div style={{fontSize:13,fontWeight:700,marginBottom:8,color:C.or}}>Unlinked cards ({orphans.length})</div>
+      <p style={{fontSize:11,color:C.w3,marginTop:0}}>These cards' jobs were deleted. You can remove them.</p>
+      {orphans.map(c=><div key={c.id} style={{...S.fxsb,padding:"6px 0",borderTop:`1px solid ${C.bd}`,alignItems:"center"}}><a href={c.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.bl}}>{c.label}</a><button onClick={()=>del(c)} style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:11}}>✕</button></div>)}
+    </div>}
+    {lb&&<div onClick={()=>setLb(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.9)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,cursor:"zoom-out",padding:20}}>
+      <img src={lb} alt="" style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",borderRadius:8}}/>
+    </div>}
+  </>;
+}
 function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,setCompanyDocs,user}){
   const[selProj,setSelProj]=useState(null);
   const[modal,sM]=useState(null);
