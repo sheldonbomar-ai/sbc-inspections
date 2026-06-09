@@ -841,7 +841,7 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
         await new Promise((resolve,reject)=>{
           task.on("state_changed",(snap)=>{setPhotoProg(Math.round((snap.bytesTransferred/snap.totalBytes)*100));},(err)=>reject(err),async()=>{
             const dlUrl=await getDownloadURL(task.snapshot.ref);
-            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:cat,folder:""});
+            onAdd({label:file.name,url:dlUrl,storagePath:path,fileType:file.type,fileSize:file.size,category:"pre",photoCat:cat,folder:""});
             if(logAct)logAct("uploaded photo",`${file.name} to ${projectName}`);
             resolve();
           });
@@ -852,11 +852,12 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
   };
   const add=()=>{if(label.trim()&&url.trim()){onAdd({label:label.trim(),url:url.trim(),category:addCat,folder:addFolder||""});sL("");sU("");}};
   const fmtSize=(b)=>{if(!b)return"";if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
-  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);const[dragId,setDragId]=useState(null);const[dragOver,setDragOver]=useState(null);const[actionMenu,setActionMenu]=useState(null);const[lb,setLb]=useState(null);const[photoUploading,setPhotoUploading]=useState(false);const[photoProg,setPhotoProg]=useState(0);
+  const[newFolder,setNewFolder]=useState("");const[addFolderSide,setAddFolderSide]=useState(null);const[selFolder,setSelFolder]=useState(null);const[dragId,setDragId]=useState(null);const[dragOver,setDragOver]=useState(null);const[actionMenu,setActionMenu]=useState(null);const[lb,setLb]=useState(null);const[photoUploading,setPhotoUploading]=useState(false);const[photoProg,setPhotoProg]=useState(0);const[photoView,setPhotoView]=useState("All");
+  const PHOTO_CATS=["General","Electrical","Mechanical","Plumbing","Structural"];
   const preFiles=links.filter(l=>(l.category||"pre")==="pre"&&(l.isFolder||!isImg(l.label)));
   const postFiles=links.filter(l=>l.category==="post"&&(l.isFolder||!isImg(l.label)));
-  const beforePhotos=links.filter(l=>!l.isFolder&&isImg(l.label)&&(l.category||"pre")==="pre");
-  const afterPhotos=links.filter(l=>!l.isFolder&&isImg(l.label)&&l.category==="post");
+  const photos=links.filter(l=>!l.isFolder&&isImg(l.label));
+  const photoCatOf=l=>l.photoCat||"General";
   const getFolders=(files)=>{const folders=new Set();files.forEach(f=>{if(f.folder)folders.add(f.folder);});return[...folders].sort();};
   const preFolders=getFolders(preFiles);
   const postFolders=getFolders(postFiles);
@@ -923,33 +924,33 @@ function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectNa
       {files.filter(f=>!f.isFolder).length===0&&folders.length===0&&<p style={{fontSize:mob?12:10,color:C.w3,margin:0}}>No files yet</p>}
     </div>;
   };
-  const photoTile=(lk)=><div key={lk.id} style={{position:"relative",borderRadius:8,overflow:"hidden",border:`1px solid ${C.bd}`,background:"#000"}}>
-    <div onClick={()=>setLb(lk.url)} title={lk.label} style={{height:mob?96:84,background:`#000 center/cover no-repeat url("${lk.url}")`,cursor:"zoom-in"}}/>
-    <div style={{position:"absolute",top:3,right:3,display:"flex",gap:3}}>
-      <button onClick={()=>onUpdate(lk.id,{category:(lk.category||"pre")==="pre"?"post":"pre"})} title={(lk.category||"pre")==="pre"?"Move to After":"Move to Before"} style={{background:"rgba(0,0,0,.6)",border:"none",borderRadius:4,color:"#fff",cursor:"pointer",fontSize:10,padding:"2px 5px",lineHeight:1}}>{(lk.category||"pre")==="pre"?"→":"←"}</button>
-      <button onClick={()=>handleDel(lk)} title="Delete" style={{background:"rgba(0,0,0,.6)",border:"none",borderRadius:4,color:C.rd,cursor:"pointer",fontSize:10,padding:"2px 5px",lineHeight:1}}>✕</button>
+  const photoTile=(lk)=><div key={lk.id} style={{borderRadius:8,overflow:"hidden",border:`1px solid ${C.bd}`,background:C.bg}}>
+    <div onClick={()=>setLb(lk.url)} title={lk.label} style={{height:mob?100:90,background:`#000 center/cover no-repeat url("${lk.url}")`,cursor:"zoom-in"}}/>
+    <div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 5px"}}>
+      <select value={photoCatOf(lk)} onChange={e=>onUpdate(lk.id,{photoCat:e.target.value})} title="Change category" style={{flex:1,minWidth:0,background:C.b3,color:C.w2,border:`1px solid ${C.bd}`,borderRadius:4,fontSize:mob?11:9,padding:"2px 4px",fontFamily:"inherit",cursor:"pointer"}}>
+        {PHOTO_CATS.map(pc=><option key={pc} value={pc}>{pc}</option>)}
+      </select>
+      <button onClick={()=>handleDel(lk)} title="Delete" style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:13,padding:"0 2px",lineHeight:1}}>✕</button>
     </div>
   </div>;
-  const photoInputBtn=(cat,big)=><label style={big?{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,padding:mob?"28px 16px":"24px 16px",borderRadius:10,border:`2px dashed ${C.bl}`,cursor:photoUploading?"default":"pointer",color:C.bl,fontSize:mob?14:13,fontWeight:600,background:C.bll,textAlign:"center"}:{display:"inline-flex",alignItems:"center",gap:5,padding:mob?"8px 14px":"6px 12px",borderRadius:6,border:"none",background:C.bl,color:"#fff",cursor:photoUploading?"default":"pointer",fontSize:mob?13:11,fontWeight:600}}>
+  const photoInputBtn=(cat,big)=><label style={big?{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,padding:mob?"32px 16px":"28px 16px",borderRadius:10,border:`2px dashed ${C.bl}`,cursor:photoUploading?"default":"pointer",color:C.bl,fontSize:mob?14:13,fontWeight:600,background:C.bll,textAlign:"center"}:{display:"inline-flex",alignItems:"center",gap:5,padding:mob?"8px 14px":"6px 12px",borderRadius:6,border:"none",background:C.bl,color:"#fff",cursor:photoUploading?"default":"pointer",fontSize:mob?13:11,fontWeight:600}}>
     <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>handlePhotoUpload(e,cat)} disabled={photoUploading}/>
-    <span style={{fontSize:big?24:14}}>📷</span>{big?(mob?"Tap to add photos":"Add Photos"):"Add"}
+    <span style={{fontSize:big?24:14}}>📷</span>{big?(mob?`Tap to add ${cat} photos`:`Add ${cat} Photos`):"Add"}
   </label>;
-  const gallerySide=(photos,color,title,cat)=><div style={{flex:1,minWidth:0}}>
-    <div style={{...S.fxsb,marginBottom:8,alignItems:"center",gap:8}}>
-      <div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:color}}/><span style={{fontSize:mob?13:11,fontWeight:700,color:color,letterSpacing:0.5}}>{title}</span><span style={{fontSize:mob?11:9,color:C.w3,background:C.b3,borderRadius:10,padding:"2px 8px"}}>{photos.length}</span></div>
-      {photos.length>0&&photoInputBtn(cat,false)}
-    </div>
-    {photos.length?<div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(auto-fill,minmax(84px,1fr))",gap:6}}>{photos.map(photoTile)}</div>:photoInputBtn(cat,true)}
-  </div>;
+  const visiblePhotos=photoView==="All"?photos:photos.filter(l=>photoCatOf(l)===photoView);
+  const uploadTarget=photoView==="All"?"General":photoView;
   return <div style={S.cd}>
-    <h4 style={{fontSize:mob?15:13,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📷</span>Photos<span style={{fontSize:10,fontWeight:500,color:C.w3}}>({beforePhotos.length+afterPhotos.length})</span></h4>
-    <div style={{display:"flex",flexDirection:mob?"column":"row",gap:mob?12:14,marginBottom:photoUploading||uploadErr?8:16}}>
-      {gallerySide(beforePhotos,C.or,"BEFORE","pre")}
-      {gallerySide(afterPhotos,C.gr,"AFTER","post")}
+    <div style={{...S.fxsb,marginBottom:12,flexWrap:"wrap",gap:8,alignItems:"center"}}>
+      <h4 style={{fontSize:mob?15:13,fontWeight:700,margin:0,display:"flex",alignItems:"center",gap:8}}><span>📷</span>Photos<span style={{fontSize:10,fontWeight:500,color:C.w3}}>({photos.length})</span></h4>
+      {photos.length>0&&photoInputBtn(uploadTarget,false)}
+    </div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+      {["All",...PHOTO_CATS].map(cat=>{const n=cat==="All"?photos.length:photos.filter(l=>photoCatOf(l)===cat).length;const active=photoView===cat;return <button key={cat} onClick={()=>setPhotoView(cat)} style={{...S.bs,fontSize:mob?12:11,padding:mob?"7px 12px":"4px 11px",background:active?C.bll:"transparent",color:active?C.bl:C.w3,border:`1px solid ${active?C.bl:C.bd}`,fontWeight:active?700:500}}>{cat}{n>0?` ${n}`:""}</button>;})}
     </div>
     {photoUploading&&<div style={{marginBottom:12}}><div style={{fontSize:11,color:C.bl,marginBottom:4}}>Uploading photos… {photoProg}%</div><div style={{height:4,background:C.bd,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:C.bl,width:`${photoProg}%`,transition:"width 0.2s"}}/></div></div>}
     {uploadErr&&!uploading&&<div style={{fontSize:12,color:C.rd,marginBottom:12,padding:8,background:C.rdb,borderRadius:6,wordBreak:"break-all"}}>{uploadErr}</div>}
-    <div style={{borderBottom:`1px solid ${C.bd}`,marginBottom:16}}/>
+    {visiblePhotos.length?<div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(auto-fill,minmax(96px,1fr))",gap:6,marginBottom:16}}>{visiblePhotos.map(photoTile)}</div>:photoInputBtn(uploadTarget,true)}
+    <div style={{borderBottom:`1px solid ${C.bd}`,marginBottom:16,marginTop:4}}/>
     <h4 style={{fontSize:mob?15:13,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📄</span>Documents & Links</h4>
     <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:mob?10:12,marginBottom:12}}>
       {renderSide(preFiles,preFolders,"pre","post",C.or,"PRE JOB")}
