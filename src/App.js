@@ -1478,12 +1478,14 @@ function TodoTab({todos,setTodos,proj,setP,mob,logAct,user}){
 }
 
 function BackupsPanel({mob}){
-  const[backups,setBackups]=useState([]);const[loading,setLoading]=useState(true);const[acting,setActing]=useState(false);const[msg,setMsg]=useState("");
+  const[backups,setBackups]=useState([]);const[loading,setLoading]=useState(true);const[acting,setActing]=useState(false);const[msg,setMsg]=useState("");const[previews,setPreviews]=useState({});const[openPath,setOpenPath]=useState(null);
   const fmtSize=b=>{if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";};
   const fmtDate=d=>{const dt=new Date(d);return dt.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})+" "+dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
   const load=async()=>{setLoading(true);try{const fn=httpsCallable(functions,"listBackups");const res=await fn();setBackups(res.data.backups||[]);}catch(e){setMsg("Error loading backups: "+e.message);}setLoading(false);};
   const create=async()=>{setActing(true);setMsg("");try{const fn=httpsCallable(functions,"manualBackup");await fn();setMsg("Backup created successfully");await load();}catch(e){setMsg("Error: "+e.message);}setActing(false);};
   const restore=async(path)=>{if(!window.confirm("Restore this backup? Current data will be overwritten.\n\nA pre-restore snapshot will be saved automatically."))return;setActing(true);setMsg("");try{const fn=httpsCallable(functions,"restoreBackup");await fn({backupPath:path});setMsg("Restored from "+path.split("/").pop()+". Refresh the page to see changes.");await load();}catch(e){setMsg("Error: "+e.message);}setActing(false);};
+  const KEY_LABELS={sYp:"Projects",sYi:"Inspections",sYpm:"Permits",sYs:"Schedule",sYtd:"To Dos",sYcd:"Company Docs",sYpc:"Permit Cards",sYc:"Custom Types"};
+  const doPreview=async(path)=>{if(openPath===path){setOpenPath(null);return;}setOpenPath(path);if(previews[path])return;setPreviews(p=>({...p,[path]:{loading:true}}));try{const fn=httpsCallable(functions,"previewBackup");const res=await fn({backupPath:path});setPreviews(p=>({...p,[path]:{counts:res.data.counts,timestamp:res.data.timestamp}}));}catch(e){setPreviews(p=>({...p,[path]:{error:e.message}}));}};
   useEffect(()=>{load();},[]);
   return <>
     <div style={{...S.fxsb,marginBottom:20,flexWrap:"wrap",gap:8,alignItems:"center"}}>
@@ -1494,15 +1496,29 @@ function BackupsPanel({mob}){
     {loading?<p style={{color:C.w3,fontSize:13}}>Loading backups...</p>:
     !backups.length?<div style={{textAlign:"center",padding:"40px 20px",color:C.w3}}><div style={{fontSize:32,marginBottom:8}}>💾</div><p style={{fontSize:14}}>No backups yet</p><p style={{fontSize:12}}>Click "Create Backup Now" to create your first snapshot</p></div>:
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
-      {backups.map(b=>{const name=b.path.split("/").pop();const trigger=name.split("-")[0];const tColor=trigger==="auto"?C.bl:trigger==="manual"?C.gr:C.or;return <div key={b.path} style={{background:C.b2,borderRadius:8,padding:mob?"14px":"12px 16px",border:`1px solid ${C.bd}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
-            <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,background:tColor+"22",color:tColor,textTransform:"uppercase"}}>{trigger}</span>
-            <span style={{fontSize:mob?14:13,fontWeight:600}}>{fmtDate(b.date)}</span>
+      {backups.map(b=>{const name=b.path.split("/").pop();const trigger=name.split("-")[0];const tColor=trigger==="auto"?C.bl:trigger==="manual"?C.gr:C.or;const pv=previews[b.path];return <div key={b.path} style={{background:C.b2,borderRadius:8,border:`1px solid ${C.bd}`,overflow:"hidden"}}>
+        <div style={{padding:mob?"14px":"12px 16px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+              <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,background:tColor+"22",color:tColor,textTransform:"uppercase"}}>{trigger}</span>
+              <span style={{fontSize:mob?14:13,fontWeight:600}}>{fmtDate(b.date)}</span>
+            </div>
+            <div style={{fontSize:11,color:C.w3}}>{fmtSize(b.size)}</div>
           </div>
-          <div style={{fontSize:11,color:C.w3}}>{fmtSize(b.size)}</div>
+          <button style={{...S.bs,fontSize:mob?13:12,padding:mob?"10px 14px":"6px 12px"}} onClick={()=>doPreview(b.path)} disabled={acting}>{openPath===b.path?"Hide":"Preview"}</button>
+          <button style={{...S.bs,color:C.or,fontSize:mob?13:12,padding:mob?"10px 14px":"6px 12px"}} onClick={()=>restore(b.path)} disabled={acting}>Restore</button>
         </div>
-        <button style={{...S.bs,color:C.or,fontSize:mob?13:12,padding:mob?"10px 14px":"6px 12px"}} onClick={()=>restore(b.path)} disabled={acting}>Restore</button>
+        {openPath===b.path&&<div style={{borderTop:`1px solid ${C.bd}`,padding:mob?"12px 14px":"12px 16px",background:C.bg}}>
+          {pv?.loading&&<span style={{fontSize:12,color:C.w3}}>Loading preview…</span>}
+          {pv?.error&&<span style={{fontSize:12,color:C.rd}}>Error: {pv.error}</span>}
+          {pv?.counts&&<>
+            <div style={{fontSize:10,fontWeight:700,color:C.w3,letterSpacing:0.5,marginBottom:8}}>WHAT THIS BACKUP CONTAINS</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {Object.entries(KEY_LABELS).map(([k,lbl])=>{const n=pv.counts[k];if(n===undefined)return null;return <span key={k} style={{fontSize:11,padding:"4px 10px",borderRadius:6,background:C.b3,border:`1px solid ${C.bd}`,color:n>0?C.w:C.w3}}><b style={{color:n>0?C.bl:C.w3}}>{n==null?"?":n}</b> {lbl}</span>;})}
+            </div>
+            <div style={{fontSize:10,color:C.w3,marginTop:8}}>Snapshot taken {fmtDate(pv.timestamp)}</div>
+          </>}
+        </div>}
       </div>;})}
     </div>}
   </>;

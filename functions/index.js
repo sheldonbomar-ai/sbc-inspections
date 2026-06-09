@@ -13,6 +13,7 @@ exports.dailyBackup = backups.dailyBackup;
 exports.manualBackup = backups.manualBackup;
 exports.listBackups = backups.listBackups;
 exports.restoreBackup = backups.restoreBackup;
+exports.previewBackup = backups.previewBackup;
 
 // Todo email notifications
 exports.onTodoAdded = onDocumentWritten(

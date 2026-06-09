@@ -46,6 +46,26 @@ exports.listBackups = onCall({ region: "us-east1" }, async (request) => {
   return { backups };
 });
 
+// Preview a backup's contents (record counts per key) without restoring
+exports.previewBackup = onCall({ region: "us-east1" }, async (request) => {
+  if (!request.auth || !ADMIN_EMAILS.includes(request.auth.token.email)) {
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
+  const { backupPath } = request.data;
+  if (!backupPath) throw new HttpsError("invalid-argument", "backupPath required");
+  const [contents] = await bucket.file(backupPath).download();
+  const snap = JSON.parse(contents.toString("utf-8"));
+  const counts = {};
+  for (const key of DATA_KEYS) {
+    if (snap.keys && snap.keys[key] !== undefined) {
+      try { counts[key] = JSON.parse(snap.keys[key]).length; } catch { counts[key] = null; }
+    } else {
+      counts[key] = 0;
+    }
+  }
+  return { trigger: snap.trigger, timestamp: snap.timestamp, counts };
+});
+
 // Restore from a backup
 exports.restoreBackup = onCall({ region: "us-east1" }, async (request) => {
   if (!request.auth || !ADMIN_EMAILS.includes(request.auth.token.email)) {
