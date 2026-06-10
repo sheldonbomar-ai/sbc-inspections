@@ -63,7 +63,19 @@ exports.previewBackup = onCall({ region: "us-east1" }, async (request) => {
       counts[key] = 0;
     }
   }
-  return { trigger: snap.trigger, timestamp: snap.timestamp, counts };
+  // Count files attached inside projects (photos + documents in each project's links)
+  let projectFiles = null, projectPhotos = null;
+  try {
+    const projects = snap.keys && snap.keys.sYp ? JSON.parse(snap.keys.sYp) : [];
+    projectFiles = 0; projectPhotos = 0;
+    const isImg = (l) => /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(l || "");
+    for (const p of projects) {
+      const links = Array.isArray(p.links) ? p.links.filter((l) => !l.isFolder) : [];
+      projectFiles += links.length;
+      projectPhotos += links.filter((l) => isImg(l.label)).length;
+    }
+  } catch { projectFiles = null; projectPhotos = null; }
+  return { trigger: snap.trigger, timestamp: snap.timestamp, counts, projectFiles, projectPhotos };
 });
 
 // Restore from a backup

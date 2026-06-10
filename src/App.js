@@ -1516,6 +1516,7 @@ function BackupsPanel({mob}){
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {Object.entries(KEY_LABELS).map(([k,lbl])=>{const n=pv.counts[k];if(n===undefined)return null;return <span key={k} style={{fontSize:11,padding:"4px 10px",borderRadius:6,background:C.b3,border:`1px solid ${C.bd}`,color:n>0?C.w:C.w3}}><b style={{color:n>0?C.bl:C.w3}}>{n==null?"?":n}</b> {lbl}</span>;})}
             </div>
+            {pv.projectFiles!=null&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:C.grl,border:`1px solid ${C.gr}`,fontSize:12,color:C.w,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><span style={{fontSize:15}}>📎</span><span><b style={{color:C.gr}}>{pv.projectFiles}</b> files attached to projects{pv.projectPhotos!=null?<> · <b style={{color:C.gr}}>{pv.projectPhotos}</b> photos</>:""}</span></div>}
             <div style={{fontSize:10,color:C.w3,marginTop:8}}>Snapshot taken {fmtDate(pv.timestamp)}</div>
           </>}
         </div>}
