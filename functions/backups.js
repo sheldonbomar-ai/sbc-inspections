@@ -20,6 +20,14 @@ exports.dailyBackup = onSchedule(
   }
 );
 
+// End-of-workday backup at 7 PM ET
+exports.eveningBackup = onSchedule(
+  { schedule: "every day 19:00", timeZone: "America/New_York", region: "us-east1" },
+  async () => {
+    await createBackup("auto");
+  }
+);
+
 // Manual backup triggered from admin UI
 exports.manualBackup = onCall({ region: "us-east1" }, async (request) => {
   if (!request.auth || !ADMIN_EMAILS.includes(request.auth.token.email)) {

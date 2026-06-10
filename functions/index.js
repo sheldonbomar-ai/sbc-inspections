@@ -1,4 +1,5 @@
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const nodemailer = require("nodemailer");
 const admin = require("firebase-admin");
@@ -7,9 +8,42 @@ admin.initializeApp();
 
 const gmailPassword = defineSecret("GMAIL_APP_PASSWORD");
 
+// Daily backup health check at 8 AM ET — emails an alert ONLY if no backup
+// has run in the last ~26h (i.e. both the 2 AM and 7 PM backups failed).
+const healthBucket = admin.storage().bucket("stacy-bomar-tracker.firebasestorage.app");
+exports.backupHealthCheck = onSchedule(
+  { schedule: "every day 08:00", timeZone: "America/New_York", region: "us-east1", secrets: [gmailPassword] },
+  async () => {
+    const [files] = await healthBucket.getFiles({ prefix: "backups/" });
+    const jsons = files.filter((f) => f.name.endsWith(".json"));
+    let latest = null;
+    for (const f of jsons) {
+      const t = new Date(f.metadata.timeCreated);
+      if (!latest || t > latest) latest = t;
+    }
+    const ageHours = latest ? (Date.now() - latest.getTime()) / 3600000 : Infinity;
+    if (ageHours <= 26) {
+      console.log(`Backup health OK: latest backup ${ageHours.toFixed(1)}h ago`);
+      return;
+    }
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: "sbcpermitting@gmail.com", pass: gmailPassword.value() },
+    });
+    await transporter.sendMail({
+      from: '"SBC Tracker" <sbcpermitting@gmail.com>',
+      to: "sbcpermitting@gmail.com",
+      subject: "⚠ SBC Backup Alert — no recent backup",
+      html: `<div style="font-family:system-ui,sans-serif;max-width:500px;background:#0F1419;border-radius:12px;padding:24px;color:#E8ECF1;"><div style="font-size:18px;font-weight:700;color:#F87171;margin-bottom:8px;">⚠ Backup Alert</div><div style="font-size:14px;color:#A0AEBF;line-height:1.5;">No SBC backup has run in over a day. Last backup: <b style="color:#E8ECF1;">${latest ? latest.toISOString() : "never"}</b>${isFinite(ageHours) ? ` (~${Math.round(ageHours)}h ago)` : ""}.<br><br>Check the Backups tab and the Cloud Functions logs.</div></div>`,
+    });
+    console.log("Backup health ALERT email sent");
+  }
+);
+
 // Re-export backup functions
 const backups = require("./backups");
 exports.dailyBackup = backups.dailyBackup;
+exports.eveningBackup = backups.eveningBackup;
 exports.manualBackup = backups.manualBackup;
 exports.listBackups = backups.listBackups;
 exports.restoreBackup = backups.restoreBackup;
