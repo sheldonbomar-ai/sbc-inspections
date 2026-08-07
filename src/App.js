@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { db, storage, auth } from "./firebase";
-import { doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { db, storage } from "./firebase";
+import { doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 
 const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
 const PRINT_CSS=`@media print{
@@ -66,19 +65,39 @@ const S={
 };
 
 export default function App(){
-  const[user,setUser]=useState(null);const[loading,setLoading]=useState(true);
+  const[user,setUser]=useState(()=>ldLocal("sbcUser",null));const[loading,setLoading]=useState(true);
+  const[needsSetup,setNeedsSetup]=useState(false);
   const[nameInput,setNameInput]=useState("");const[pwInput,setPwInput]=useState("");const[loginErr,setLoginErr]=useState("");const[signingIn,setSigningIn]=useState(false);
 
-  useEffect(()=>{const unsub=onAuthStateChanged(auth,(u)=>{setUser(u);setLoading(false);});return unsub;},[]);
+  useEffect(()=>{(async()=>{
+    try{const snap=await getDocs(collection(db,"users"));if(snap.empty)setNeedsSetup(true);}
+    catch(e){console.error("User check error:",e);}
+    setLoading(false);
+  })();},[]);
+
+  const persist=(u)=>{setUser(u);try{localStorage.setItem("sbcUser",JSON.stringify(u));}catch{}};
+  const signOutLocal=()=>{try{localStorage.removeItem("sbcUser");}catch{}setUser(null);};
 
   const doLogin=async()=>{
     if(!nameInput.trim()||!pwInput)return;
     setSigningIn(true);setLoginErr("");
     try{
-      await signInWithEmailAndPassword(auth,nameInput.trim().toLowerCase()+"@sbc.app",pwInput);
-    }catch(e){
-      setLoginErr(e.code==="auth/invalid-credential"?"Wrong username or password":e.code==="auth/user-not-found"?"User not found":e.code==="auth/too-many-requests"?"Too many attempts — try again later":"Login failed");
-    }
+      const uname=nameInput.trim().toLowerCase();
+      const snap=await getDoc(doc(db,"users",uname));
+      if(!snap.exists()||snap.data().password!==pwInput){setLoginErr("Wrong username or password");}
+      else{const d=snap.data();persist({username:uname,displayName:d.name||uname,email:uname+"@sbc.app",isAdmin:!!d.isAdmin});}
+    }catch(e){console.error("Login error:",e);setLoginErr("Login failed — check your connection");}
+    setSigningIn(false);
+  };
+
+  const doSetup=async()=>{
+    if(!nameInput.trim()||!pwInput)return;
+    setSigningIn(true);setLoginErr("");
+    try{
+      const uname=nameInput.trim().toLowerCase().replace(/\s+/g,"");
+      await setDoc(doc(db,"users",uname),{username:uname,password:pwInput,name:nameInput.trim(),isAdmin:true,createdAt:td()});
+      persist({username:uname,displayName:nameInput.trim(),email:uname+"@sbc.app",isAdmin:true});
+    }catch(e){console.error("Setup error:",e);setLoginErr("Setup failed — check your connection");}
     setSigningIn(false);
   };
 
@@ -89,22 +108,121 @@ export default function App(){
       <div style={{background:C.b2,borderRadius:16,padding:36,border:`1px solid ${C.bd}`,width:340,textAlign:"center"}}>
         <svg width="48" height="48" viewBox="0 0 40 40" style={{marginBottom:12}}><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
         <div style={{fontSize:18,fontWeight:700,color:C.bl,marginBottom:2}}>Stacy Bomar</div>
-        <div style={{fontSize:10,fontWeight:700,color:C.gr,letterSpacing:2,marginBottom:24}}>CONSTRUCTION</div>
-        <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")document.getElementById("sbc-pw")?.focus();}} type="text" autoCapitalize="none" autoCorrect="off" placeholder="Username" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:10}}/>
-        <input id="sbc-pw" value={pwInput} onChange={e=>{setPwInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")doLogin();}} type="password" placeholder="Password" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:12}}/>
+        <div style={{fontSize:10,fontWeight:700,color:C.gr,letterSpacing:2,marginBottom:needsSetup?14:24}}>CONSTRUCTION</div>
+        {needsSetup&&<div style={{fontSize:12,color:C.w2,marginBottom:16,lineHeight:1.4}}>Create your <b style={{color:C.w}}>admin account</b>. You'll use this to manage everyone else's logins.</div>}
+        <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")document.getElementById("sbc-pw")?.focus();}} type="text" autoCapitalize="none" autoCorrect="off" placeholder={needsSetup?"Your name / username":"Username"} style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:10}}/>
+        <input id="sbc-pw" value={pwInput} onChange={e=>{setPwInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")needsSetup?doSetup():doLogin();}} type="password" placeholder="Password" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:12}}/>
         {loginErr&&<div style={{fontSize:12,color:C.rd,marginBottom:8}}>{loginErr}</div>}
-        <button disabled={signingIn} onClick={doLogin} style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:C.bl,color:"#fff",fontSize:14,fontWeight:600,cursor:signingIn?"default":"pointer",opacity:signingIn?0.7:1}}>
-          {signingIn?"Signing in...":"Sign In"}
+        <button disabled={signingIn} onClick={needsSetup?doSetup:doLogin} style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:C.bl,color:"#fff",fontSize:14,fontWeight:600,cursor:signingIn?"default":"pointer",opacity:signingIn?0.7:1}}>
+          {signingIn?(needsSetup?"Creating...":"Signing in..."):(needsSetup?"Create Admin Account":"Sign In")}
         </button>
       </div>
     </div>
   );
 
-  return <AppMain user={user}/>;
+  return <AppMain user={user} onSignOut={signOutLocal}/>;
 }
 
-function AppMain({user}){
+function AdminPanel({user,onClose,mob}){
+  const[list,setList]=useState([]);
+  const[nm,setNm]=useState("");const[un,setUn]=useState("");const[pw,setPw]=useState("");const[adm,setAdm]=useState(false);
+  const[err,setErr]=useState("");const[busy,setBusy]=useState(false);
+  const[edits,setEdits]=useState({});const[confirmDel,setConfirmDel]=useState(null);const[showPw,setShowPw]=useState(true);
+
+  useEffect(()=>{const unsub=onSnapshot(collection(db,"users"),(snap)=>{
+    setList(snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||a.username||a.id).localeCompare(b.name||b.username||b.id,undefined,{sensitivity:"base"})));
+  },(e)=>console.error("Users listen error:",e));return unsub;},[]);
+
+  const addUser=async()=>{
+    setErr("");
+    const uname=un.trim().toLowerCase().replace(/\s+/g,"");
+    if(!nm.trim()||!uname||!pw){setErr("Fill in name, username, and password.");return;}
+    if(!/^[a-z0-9._-]+$/.test(uname)){setErr("Username: letters/numbers only (no spaces).");return;}
+    if(list.some(u=>u.id===uname)){setErr("That username is already taken.");return;}
+    setBusy(true);
+    try{await setDoc(doc(db,"users",uname),{username:uname,password:pw,name:nm.trim(),isAdmin:adm,createdAt:td()});setNm("");setUn("");setPw("");setAdm(false);}
+    catch(e){console.error(e);setErr("Could not add user — check your connection.");}
+    setBusy(false);
+  };
+  const savePw=async(u)=>{const val=edits[u.id];if(val==null||val===u.password){setEdits(e=>{const n={...e};delete n[u.id];return n;});return;}
+    try{await setDoc(doc(db,"users",u.id),{password:val},{merge:true});setEdits(e=>{const n={...e};delete n[u.id];return n;});}catch(e){console.error(e);setErr("Could not save password.");}};
+  const toggleAdmin=async(u)=>{
+    if(u.isAdmin&&list.filter(x=>x.isAdmin).length<=1){setErr("There must be at least one admin.");return;}
+    try{await setDoc(doc(db,"users",u.id),{isAdmin:!u.isAdmin},{merge:true});}catch(e){console.error(e);}};
+  const delUser=async(u)=>{
+    setErr("");
+    if(u.id===user.username){setErr("You can't delete the account you're signed in with.");setConfirmDel(null);return;}
+    if(u.isAdmin&&list.filter(x=>x.isAdmin).length<=1){setErr("You can't delete the last admin.");setConfirmDel(null);return;}
+    try{await deleteDoc(doc(db,"users",u.id));setConfirmDel(null);}catch(e){console.error(e);setErr("Could not delete user.");}
+  };
+
+  const inp={padding:"9px 12px",borderRadius:7,border:`1px solid ${C.bd}`,background:C.bg,color:C.w,fontSize:13,outline:"none",fontFamily:"inherit"};
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1000,background:C.bg,overflow:"auto",fontFamily:"system-ui,sans-serif"}}>
+      <div style={{maxWidth:820,margin:"0 auto",padding:mob?"18px 14px 60px":"32px 28px 60px"}}>
+        <div style={{...S.fxsb,alignItems:"center",marginBottom:6}}>
+          <div style={{...S.fxc,gap:10}}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={C.bl} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <h1 style={{fontSize:mob?18:22,fontWeight:800,margin:0,color:C.w}}>User Management</h1>
+          </div>
+          <button onClick={onClose} style={{...S.bs}}>← Back to app</button>
+        </div>
+        <div style={{fontSize:12,color:C.w3,marginBottom:20}}>Admin only. Signed in as <b style={{color:C.w2}}>{user.displayName}</b>.</div>
+
+        <div style={{...S.cd,marginBottom:22}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.w,marginBottom:12}}>Add a new user</div>
+          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr auto",gap:8,alignItems:"center"}}>
+            <input style={inp} placeholder="Full name" value={nm} onChange={e=>{setNm(e.target.value);setErr("");}}/>
+            <input style={inp} placeholder="Username (login)" value={un} onChange={e=>{setUn(e.target.value);setErr("");}} autoCapitalize="none" autoCorrect="off"/>
+            <input style={inp} placeholder="Password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}}/>
+            <button disabled={busy} onClick={addUser} style={{...S.btn,opacity:busy?0.6:1,whiteSpace:"nowrap"}}>+ Add User</button>
+          </div>
+          <label style={{...S.fxc,gap:6,marginTop:10,fontSize:12,color:C.w2,cursor:"pointer"}}>
+            <input type="checkbox" checked={adm} onChange={e=>setAdm(e.target.checked)}/> Make this user an admin (can manage other users)
+          </label>
+        </div>
+
+        {err&&<div style={{background:C.rdb,color:C.rd,fontSize:13,padding:"10px 14px",borderRadius:8,marginBottom:16,border:`1px solid ${C.rd}44`}}>{err}</div>}
+
+        <div style={{...S.fxsb,alignItems:"center",marginBottom:10}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.w}}>All users ({list.length})</div>
+          <button onClick={()=>setShowPw(v=>!v)} style={{...S.bs,fontSize:11,padding:"5px 10px"}}>{showPw?"Hide passwords":"Show passwords"}</button>
+        </div>
+
+        <div style={{...S.cd,padding:0,overflow:"hidden"}}>
+          {list.length===0&&<div style={{padding:20,color:C.w3,fontSize:13,textAlign:"center"}}>No users yet.</div>}
+          {list.map((u,i)=>{
+            const editing=edits[u.id]!=null;const editVal=editing?edits[u.id]:u.password;const me=u.id===user.username;
+            return <div key={u.id} style={{padding:mob?"12px 14px":"12px 18px",borderTop:i?`1px solid ${C.bd}`:"none",display:"grid",gridTemplateColumns:mob?"1fr":"180px 130px 1fr auto",gap:mob?8:12,alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:C.w,display:"flex",alignItems:"center",gap:6}}>{u.name||u.id}{u.isAdmin&&<span style={S.bg(C.bll,C.bl)}>ADMIN</span>}{me&&<span style={S.bg(C.grl,C.gr)}>YOU</span>}</div>
+              </div>
+              <div style={{fontSize:13,color:C.w2,fontFamily:"monospace"}}>{u.id}</div>
+              <div style={{...S.fxc,gap:6}}>
+                <input value={showPw?editVal:"••••••••"} disabled={!showPw} onChange={e=>setEdits(ed=>({...ed,[u.id]:e.target.value}))} style={{...inp,padding:"7px 10px",fontSize:13,fontFamily:"monospace",flex:1,minWidth:0,opacity:showPw?1:0.6}}/>
+                {editing&&<button onClick={()=>savePw(u)} style={{...S.btn,padding:"6px 12px",fontSize:12}}>Save</button>}
+              </div>
+              <div style={{...S.fxc,gap:6,justifyContent:mob?"flex-start":"flex-end"}}>
+                <button onClick={()=>toggleAdmin(u)} style={{...S.bs,fontSize:11,padding:"5px 10px"}}>{u.isAdmin?"Remove admin":"Make admin"}</button>
+                {confirmDel===u.id?
+                  <div style={{...S.fxc,gap:4}}>
+                    <button onClick={()=>delUser(u)} style={{background:C.rd,border:"none",color:"#fff",cursor:"pointer",fontSize:11,fontFamily:"inherit",padding:"6px 10px",borderRadius:6,fontWeight:600}}>Delete</button>
+                    <button onClick={()=>setConfirmDel(null)} style={{...S.bs,fontSize:11,padding:"5px 8px"}}>Cancel</button>
+                  </div>:
+                  <button onClick={()=>{setErr("");setConfirmDel(u.id);}} disabled={me} title={me?"Can't delete yourself":""} style={{background:"none",border:`1px solid ${me?C.bd:C.rd+"66"}`,borderRadius:6,color:me?C.w3:C.rd,cursor:me?"default":"pointer",fontSize:11,fontFamily:"inherit",padding:"5px 10px",fontWeight:600,opacity:me?0.5:1}}>Delete</button>}
+              </div>
+            </div>;
+          })}
+        </div>
+        <div style={{fontSize:11,color:C.w3,marginTop:16,lineHeight:1.5}}>Deleting a user removes their login immediately. Their name stays on any past activity-log entries and notes as history.</div>
+      </div>
+    </div>
+  );
+}
+
+function AppMain({user,onSignOut}){
   const[pg,setPg]=useState("dashboard");
+  const[showAdmin,setShowAdmin]=useState(false);
   const[proj,setP]=useState([]);const[insp,setI]=useState([]);const[ct,setCt]=useState([]);const[sched,setSched]=useState([]);const[permits,setPermits]=useState([]);const[todos,setTodos]=useState([]);const[companyDocs,setCompanyDocs]=useState([]);
   const[ok,setOk]=useState(false);const[selI,sSI]=useState(null);const[selP,sSP]=useState(null);
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);
@@ -158,7 +276,7 @@ function AppMain({user}){
   },[ok,proj.length]);
 
   const logAct=(action,detail)=>{try{addDoc(collection(db,"activityLog"),{user:user.displayName||"Unknown",action,detail:detail||"",ts:new Date().toISOString()});}catch(e){console.error("Log error:",e);}};
-  const isAdmin=user.email==="sheldon@sbc.app"||user.email==="tim@sbc.app";
+  const isAdmin=user.isAdmin===true||user.email==="sheldon@sbc.app"||user.email==="tim@sbc.app";
   const[actLog,setActLog]=useState([]);
   const loadLog=async()=>{try{const q2=query(collection(db,"activityLog"),orderBy("ts","desc"),limit(200));const snap=await getDocs(q2);setActLog(snap.docs.map(d=>({id:d.id,...d.data()})));}catch(e){console.error("Load log error:",e);}};
 
@@ -178,6 +296,7 @@ function AppMain({user}){
   return(
     <div data-app="" style={{...S.app,flexDirection:mob?"column":"row"}}>
       <style dangerouslySetInnerHTML={{__html:PRINT_CSS}}/>
+      {isAdmin&&showAdmin&&<AdminPanel user={user} mob={mob} onClose={()=>setShowAdmin(false)}/>}
       {!mob&&<div data-sidebar="" style={S.side}>
         <div style={{...S.fxc,gap:10,padding:"4px 16px 18px",borderBottom:`1px solid ${C.bd}`,marginBottom:10}}>
           <svg width="32" height="32" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
@@ -195,8 +314,12 @@ function AppMain({user}){
         <div style={{padding:"14px 16px",borderTop:`1px solid ${C.bd}`,fontSize:10,color:C.w3}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <span style={{fontWeight:600,color:C.w2}}>{user.displayName||"User"}</span>
-            <button onClick={()=>signOut(auth)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px"}}>Sign Out</button>
+            <button onClick={onSignOut} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:4,color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit",padding:"2px 8px"}}>Sign Out</button>
           </div>
+          {isAdmin&&<button onClick={()=>setShowAdmin(true)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:C.bll,border:`1px solid ${C.bl}44`,borderRadius:6,color:C.bl,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600,padding:"7px 8px",marginBottom:8}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            Manage Users
+          </button>}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span>Broward County, FL</span>
             {!resetting?<button onClick={()=>setResetting(true)} style={{background:"none",border:"none",color:C.w3,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>Reset</button>:
@@ -214,7 +337,10 @@ function AppMain({user}){
           <span style={{fontSize:13,fontWeight:700,color:C.bl}}>SBC</span>
           <span style={{fontSize:11,color:C.w2,fontWeight:500}}>{user.displayName||"User"}</span>
         </div>
-        <button onClick={()=>signOut(auth)} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:11,fontFamily:"inherit",padding:"5px 10px"}}>Sign Out</button>
+        <div style={{...S.fxc,gap:6}}>
+          {isAdmin&&<button onClick={()=>setShowAdmin(true)} style={{background:C.bll,border:`1px solid ${C.bl}44`,borderRadius:6,color:C.bl,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600,padding:"5px 10px"}}>Users</button>}
+          <button onClick={onSignOut} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:11,fontFamily:"inherit",padding:"5px 10px"}}>Sign Out</button>
+        </div>
       </div>}
       <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"24px 40px",maxWidth:mob?"100%":1400}}>
 
@@ -232,11 +358,6 @@ function AppMain({user}){
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
                 <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
             </div>
-            {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
-              {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Comments Need Response",needResp?C.or:C.w3],[pend30,"Pending > 30 Days",pend30?C.rd:C.w3]].map(([v,l,c],i)=>
-                <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer",padding:mob?16:20}} onClick={()=>setPg("permits")}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
-            </div>;})()}
-
             {pendTotal>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.rd}`,marginBottom:20,background:C.rdb,padding:mob?16:20}}>
               <div style={{...S.fxsb,marginBottom:10}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:22}}>⚠</span><span style={{fontSize:16,fontWeight:700,color:C.rd}}>REVISIONS & CHANGE ORDERS</span></div><span style={{fontSize:28,fontWeight:700,color:C.rd}}>{pendTotal}</span></div>
               {projWithIssues.map(p=>{const pco=(p.changeOrders||[]).filter(co=>co.status==="Pending");const prev=(p.revisions||[]).filter(r=>r.status==="Open");return <div key={p.id} style={{padding:"8px 0",borderTop:`1px solid ${C.bd}`}}>
@@ -287,17 +408,12 @@ function AppMain({user}){
               </table>}
             </div>
 
-            {/* CITY + PERMITS + PHASE in 3 columns */}
+            {/* CITY + PHASE in 2 columns */}
             {(()=>{
-              const psc={issued:0,review:0,none:0};proj.forEach(p=>{const ps=(p.permitStatus||"").toLowerCase();if(ps==="issued")psc.issued++;else if(ps==="in review")psc.review++;else psc.none++;});
               const phases={permitting:0,progress:0,done:0,paused:0,commence:0};active.forEach(p=>{const st=(p.status||"").toLowerCase();if(st.includes("permit")||st.includes("review"))phases.permitting++;else if(st.includes("progress")||st.includes("active")||st.includes("commenced")||st.includes("work"))phases.progress++;else if(st.includes("done")||st.includes("final")||st.includes("closed soon"))phases.done++;else if(st.includes("pause")||st.includes("insurance")||st.includes("waiting"))phases.paused++;else if(st.includes("commence"))phases.commence++;else phases.progress++;});
-              return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:14}}>
+              return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
                 <div style={{...S.cd,padding:mob?16:20}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>By City</h3>
                   {Object.entries(cc).sort((a,b)=>b[1]-a[1]).map(([c,n])=><div key={c} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><span style={{fontSize:13}}>{c}</span><span style={{fontSize:16,fontWeight:700,color:C.bl}}>{n}</span></div>)}
-                </div>
-                <div style={{...S.cd,padding:mob?16:20}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>Permit Status</h3>
-                  {[["Issued / Approved",psc.issued,C.gr],["In Review",psc.review,C.or],["Not Set",psc.none,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:c}}/><span style={{fontSize:13}}>{l}</span></div><span style={{fontSize:16,fontWeight:700,color:c}}>{v}</span></div>)}
-                  <p style={{fontSize:11,color:C.w3,marginTop:8}}>Set in project Edit</p>
                 </div>
                 <div style={{...S.cd,padding:mob?16:20}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>Jobs by Phase</h3>
                   {[["In Permitting",phases.permitting,C.or],["In Progress",phases.progress,C.bl],["Nearly Done / Finals",phases.done,C.gr],["On Pause",phases.paused,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:c}}/><span style={{fontSize:13}}>{l}</span></div><span style={{fontSize:16,fontWeight:700,color:c}}>{v}</span></div>)}
@@ -1021,6 +1137,14 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
       <button style={{...S.bs,padding:mob?"10px 14px":"8px 16px",fontSize:mob?13:13,background:showDocs?C.bll:C.b2,color:showDocs?C.bl:C.w2,borderColor:showDocs?C.bl:C.bd}} onClick={()=>setShowDocs(!showDocs)}>📁 Company Docs ({companyDocs.filter(d=>!d.isFolder).length})</button>
     </div>
     {showDocs&&<CompanyDocsSection docs={companyDocs} setDocs={setCompanyDocs} mob={mob} user={user} logAct={logAct}/>}
+    {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:16}}>
+      {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Comments Need Response",needResp?C.or:C.w3],[pend30,"Pending > 30 Days",pend30?C.rd:C.w3]].map(([v,l,c],i)=>
+        <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20,marginBottom:0}}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
+    </div>;})()}
+    {(()=>{const psc={issued:0,review:0,none:0};proj.forEach(p=>{const ps=(p.permitStatus||"").toLowerCase();if(ps==="issued")psc.issued++;else if(ps==="in review")psc.review++;else psc.none++;});return <div style={{...S.cd,padding:mob?16:20,marginBottom:16}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>Permit Status</h3>
+      {[["Issued / Approved",psc.issued,C.gr],["In Review",psc.review,C.or],["Not Set",psc.none,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:c}}/><span style={{fontSize:13}}>{l}</span></div><span style={{fontSize:16,fontWeight:700,color:c}}>{v}</span></div>)}
+      <p style={{fontSize:11,color:C.w3,marginTop:8}}>Set in project Edit</p>
+    </div>;})()}
     <input style={{...S.inp,maxWidth:mob?"100%":300,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px"}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search projects..."/>
 
     {/* Projects with permits */}
