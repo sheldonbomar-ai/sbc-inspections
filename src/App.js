@@ -33,6 +33,10 @@ html{-webkit-text-size-adjust:100%;}
 body{overflow-x:hidden;overscroll-behavior-y:none;}
 *{-webkit-tap-highlight-color:transparent;}
 [data-content]{-webkit-overflow-scrolling:touch;}
+/* Inputs are styled width:100% with their own padding, which without
+   border-box makes every one of them wider than its container and pushes the
+   right edge off screen. */
+input,select,textarea{box-sizing:border-box;max-width:100%;}
 /* Use the real (dynamic) viewport height so the bottom nav is never hidden
    behind mobile Safari's address bar. Falls back to the 100vh inline style. */
 @supports (height:100dvh){[data-app]{height:100dvh!important;}}
@@ -230,10 +234,10 @@ function AdminPanel({user,onClose,mob}){
           {list.map((u,i)=>{
             const editing=edits[u.id]!=null;const editVal=editing?edits[u.id]:u.password;const me=u.id===user.username;
             return <div key={u.id} style={{padding:mob?"12px 14px":"12px 18px",borderTop:i?`1px solid ${C.bd}`:"none",display:"grid",gridTemplateColumns:mob?"1fr":"180px 130px 1fr auto",gap:mob?8:12,alignItems:"center"}}>
-              <div>
-                <div style={{fontSize:14,fontWeight:700,color:C.w,display:"flex",alignItems:"center",gap:6}}>{u.name||u.id}{u.isAdmin&&<span style={S.bg(C.bll,C.bl)}>ADMIN</span>}{me&&<span style={S.bg(C.grl,C.gr)}>YOU</span>}</div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:700,color:C.w,display:"flex",alignItems:"center",gap:6,minWidth:0}}><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name||u.id}</span>{u.isAdmin&&<span style={S.bg(C.bll,C.bl)}>ADMIN</span>}{me&&<span style={S.bg(C.grl,C.gr)}>YOU</span>}</div>
               </div>
-              <div style={{fontSize:13,color:C.w2,fontFamily:"monospace"}}>{u.id}</div>
+              <div style={{fontSize:13,color:C.w2,fontFamily:"monospace",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.id}</div>
               <div style={{...S.fxc,gap:6}}>
                 <input value={showPw?editVal:"••••••••"} disabled={!showPw} onChange={e=>setEdits(ed=>({...ed,[u.id]:e.target.value}))} style={{...inp,padding:"7px 10px",fontSize:13,fontFamily:"monospace",flex:1,minWidth:0,opacity:showPw?1:0.6}}/>
                 {editing&&<button onClick={()=>savePw(u)} style={{...S.btn,padding:"6px 12px",fontSize:12}}>Save</button>}
@@ -567,7 +571,7 @@ function AppMain({user,onSignOut}){
           const badge=id==="sheet"?ovd:id==="projects"?pendTotal:id==="todos"?todos.filter(t=>!t.done).length:0;
           const badgeBg=id==="projects"?C.rd:C.or;const badgeFg=id==="projects"?"#fff":C.bg;
           return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,minWidth:0,padding:"8px 2px 6px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:18,lineHeight:1}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":"📅"}</span>
+          <span style={{fontSize:18,lineHeight:1}}>{id==="dashboard"?"📊":id==="projects"?"🏘️":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3,letterSpacing:-0.2,whiteSpace:"nowrap",maxWidth:"100%",overflow:"hidden"}}>{MOB_NAV_LABEL[id]||lb}</span>
           {badge>0&&<span style={{position:"absolute",top:2,left:"50%",marginLeft:6,fontSize:9,fontWeight:700,background:badgeBg,color:badgeFg,borderRadius:9,padding:"0 5px",lineHeight:"15px",minWidth:9,textAlign:"center"}}>{badge>99?"99+":badge}</span>}
         </button>;})}
