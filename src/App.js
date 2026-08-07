@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { db, storage } from "./firebase";
 import { doc, setDoc, getDoc, deleteDoc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
@@ -28,6 +28,20 @@ const PRINT_CSS=`@media print{
   [data-pend-header] span{color:#92400e!important;font-size:13px!important;}
   [data-col-header]{display:none!important;}
 }`;
+const APP_CSS=`
+html{-webkit-text-size-adjust:100%;}
+body{overflow-x:hidden;overscroll-behavior-y:none;}
+*{-webkit-tap-highlight-color:transparent;}
+[data-content]{-webkit-overflow-scrolling:touch;}
+/* Use the real (dynamic) viewport height so the bottom nav is never hidden
+   behind mobile Safari's address bar. Falls back to the 100vh inline style. */
+@supports (height:100dvh){[data-app]{height:100dvh!important;}}
+@media (max-width:767px){
+  /* iOS zooms the page in whenever a focused field is under 16px. Force 16px
+     on every control so tapping an input never rescales the layout. */
+  input,select,textarea{font-size:16px!important;}
+  [data-mobnav] button{position:relative;}
+}`;
 const useMobile=()=>{const[m,sM]=useState(window.innerWidth<768);useEffect(()=>{const h=()=>sM(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m;};
 const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"},{p:"S",l:"Drywall Screw"},{p:"S",l:"Foundation"},{p:"S",l:"Unit Masonry"},{p:"S",l:"Window/Door Buck"},{p:"S",l:"Final Building"},{p:"S",l:"Progress"},{p:"P",l:"Underground/Rough Plumbing"},{p:"P",l:"Top-Out Plumbing"},{p:"P",l:"Final Plumbing"},{p:"P",l:"Water Service"},{p:"P",l:"Sewer Hook-up"},{p:"E",l:"Rough Electrical"},{p:"E",l:"Final Electrical"},{p:"E",l:"Smokes/GFCI"},{p:"M",l:"Rough Mechanical"},{p:"M",l:"Final Mechanical"},{p:"R",l:"Mop in Progress"},{p:"R",l:"Shingle in Progress"},{p:"R",l:"Tin Cap"},{p:"R",l:"Uplift Test"},{p:"R",l:"Roof Final"},{p:"R",l:"Tile in Progress"},{p:"W",l:"Windows & Doors"},{p:"W",l:"Impact/NOA"}];
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
@@ -42,6 +56,8 @@ const CREWS=[
 const fT=(t,ct=[])=>{const f=[...DT,...ct].find(x=>x.l===t);return f?`${f.p}- ${f.l}`:t;};
 const AddrLink=({a,c})=>!a||a==="TBD"?null:<a href={`https://maps.apple.com/?q=${encodeURIComponent(c?a+", "+c:a)}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:"inherit",textDecoration:"underline",textDecorationStyle:"dotted",textUnderlineOffset:2}}>{a}</a>;
 const SD="Ashley|Pompano Beach|2921 NW 8 ST|0|0|W,E|⚠ REVISION: CGI NOA now PGT by Sparta;Barrant|Sunrise|4008 Del Rio Way|0|1|W,R,E|In permitting;Beckles|Pembroke Pines|12017 NW 11 ST|0|1|W,S,E,P|In permitting;Bryan|Sunrise|11701 NW 30 PL|R-STRT-003473|0|R,S,E,P|Pending building final - work done;Burke|Margate|7708 Margate Blvd Apt C3-6|0|1||CLOSED;Bursztyn|Davie|3745 SW 59 AVE|2025-7435|1|W,S,E,P|Pending finals - job done;Camacho|Plantation|7501 NW 16 ST Unit 3305|P25-1025|0|W,S,E,P|Need appliances AC kitchen sink then finals;Campbell|Margate|1835 Vista Way|0|1|R,S,E|Roof permit in review - other permits issued;Ceasar|Margate|6130 SW 3 ST|0|0|W,R|CLOSED;Clover|Deerfield Beach|516 SW Natura AVE|0|1|R|Roof permit in review;Courts|Deerfield Beach|225 Ventor Q|0|1|W,S,E,P|About to commence;Cox|Deerfield Beach|330 NW 1 AVE|0|0|W,R,S,E,P|Roof in progress - rest about to commence;Davila|Pembroke Pines|1026 NW 159 AVE|0|1|W,R,S,P|Window permit issued - roof in review;Davilsaint|Ft Lauderdale||0|0|R|On pause - insurance issue;Derek-Towriss|Ft Lauderdale|1649 NE 3 CT|0|0||Pending final inspections;Goberdhan|Plantation|7820 NW 14 ST|0|0|W,S,E,P|Win+elec+AC done - bath drywall+appliances+doors left;Gonzalez|Sunrise|9801 Sunrise Lakes Blvd Unit 207|0|1|W,S,E,P|Permit to be issued within 2 weeks;Knight|Pompano Beach|1570 NW 4 AVE|0|0|E|Exterior paint last thing - permits closed;Ledgister|Plantation|103 NW 68 AVE|B25-04632|0|W,S,E,P|All done besides appliances;Mel|Miami||0|0|R|On pause - insurance issue;Mistler|Plantation|5301 SW 8 ST|B25-04835|0|S|Roof work commenced;Morgan|Pembroke Pines|1000 Colony Point Cir #420|0|1|S,E,P|Permit in progress;Moye-Barnett|Davie|7520 NW 31st Place|0|1|W,R,S,E,P|CLOSED;Nora Sanchez|Deerfield Beach|222 Prescott L|0|1|W,S,E,P|About to commence;NSP Swap Shop|Ft Lauderdale|3090 NW 11 ST|18-00205|0|W,R,S,E,P|In progress - big job;NSP WP|West Park|28 Allen RD|WP25-000446|0|W,R,S,E,P|In progress - big job;Phillips|Pembroke Pines|7347 NW 22 DR|0|1|W,R,S,E,P|In permitting;Pifalo|Plantation|8536 NW 10 ST Unit D78|B25-05040|1|W,S,E,P|⚠ REVISION: NOA wrong on window+door - missing plmb permit for WH;Qatar|Sunrise|13800 NW 14 ST Suite 160|0|0|S,E,P|Insurance issue - working to start;Rhoda|Plantation|501 N Pine Island Rd Unit 1|0|0|W,S,E,P|Very active - lots of work to do;Soto|Sunrise|11301 NW 17 ST|0|0|W,R|In review;Stone|Davie|4791 SW 55 AVE|0|0|W,R,S,P|Permit to be closed soon;Peacox|Ft Lauderdale||0|0|W,R,S|Not signed — Windows; (2) ext doors; Sloped roof; OHGD; AC C/O;Centeno|Cooper City||0|0|W,R,E|Not signed — Windows + (1) SGD; FD 1/4 lite; Slope+flat roof; AC C/O; Electrical upgrade;Perez-Millan|West Park||0|0|W,E|Not signed — Windows; (6) 1/2 lite doors; AC C/O; Electrical upgrade; Ext paint;Lopez|Weston||0|1|W,R|Not signed — Windows + (1) SGD; 1 6-panel door; Tile roof; Gutters";
+// Short labels for the phone tab bar — seven full words don't fit on a 375px screen.
+const MOB_NAV_LABEL={dashboard:"Home",projects:"Jobs",sheet:"Insp",permits:"Permits",scheduling:"Crew",todos:"To Do",activity:"Log"};
 const uid=()=>Math.random().toString(36).substr(2,9);
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
 const fDay=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"long"}).toUpperCase():"";
@@ -70,7 +86,27 @@ export default function App(){
   const[nameInput,setNameInput]=useState("");const[pwInput,setPwInput]=useState("");const[loginErr,setLoginErr]=useState("");const[signingIn,setSigningIn]=useState(false);
 
   useEffect(()=>{(async()=>{
-    try{const snap=await getDocs(collection(db,"users"));if(snap.empty)setNeedsSetup(true);}
+    try{
+      const snap=await getDocs(collection(db,"users"));
+      // Only a doc that carries a password can actually be signed in to. The
+      // collection still holds a leftover row from the old Firebase Auth setup
+      // (keyed by Auth UID, no name or password), and testing snap.empty alone
+      // treated that ghost as a real account — leaving the app with a sign-in
+      // screen nobody on earth had credentials for. Fall back to create-admin
+      // whenever there is no usable account.
+      const usable=snap.docs.filter(d=>d.data().password);
+      if(!usable.length){setNeedsSetup(true);setLoading(false);return;}
+      // Re-check the saved session against Firestore: a deleted account kept
+      // working forever on the device it was signed in on, and revoking admin
+      // never reached anyone already signed in.
+      const saved=ldLocal("sbcUser",null);
+      if(saved&&saved.username){
+        const me=usable.find(d=>d.id===saved.username);
+        if(!me){try{localStorage.removeItem("sbcUser");}catch{}setUser(null);}
+        else{const d=me.data();const fresh={...saved,displayName:d.name||saved.username,isAdmin:!!d.isAdmin};
+          if(fresh.isAdmin!==saved.isAdmin||fresh.displayName!==saved.displayName){setUser(fresh);try{localStorage.setItem("sbcUser",JSON.stringify(fresh));}catch{}}}
+      }
+    }
     catch(e){console.error("User check error:",e);}
     setLoading(false);
   })();},[]);
@@ -110,8 +146,8 @@ export default function App(){
         <div style={{fontSize:18,fontWeight:700,color:C.bl,marginBottom:2}}>Stacy Bomar</div>
         <div style={{fontSize:10,fontWeight:700,color:C.gr,letterSpacing:2,marginBottom:needsSetup?14:24}}>CONSTRUCTION</div>
         {needsSetup&&<div style={{fontSize:12,color:C.w2,marginBottom:16,lineHeight:1.4}}>Create your <b style={{color:C.w}}>admin account</b>. You'll use this to manage everyone else's logins.</div>}
-        <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")document.getElementById("sbc-pw")?.focus();}} type="text" autoCapitalize="none" autoCorrect="off" placeholder={needsSetup?"Your name / username":"Username"} style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:10}}/>
-        <input id="sbc-pw" value={pwInput} onChange={e=>{setPwInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")needsSetup?doSetup():doLogin();}} type="password" placeholder="Password" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:12}}/>
+        <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")document.getElementById("sbc-pw")?.focus();}} type="text" autoCapitalize="none" autoCorrect="off" placeholder={needsSetup?"Your name / username":"Username"} style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:16,outline:"none",textAlign:"center",marginBottom:10}}/>
+        <input id="sbc-pw" value={pwInput} onChange={e=>{setPwInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")needsSetup?doSetup():doLogin();}} type="password" placeholder="Password" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:16,outline:"none",textAlign:"center",marginBottom:12}}/>
         {loginErr&&<div style={{fontSize:12,color:C.rd,marginBottom:8}}>{loginErr}</div>}
         <button disabled={signingIn} onClick={needsSetup?doSetup:doLogin} style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:C.bl,color:"#fff",fontSize:14,fontWeight:600,cursor:signingIn?"default":"pointer",opacity:signingIn?0.7:1}}>
           {signingIn?(needsSetup?"Creating...":"Signing in..."):(needsSetup?"Create Admin Account":"Sign In")}
@@ -261,24 +297,18 @@ function AppMain({user,onSignOut}){
   useEffect(()=>{if(ok){const j=JSON.stringify(todos);if(j!==lastFs.current.sYtd){lastFs.current.sYtd=j;svFs("sYtd",todos);localStorage.setItem("sYtd",j);}}},[todos,ok]);
   useEffect(()=>{if(ok){const j=JSON.stringify(companyDocs);if(j!==lastFs.current.sYcd){lastFs.current.sYcd=j;svFs("sYcd",companyDocs);localStorage.setItem("sYcd",j);}}},[companyDocs,ok]);
 
-  // One-time: add new jobs from 2026 spreadsheet
-  const migratedRef=useRef(false);
-  useEffect(()=>{
-    if(!ok||!proj.length||migratedRef.current)return;
-    migratedRef.current=true;
-    const newJobs=[
-      {clientName:"Peacox",city:"Ft Lauderdale",scopes:["Windows & Doors","Roofing","Structural","Mechanical"],hoa:false,scopeNotes:"Windows; (2) ext doors; Sloped roof; OHGD; AC C/O",status:"Not signed"},
-      {clientName:"Centeno",city:"Cooper City",scopes:["Windows & Doors","Roofing","Electrical","Mechanical"],hoa:false,scopeNotes:"Windows + (1) SGD; FD 1/4 lite; Slope+flat roof; AC C/O; Electrical upgrade",status:"Not signed"},
-      {clientName:"Perez-Millan",city:"West Park",scopes:["Windows & Doors","Electrical","Mechanical"],hoa:false,scopeNotes:"Windows; (6) 1/2 lite doors; AC C/O; Electrical upgrade; Ext paint",status:"Not signed"},
-      {clientName:"Lopez",city:"Weston",scopes:["Windows & Doors","Roofing"],hoa:true,scopeNotes:"Windows + (1) SGD; 1 6-panel door; Tile roof; Gutters",status:"Not signed"},
-    ];
-    setP(cur=>{const toAdd=newJobs.filter(nj=>!cur.some(p=>p.clientName.toLowerCase()===nj.clientName.toLowerCase()));return toAdd.length?[...cur,...toAdd.map(j=>({id:uid(),address:"TBD",permitNum:"",assignee:"",comments:[],createdAt:td(),...j}))]:cur;});
-  },[ok,proj.length]);
+  // The 2026-spreadsheet job import lived here. It has already run against the
+  // live data, and because it re-ran on every page load it silently restored
+  // Peacox / Centeno / Perez-Millan / Lopez whenever they were deleted.
+  // Those four are also in the seed list, so nothing is lost by dropping it.
 
   const logAct=(action,detail)=>{try{addDoc(collection(db,"activityLog"),{user:user.displayName||"Unknown",action,detail:detail||"",ts:new Date().toISOString()});}catch(e){console.error("Log error:",e);}};
   const isAdmin=user.isAdmin===true||user.email==="sheldon@sbc.app"||user.email==="tim@sbc.app";
   const[actLog,setActLog]=useState([]);
-  const loadLog=async()=>{try{const q2=query(collection(db,"activityLog"),orderBy("ts","desc"),limit(200));const snap=await getDocs(q2);setActLog(snap.docs.map(d=>({id:d.id,...d.data()})));}catch(e){console.error("Load log error:",e);}};
+  const loadLog=useCallback(async()=>{try{const q2=query(collection(db,"activityLog"),orderBy("ts","desc"),limit(200));const snap=await getDocs(q2);setActLog(snap.docs.map(d=>({id:d.id,...d.data()})));}catch(e){console.error("Load log error:",e);}},[]);
+  // Fetch on tab open only. Doing this during render re-queried Firestore on
+  // every render forever whenever the log came back empty.
+  useEffect(()=>{if(pg==="activity"&&isAdmin)loadLog();},[pg,isAdmin,loadLog]);
 
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
@@ -295,7 +325,7 @@ function AppMain({user,onSignOut}){
 
   return(
     <div data-app="" style={{...S.app,flexDirection:mob?"column":"row"}}>
-      <style dangerouslySetInnerHTML={{__html:PRINT_CSS}}/>
+      <style dangerouslySetInnerHTML={{__html:APP_CSS+PRINT_CSS}}/>
       {isAdmin&&showAdmin&&<AdminPanel user={user} mob={mob} onClose={()=>setShowAdmin(false)}/>}
       {!mob&&<div data-sidebar="" style={S.side}>
         <div style={{...S.fxc,gap:10,padding:"4px 16px 18px",borderBottom:`1px solid ${C.bd}`,marginBottom:10}}>
@@ -342,7 +372,7 @@ function AppMain({user,onSignOut}){
           <button onClick={onSignOut} style={{background:"none",border:`1px solid ${C.bd}`,borderRadius:6,color:C.w3,cursor:"pointer",fontSize:11,fontFamily:"inherit",padding:"5px 10px"}}>Sign Out</button>
         </div>
       </div>}
-      <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?70:0}}><div style={{padding:mob?"14px 12px":"24px 40px",maxWidth:mob?"100%":1400}}>
+      <div data-content="" style={{flex:1,overflow:"auto",paddingBottom:mob?"calc(72px + env(safe-area-inset-bottom))":0}}><div style={{padding:mob?"14px 12px":"24px 40px",maxWidth:mob?"100%":1400}}>
 
         {pg==="dashboard"&&(()=>{
           const cc={};proj.forEach(p=>{cc[p.city||"?"]=(cc[p.city||"?"]||0)+1;});
@@ -354,9 +384,9 @@ function AppMain({user,onSignOut}){
           const isRev=s=>(s||"").includes("REVISION");
           const revCount=active.filter(p=>isRev(p.status)).length;
           return <>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
-              {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
-                <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:mob?8:14,marginBottom:mob?14:20}}>
+              {[[active.length,"Active Jobs","Active",C.bl],[closed.length,"Closed Jobs","Closed",C.w3],[revCount,"Revision Required","Revisions",revCount?C.or:C.w3]].map(([v,l,sl,c],i)=>
+                <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?"12px 10px":20,marginBottom:0}}><div style={{fontSize:mob?24:32,fontWeight:700,color:c,lineHeight:1.1}}>{v}</div><div style={{fontSize:mob?10:13,color:C.w3,marginTop:2}}>{mob?sl:l}</div></div>)}
             </div>
             {pendTotal>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.rd}`,marginBottom:20,background:C.rdb,padding:mob?16:20}}>
               <div style={{...S.fxsb,marginBottom:10}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:22}}>⚠</span><span style={{fontSize:16,fontWeight:700,color:C.rd}}>REVISIONS & CHANGE ORDERS</span></div><span style={{fontSize:28,fontWeight:700,color:C.rd}}>{pendTotal}</span></div>
@@ -446,10 +476,10 @@ function AppMain({user,onSignOut}){
                 </div>);})}
             </div>;})}
             {pend.length>0&&<><div data-pend-header="" style={{background:C.orb,padding:"7px 14px",borderTop:`2px solid ${C.or}`,marginTop:6}}><span style={{fontSize:11,fontWeight:700,color:C.or}}>PENDING ({pend.length})</span></div>{pend.map(i=>{const p=proj.find(x=>x.id===i.projectId);return(
-              <div data-insp-row="" key={i.id} draggable onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:"8px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:"grab",opacity:inspDragId===i.id?0.4:1}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><span data-result="" style={{fontSize:10,color:C.or}}>Pending</span></div>
-                <div data-type="" style={{fontSize:11,color:C.or,fontWeight:600}}>{fT(i.type,ct)}</div>
-                <div data-detail="" style={{fontSize:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
+              <div data-insp-row="" key={i.id} draggable={!mob} onDragStart={e=>iDragStart(e,i.id)} onDragEnd={iDragEnd} onClick={()=>{if(!inspDragId){sSI(i.id);setPg("detail");}}} style={{padding:mob?"12px 14px":"8px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`,cursor:mob?"pointer":"grab",opacity:inspDragId===i.id?0.4:1}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span data-name="" style={{fontSize:mob?14:12,fontWeight:600,textTransform:"uppercase"}}>{p?.clientName}</span><span data-result="" style={{fontSize:mob?12:10,color:C.or}}>Pending</span></div>
+                <div data-type="" style={{fontSize:mob?13:11,color:C.or,fontWeight:600}}>{fT(i.type,ct)}</div>
+                <div data-detail="" style={{fontSize:mob?12:10,color:C.w3,marginTop:2}}>{p?.city}{p?.address&&p?.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}{i.permitNum?` · Permit: ${i.permitNum}`:""}</div>
               </div>);})}</>}
           </>;
         })()}
@@ -504,7 +534,6 @@ function AppMain({user,onSignOut}){
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} mob={mob} logAct={logAct} user={user}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
-          if(!actLog.length)loadLog();
           const fmtTs=(ts)=>{const d=new Date(ts);return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
           const actColor={added:C.gr,scheduled:C.bl,updated:C.or,deleted:C.rd,passed:C.gr,failed:C.rd,reset:C.w3,uploaded:C.bl,moved:C.or,removed:C.rd};
           const getVerb=(a)=>{const w=a.toLowerCase().split(" ")[0];return actColor[w]||C.w2;};
@@ -534,11 +563,13 @@ function AppMain({user,onSignOut}){
 
       </div></div>
       {mob&&<div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
-        {mobNavItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":"📅"}</span>
-          <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
-          {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
-          {id==="projects"&&pendTotal>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.rd,color:"#fff",borderRadius:8,padding:"1px 4px"}}>{pendTotal}</span>}
+        {mobNavItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");
+          const badge=id==="sheet"?ovd:id==="projects"?pendTotal:id==="todos"?todos.filter(t=>!t.done).length:0;
+          const badgeBg=id==="projects"?C.rd:C.or;const badgeFg=id==="projects"?"#fff":C.bg;
+          return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,minWidth:0,padding:"8px 2px 6px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",fontFamily:"inherit"}}>
+          <span style={{fontSize:18,lineHeight:1}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":"📅"}</span>
+          <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3,letterSpacing:-0.2,whiteSpace:"nowrap",maxWidth:"100%",overflow:"hidden"}}>{MOB_NAV_LABEL[id]||lb}</span>
+          {badge>0&&<span style={{position:"absolute",top:2,left:"50%",marginLeft:6,fontSize:9,fontWeight:700,background:badgeBg,color:badgeFg,borderRadius:9,padding:"0 5px",lineHeight:"15px",minWidth:9,textAlign:"center"}}>{badge>99?"99+":badge}</span>}
         </button>;})}
       </div>}
     </div>
@@ -740,8 +771,8 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
   const addAssign=(crewId,date,projectId,notes)=>{setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||""}]);const cr=CREWS.find(c=>c.id===crewId);const p=proj.find(x=>x.id===projectId);if(logAct)logAct("scheduled crew",`${cr?.name||crewId} → ${p?.clientName||"?"} on ${fmt(date)}`);};
   const rmAssign=(id)=>{const a=sched.find(s=>s.id===id);const cr=CREWS.find(c=>c.id===a?.crewId);const p=proj.find(x=>x.id===a?.projectId);if(logAct)logAct("removed crew assignment",`${cr?.name||"?"} from ${p?.clientName||"?"}`);setSched(v=>v.filter(s=>s.id!==id));};
   return <>
-    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:20,fontWeight:700,margin:0}}>CREW SCHEDULING</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div></div>
-    <div style={{...S.fx,gap:6,marginBottom:16}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
+    <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>CREW SCHEDULING</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div></div>
+    <div style={{...S.fx,gap:6,marginBottom:16}}><button style={{...S.bs,padding:mob?"10px 16px":"8px 16px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(d.toISOString().split("T")[0]);}}>←</button><button style={{...S.bs,color:C.bl,padding:mob?"10px 16px":"8px 16px"}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(d.toISOString().split("T")[0]);}}>This Week</button><button style={{...S.bs,padding:mob?"10px 16px":"8px 16px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(d.toISOString().split("T")[0]);}}>→</button></div>
 
     {mob?
       days.map(d=>{const isT=d===td();const dayAssigns=sched.filter(s=>s.date===d);const crewsWithWork=CREWS.filter(cr=>dayAssigns.some(s=>s.crewId===cr.id));const crewsOff=CREWS.filter(cr=>{const a=getAssign(cr.id,d);return a.length>0&&a.every(x=>x.projectId==="OFF");});return <div key={d} style={{marginBottom:14}}>
@@ -1078,7 +1109,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
             {comments.map(cm=>{
               const rsC=cm.responseStatus==="Resolved"?C.gr:cm.responseStatus==="Responded"?C.bl:cm.responseStatus==="In Progress"?C.or:C.rd;
               return <div key={cm.id} style={{padding:"6px 0",borderBottom:`1px solid ${C.bd}`}}>
-                <div style={{...S.fxsb}}><span style={{fontSize:11,fontWeight:600}}>{cm.reviewer||"Reviewer"} · {fmt(cm.date)}</span>
+                <div style={{...S.fxsb,flexWrap:"wrap",gap:6,alignItems:"center"}}><span style={{fontSize:mob?12:11,fontWeight:600}}>{cm.reviewer||"Reviewer"} · {fmt(cm.date)}</span>
                   <div style={{...S.fxc,gap:4}}>
                     <select value={cm.responseStatus} onChange={e=>{const ns=e.target.value;setPermits(v=>v.map(x=>x.id===pm.id?{...x,comments:x.comments.map(cc=>cc.id===cm.id?{...cc,responseStatus:ns}:cc)}:x));}} style={{...S.inp,marginBottom:0,padding:mob?"6px 8px":"2px 6px",fontSize:mob?12:9,width:"auto"}}>
                       {["Not Started","In Progress","Responded","Resolved"].map(rs=><option key={rs} value={rs}>{rs}</option>)}
@@ -1137,9 +1168,9 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
       <button style={{...S.bs,padding:mob?"10px 14px":"8px 16px",fontSize:mob?13:13,background:showDocs?C.bll:C.b2,color:showDocs?C.bl:C.w2,borderColor:showDocs?C.bl:C.bd}} onClick={()=>setShowDocs(!showDocs)}>📁 Company Docs ({companyDocs.filter(d=>!d.isFolder).length})</button>
     </div>
     {showDocs&&<CompanyDocsSection docs={companyDocs} setDocs={setCompanyDocs} mob={mob} user={user} logAct={logAct}/>}
-    {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:16}}>
-      {[[activeP.length,"Active Permits","#22D3EE"],[needResp,"Comments Need Response",needResp?C.or:C.w3],[pend30,"Pending > 30 Days",pend30?C.rd:C.w3]].map(([v,l,c],i)=>
-        <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20,marginBottom:0}}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
+    {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>p.dateSubmitted&&(new Date()-new Date(p.dateSubmitted+"T00:00:00"))/(1e3*86400)>30).length;return <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:mob?8:14,marginBottom:mob?14:16}}>
+      {[[activeP.length,"Active Permits","Active","#22D3EE"],[needResp,"Comments Need Response","Need Reply",needResp?C.or:C.w3],[pend30,"Pending > 30 Days","30+ Days",pend30?C.rd:C.w3]].map(([v,l,sl,c],i)=>
+        <div key={"pm"+i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?"12px 10px":20,marginBottom:0}}><div style={{fontSize:mob?24:32,fontWeight:700,color:c,lineHeight:1.1}}>{v}</div><div style={{fontSize:mob?10:13,color:C.w3,marginTop:2}}>{mob?sl:l}</div></div>)}
     </div>;})()}
     {(()=>{const psc={issued:0,review:0,none:0};proj.forEach(p=>{const ps=(p.permitStatus||"").toLowerCase();if(ps==="issued")psc.issued++;else if(ps==="in review")psc.review++;else psc.none++;});return <div style={{...S.cd,padding:mob?16:20,marginBottom:16}}><h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>Permit Status</h3>
       {[["Issued / Approved",psc.issued,C.gr],["In Review",psc.review,C.or],["Not Set",psc.none,C.w3]].map(([l,v,c])=><div key={l} style={{...S.fxsb,padding:"8px 0",borderBottom:`1px solid ${C.bd}`}}><div style={{...S.fxc,gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:c}}/><span style={{fontSize:13}}>{l}</span></div><span style={{fontSize:16,fontWeight:700,color:c}}>{v}</span></div>)}
@@ -1304,7 +1335,7 @@ function TodoTab({todos,setTodos,proj,mob,logAct,user}){
       )}
     </div>
     {!sortedTodos.length&&<p style={{color:C.w3,fontSize:mob?14:13}}>{filter==="done"?"No completed items.":"Nothing to do — nice!"}</p>}
-    <div style={{paddingBottom:mob?70:0}}>
+    <div>
     {sortedTodos.map(t=>{const pj=proj.find(x=>x.id===t.projectId);return <div key={t.id} style={{...S.cd,marginBottom:8,opacity:t.done?0.55:1,padding:mob?"14px 12px":16}}>
       <div style={{display:"flex",alignItems:"flex-start",gap:mob?14:12}}>
         <div style={{flex:1,minWidth:0}}>
