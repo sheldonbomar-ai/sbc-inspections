@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage, auth, functions } from "./firebase";
-import { doc, setDoc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -52,7 +52,40 @@ const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${Str
 const td=()=>ymd(new Date());
 const BUILD_SHA=(process.env.REACT_APP_GIT_SHA||"").slice(0,7);
 const BUILD_LABEL=(()=>{try{const t=process.env.REACT_APP_BUILD_TIME;if(!t)return"";return new Date(t).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}catch{return"";}})();
-const svFs=async(k,v)=>{try{await setDoc(doc(db,"data",k),{value:JSON.stringify(v)});}catch(e){console.error("Firestore save error:",e);}};
+// 3-way merge: reconcile this client's changes (base->local) onto the current
+// server value, keyed by record id. A client only applies its OWN adds/edits/
+// deletes; records it never loaded are preserved. Prevents stale-tab clobber.
+const mergeArrays=(server,base,local)=>{
+  const kf=r=>(r&&r.id!=null)?r.id:null;
+  const S=new Map(),B=new Map(),L=new Map();
+  server.forEach(r=>{const k=kf(r);if(k!=null)S.set(k,r);});
+  base.forEach(r=>{const k=kf(r);if(k!=null)B.set(k,r);});
+  local.forEach(r=>{const k=kf(r);if(k!=null)L.set(k,r);});
+  const result=new Map(S); // start from server truth
+  for(const k of B.keys())if(!L.has(k))result.delete(k); // deletions this client made
+  for(const[k,rec]of L){const b=B.get(k);
+    if(!b||JSON.stringify(b)!==JSON.stringify(rec))result.set(k,rec); // local add/edit wins
+    else if(!result.has(k))result.set(k,rec);} // base-unchanged but dropped on server -> restore
+  const ordered=[],seen=new Set(); // preserve local order, append server-only extras
+  local.forEach(r=>{const k=kf(r);if(k!=null&&result.has(k)&&!seen.has(k)){ordered.push(result.get(k));seen.add(k);}});
+  local.forEach(r=>{if(kf(r)==null)ordered.push(r);}); // rare: records with no id
+  server.forEach(r=>{const k=kf(r);if(k!=null&&result.has(k)&&!seen.has(k)){ordered.push(result.get(k));seen.add(k);}});
+  return ordered;
+};
+const svFs=async(k,v,baseJson)=>{try{
+  const ref=doc(db,"data",k);
+  await runTransaction(db,async(tx)=>{
+    const snap=await tx.get(ref);
+    const server=(snap.exists()&&snap.data()&&snap.data().value)?JSON.parse(snap.data().value):[];
+    const base=baseJson?JSON.parse(baseJson):[];
+    const local=Array.isArray(v)?v:[];
+    const merged=mergeArrays(server,base,local);
+    // safety valve: refuse a save that would erase >50% of an established collection
+    if(server.length>=10&&merged.length<server.length*0.5){
+      console.error(`svFs safety: refused save on "${k}" (would drop ${server.length-merged.length}/${server.length})`);return;}
+    tx.set(ref,{value:JSON.stringify(merged)});
+  });
+}catch(e){console.error("Firestore save error:",e);}};
 const runSafeMigration=async(migId,dataKey,current,migrateFn,desc)=>{
   const applied=ldLocal("mig_"+migId,false);if(applied)return{changed:false,data:current};
   try{
@@ -140,7 +173,7 @@ function AppMain({user}){
     const unsubs=keys.map(([k,setter])=>onSnapshot(doc(db,"data",k),(snap)=>{
       const d=snap.data();
       let val=d?JSON.parse(d.value):null;
-      if(k==="sYp"&&!val){val=mkSeed();svFs(k,val);}
+      if(k==="sYp"&&!val){val=mkSeed();} // seed locally only — never auto-overwrite server (prevents transient-empty clobber)
       if(!val)val=[];
       const json=JSON.stringify(val);
       localStorage.setItem(k,json);
@@ -155,14 +188,14 @@ function AppMain({user}){
     }));
     return ()=>unsubs.forEach(u=>u());
   },[]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(proj);if(j!==lastFs.current.sYp){lastFs.current.sYp=j;svFs("sYp",proj);localStorage.setItem("sYp",j);}}},[proj,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(insp);if(j!==lastFs.current.sYi){lastFs.current.sYi=j;svFs("sYi",insp);localStorage.setItem("sYi",j);}}},[insp,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(ct);if(j!==lastFs.current.sYc){lastFs.current.sYc=j;svFs("sYc",ct);localStorage.setItem("sYc",j);}}},[ct,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(sched);if(j!==lastFs.current.sYs){lastFs.current.sYs=j;svFs("sYs",sched);localStorage.setItem("sYs",j);}}},[sched,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(permits);if(j!==lastFs.current.sYpm){lastFs.current.sYpm=j;svFs("sYpm",permits);localStorage.setItem("sYpm",j);}}},[permits,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(todos);if(j!==lastFs.current.sYtd){lastFs.current.sYtd=j;svFs("sYtd",todos);localStorage.setItem("sYtd",j);}}},[todos,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(companyDocs);if(j!==lastFs.current.sYcd){lastFs.current.sYcd=j;svFs("sYcd",companyDocs);localStorage.setItem("sYcd",j);}}},[companyDocs,ok]);
-  useEffect(()=>{if(ok){const j=JSON.stringify(permitCards);if(j!==lastFs.current.sYpc){lastFs.current.sYpc=j;svFs("sYpc",permitCards);localStorage.setItem("sYpc",j);}}},[permitCards,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYp;const j=JSON.stringify(proj);if(j!==base){lastFs.current.sYp=j;svFs("sYp",proj,base);localStorage.setItem("sYp",j);}}},[proj,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYi;const j=JSON.stringify(insp);if(j!==base){lastFs.current.sYi=j;svFs("sYi",insp,base);localStorage.setItem("sYi",j);}}},[insp,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYc;const j=JSON.stringify(ct);if(j!==base){lastFs.current.sYc=j;svFs("sYc",ct,base);localStorage.setItem("sYc",j);}}},[ct,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYs;const j=JSON.stringify(sched);if(j!==base){lastFs.current.sYs=j;svFs("sYs",sched,base);localStorage.setItem("sYs",j);}}},[sched,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYpm;const j=JSON.stringify(permits);if(j!==base){lastFs.current.sYpm=j;svFs("sYpm",permits,base);localStorage.setItem("sYpm",j);}}},[permits,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYtd;const j=JSON.stringify(todos);if(j!==base){lastFs.current.sYtd=j;svFs("sYtd",todos,base);localStorage.setItem("sYtd",j);}}},[todos,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYcd;const j=JSON.stringify(companyDocs);if(j!==base){lastFs.current.sYcd=j;svFs("sYcd",companyDocs,base);localStorage.setItem("sYcd",j);}}},[companyDocs,ok]);
+  useEffect(()=>{if(ok){const base=lastFs.current.sYpc;const j=JSON.stringify(permitCards);if(j!==base){lastFs.current.sYpc=j;svFs("sYpc",permitCards,base);localStorage.setItem("sYpc",j);}}},[permitCards,ok]);
 
   // One-time migrations (wrapped in safety layer)
   const migratedRef=useRef(false);
