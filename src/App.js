@@ -46,6 +46,7 @@ const fT=(t,ct=[])=>{const f=[...DT,...ct].find(x=>x.l===t);return f?`${f.p}- ${
 const AddrLink=({a,c})=>!a||a==="TBD"?null:<a href={`https://maps.apple.com/?q=${encodeURIComponent(c?a+", "+c:a)}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:"inherit",textDecoration:"underline",textDecorationStyle:"dotted",textUnderlineOffset:2}}>{a}</a>;
 const SD="Ashley|Pompano Beach|2921 NW 8 ST|0|0|W,E|⚠ REVISION: CGI NOA now PGT by Sparta;Barrant|Sunrise|4008 Del Rio Way|0|1|W,R,E|In permitting;Beckles|Pembroke Pines|12017 NW 11 ST|0|1|W,S,E,P|In permitting;Bryan|Sunrise|11701 NW 30 PL|R-STRT-003473|0|R,S,E,P|Pending building final - work done;Burke|Margate|7708 Margate Blvd Apt C3-6|0|1||CLOSED;Bursztyn|Davie|3745 SW 59 AVE|2025-7435|1|W,S,E,P|Pending finals - job done;Camacho|Plantation|7501 NW 16 ST Unit 3305|P25-1025|0|W,S,E,P|Need appliances AC kitchen sink then finals;Campbell|Margate|1835 Vista Way|0|1|R,S,E|Roof permit in review - other permits issued;Ceasar|Margate|6130 SW 3 ST|0|0|W,R|CLOSED;Clover|Deerfield Beach|516 SW Natura AVE|0|1|R|Roof permit in review;Courts|Deerfield Beach|225 Ventor Q|0|1|W,S,E,P|About to commence;Cox|Deerfield Beach|330 NW 1 AVE|0|0|W,R,S,E,P|Roof in progress - rest about to commence;Davila|Pembroke Pines|1026 NW 159 AVE|0|1|W,R,S,P|Window permit issued - roof in review;Davilsaint|Ft Lauderdale||0|0|R|On pause - insurance issue;Derek-Towriss|Ft Lauderdale|1649 NE 3 CT|0|0||Pending final inspections;Goberdhan|Plantation|7820 NW 14 ST|0|0|W,S,E,P|Win+elec+AC done - bath drywall+appliances+doors left;Gonzalez|Sunrise|9801 Sunrise Lakes Blvd Unit 207|0|1|W,S,E,P|Permit to be issued within 2 weeks;Knight|Pompano Beach|1570 NW 4 AVE|0|0|E|Exterior paint last thing - permits closed;Ledgister|Plantation|103 NW 68 AVE|B25-04632|0|W,S,E,P|All done besides appliances;Mel|Miami||0|0|R|On pause - insurance issue;Mistler|Plantation|5301 SW 8 ST|B25-04835|0|S|Roof work commenced;Morgan|Pembroke Pines|1000 Colony Point Cir #420|0|1|S,E,P|Permit in progress;Moye-Barnett|Davie|7520 NW 31st Place|0|1|W,R,S,E,P|CLOSED;Nora Sanchez|Deerfield Beach|222 Prescott L|0|1|W,S,E,P|About to commence;NSP Swap Shop|Ft Lauderdale|3090 NW 11 ST|18-00205|0|W,R,S,E,P|In progress - big job;NSP WP|West Park|28 Allen RD|WP25-000446|0|W,R,S,E,P|In progress - big job;Phillips|Pembroke Pines|7347 NW 22 DR|0|1|W,R,S,E,P|In permitting;Pifalo|Plantation|8536 NW 10 ST Unit D78|B25-05040|1|W,S,E,P|⚠ REVISION: NOA wrong on window+door - missing plmb permit for WH;Qatar|Sunrise|13800 NW 14 ST Suite 160|0|0|S,E,P|Insurance issue - working to start;Rhoda|Plantation|501 N Pine Island Rd Unit 1|0|0|W,S,E,P|Very active - lots of work to do;Soto|Sunrise|11301 NW 17 ST|0|0|W,R|In review;Stone|Davie|4791 SW 55 AVE|0|0|W,R,S,P|Permit to be closed soon";
 const uid=()=>Math.random().toString(36).substr(2,9);
+const isClosed=p=>p?.closed===true||(p?.status||"")==="CLOSED";
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
 const fDay=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-US",{weekday:"long"}).toUpperCase():"";
 const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -216,7 +217,13 @@ function AppMain({user}){
       const toAdd=newJobs.filter(nj=>!updated.some(p=>p.clientName.toLowerCase()===nj.clientName.toLowerCase()));
       if(toAdd.length)updated=[...updated,...toAdd.map(j=>({id:uid(),address:"TBD",permitNum:"",assignee:"",comments:[],createdAt:td(),...j}))];
       return(hadJunk||toAdd.length)?updated:cur;
-    },"Add 2026 spreadsheet jobs + cleanup junk entries").then(r=>{if(r.changed)setP(r.data);});
+    },"Add 2026 spreadsheet jobs + cleanup junk entries").then(r=>{
+      if(r.changed)setP(r.data);
+      return runSafeMigration("2026-closed-flag","sYp",r.data,(cur)=>{
+        if(!cur.some(p=>(p.status||"")==="CLOSED"&&p.closed!==true))return cur;
+        return cur.map(p=>(p.status||"")==="CLOSED"&&p.closed!==true?{...p,closed:true,closedAt:p.closedAt||"",closedBy:p.closedBy||"",status:""}:p);
+      },"Move legacy CLOSED status text onto the closed flag").then(r2=>{if(r2.changed)setP(r2.data);});
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[ok,proj.length]);
 
@@ -228,10 +235,10 @@ function AppMain({user}){
   if(!ok) return <div style={{...S.app,alignItems:"center",justifyContent:"center"}}><p style={{color:C.w3}}>Loading...</p></div>;
 
   const ovd=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
-  const pendCO=proj.reduce((n,p)=>n+((p.changeOrders||[]).filter(co=>co.status==="Pending").length),0);
-  const pendRev=proj.reduce((n,p)=>n+((p.revisions||[]).filter(r=>r.status==="Open").length),0);
+  const pendCO=proj.reduce((n,p)=>n+(isClosed(p)?0:(p.changeOrders||[]).filter(co=>co.status==="Pending").length),0);
+  const pendRev=proj.reduce((n,p)=>n+(isClosed(p)?0:(p.revisions||[]).filter(r=>r.status==="Open").length),0);
   const pendTotal=pendCO+pendRev;
-  const projWithIssues=proj.filter(p=>(p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open"));
+  const projWithIssues=proj.filter(p=>!isClosed(p)&&((p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open")));
 
   const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"],["backups","Backups"]]:navBase;
@@ -287,8 +294,8 @@ function AppMain({user}){
           const cols=["Windows & Doors","Roofing","Structural","Electrical","Plumbing","Mechanical"];
           const colC={"Windows & Doors":C.gr,Roofing:"#FB923C",Structural:"#A78BFA",Electrical:C.rd,Plumbing:C.bl,Mechanical:"#FCD34D"};
           const sorted=[...proj].sort((a,b)=>projSort==="newest"?(b.createdAt||"").localeCompare(a.createdAt||""):a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
-          const active=sorted.filter(p=>(p.status||"")!=="CLOSED");
-          const closed=sorted.filter(p=>(p.status||"")==="CLOSED");
+          const active=sorted.filter(p=>!isClosed(p));
+          const closed=sorted.filter(p=>isClosed(p));
           const isRev=s=>(s||"").includes("REVISION");
           const revCount=active.filter(p=>isRev(p.status)).length;
           return <>
@@ -433,15 +440,15 @@ function AppMain({user}){
         </>;})()}
 
         {pg==="projects"&&!selP&&<>
-          <div style={{...S.fxsb,marginBottom:20}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Projects</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>{proj.filter(p=>(p.status||"")!=="CLOSED").length} active · {proj.filter(p=>(p.status||"")==="CLOSED").length} closed</p></div><button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("proj")}>+ New</button></div>
+          <div style={{...S.fxsb,marginBottom:20}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Projects</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>{proj.filter(p=>!isClosed(p)).length} active · {proj.filter(p=>isClosed(p)).length} closed</p></div><button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("proj")}>+ New</button></div>
           <div style={{...S.fx,gap:8,marginBottom:8,alignItems:"center"}}><input style={{...S.inp,fontSize:mob?16:12,padding:mob?"12px 14px":"8px 12px",flex:1,marginBottom:0}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search..."/>
             <div style={{...S.fx,gap:4}}>{[["alpha","A-Z"],["newest","Newest"]].map(([k,l])=><button key={k} style={{...S.bs,padding:mob?"10px 12px":"6px 10px",fontSize:mob?12:11,background:projSort===k?C.bl:C.b3,color:projSort===k?"#fff":C.w2,border:projSort===k?"none":`1px solid ${C.bd}`}} onClick={()=>setProjSort(k)}>{l}</button>)}</div></div>
-          <div style={{...S.fx,gap:2,marginBottom:14,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[["active","Active"],["closed","Closed"],["all","All"]].map(([k,l])=>{const on=projView===k;const n=k==="active"?proj.filter(p=>(p.status||"")!=="CLOSED").length:k==="closed"?proj.filter(p=>(p.status||"")==="CLOSED").length:proj.length;return <button key={k} onClick={()=>setProjView(k)} style={{border:"none",background:on?C.bl:"transparent",color:on?"#fff":C.w2,fontFamily:"inherit",fontSize:mob?13:12,fontWeight:600,padding:mob?"9px 16px":"7px 15px",borderRadius:7,cursor:"pointer"}}>{l} <span style={{opacity:0.7,fontWeight:500}}>{n}</span></button>;})}</div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>{["All","Windows & Doors","Roofing","Structural","Electrical","Plumbing","Mechanical"].map(sc=>{const active=scopeFilter===sc;const n=sc==="All"?proj.length:proj.filter(p=>(p.scopes||[]).includes(sc)).length;const sCol=sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:sc==="Mechanical"?"#FCD34D":C.bl;return <button key={sc} onClick={()=>setScopeFilter(sc)} style={{...S.bs,fontSize:mob?12:11,padding:mob?"7px 12px":"5px 11px",background:active?sCol:C.b3,color:active?(sc==="Mechanical"?"#1A1A1A":"#fff"):C.w2,border:active?"none":`1px solid ${C.bd}`,fontWeight:active?700:500}}>{sc}{sc!=="All"?` ${n}`:""}</button>;})}</div>
+          <div style={{...S.fx,gap:2,marginBottom:14,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[["active","Active"],["closed","Closed"],["all","All"]].map(([k,l])=>{const on=projView===k;const n=k==="active"?proj.filter(p=>!isClosed(p)).length:k==="closed"?proj.filter(p=>isClosed(p)).length:proj.length;return <button key={k} onClick={()=>setProjView(k)} style={{border:"none",background:on?C.bl:"transparent",color:on?"#fff":C.w2,fontFamily:"inherit",fontSize:mob?13:12,fontWeight:600,padding:mob?"9px 16px":"7px 15px",borderRadius:7,cursor:"pointer"}}>{l} <span style={{opacity:0.7,fontWeight:500}}>{n}</span></button>;})}</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>{["All","Windows & Doors","Roofing","Structural","Electrical","Plumbing","Mechanical"].map(sc=>{const active=scopeFilter===sc;const scoped=proj.filter(p=>projView==="all"||(projView==="closed"?isClosed(p):!isClosed(p)));const n=sc==="All"?scoped.length:scoped.filter(p=>(p.scopes||[]).includes(sc)).length;const sCol=sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:sc==="Mechanical"?"#FCD34D":C.bl;return <button key={sc} onClick={()=>setScopeFilter(sc)} style={{...S.bs,fontSize:mob?12:11,padding:mob?"7px 12px":"5px 11px",background:active?sCol:C.b3,color:active?(sc==="Mechanical"?"#1A1A1A":"#fff"):C.w2,border:active?"none":`1px solid ${C.bd}`,fontWeight:active?700:500}}>{sc}{sc!=="All"?` ${n}`:""}</button>;})}</div>
           <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(320px,1fr))",gap:mob?8:14}}>
-            {proj.filter(p=>projView==="all"||(projView==="closed"?(p.status||"")==="CLOSED":(p.status||"")!=="CLOSED")).filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(search.toLowerCase())).filter(p=>scopeFilter==="All"||(p.scopes||[]).includes(scopeFilter)).sort((a,b)=>projSort==="newest"?(b.createdAt||"").localeCompare(a.createdAt||""):a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=>
-              <div key={p.id} style={{...S.cd,cursor:"pointer",opacity:(p.status||"")==="CLOSED"?0.55:1,borderLeft:`3px solid ${(p.status||"")==="CLOSED"?C.w3:(p.revisions||[]).some(r=>r.status==="Open")||(p.changeOrders||[]).some(co=>co.status==="Pending")?C.rd:p.hoa?C.or:C.bl}`}} onClick={()=>sSP(p.id)}>
-                <div style={{...S.fxsb,marginBottom:6}}><span style={{fontSize:14,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{(p.status||"")==="CLOSED"&&<span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,letterSpacing:0.4,background:"#26313f",color:C.w3,border:`1px solid ${C.bd}`}}>CLOSED</span>}{(p.revisions||[]).filter(r=>r.status==="Open").length>0&&<span style={S.bg(C.orb,C.or)}>↺ {(p.revisions||[]).filter(r=>r.status==="Open").length} REV</span>}{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>$ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
+            {proj.filter(p=>projView==="all"||(projView==="closed"?isClosed(p):!isClosed(p))).filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(search.toLowerCase())).filter(p=>scopeFilter==="All"||(p.scopes||[]).includes(scopeFilter)).sort((a,b)=>projSort==="newest"?(b.createdAt||"").localeCompare(a.createdAt||""):a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"})).map(p=>
+              <div key={p.id} style={{...S.cd,cursor:"pointer",opacity:isClosed(p)?0.55:1,borderLeft:`3px solid ${isClosed(p)?C.w3:(p.revisions||[]).some(r=>r.status==="Open")||(p.changeOrders||[]).some(co=>co.status==="Pending")?C.rd:p.hoa?C.or:C.bl}`}} onClick={()=>sSP(p.id)}>
+                <div style={{...S.fxsb,marginBottom:6}}><span style={{fontSize:14,fontWeight:600}}>{p.clientName}</span><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{isClosed(p)&&<span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:20,letterSpacing:0.4,background:"#26313f",color:C.w3,border:`1px solid ${C.bd}`}}>CLOSED</span>}{(p.revisions||[]).filter(r=>r.status==="Open").length>0&&<span style={S.bg(C.orb,C.or)}>↺ {(p.revisions||[]).filter(r=>r.status==="Open").length} REV</span>}{(p.changeOrders||[]).filter(co=>co.status==="Pending").length>0&&<span style={S.bg(C.rdb,C.rd)}>$ {(p.changeOrders||[]).filter(co=>co.status==="Pending").length} CO</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>{p.permitStatus}</span>}</div></div>
                 <div style={{fontSize:12,color:C.w3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>
                 {p.permitNum&&<div style={{fontSize:11,color:C.bl,marginTop:3}}>{p.permitNum}</div>}
                 {p.scopes&&p.scopes.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{p.scopes.map(sc=><span key={sc} style={{fontSize:9,fontWeight:600,padding:"3px 9px",borderRadius:12,background:sc==="Structural"?"#2D1F4E":sc==="Plumbing"?C.bll:sc==="Electrical"?C.rdb:sc==="Roofing"?"#3B2410":sc==="Windows & Doors"?C.grl:sc==="Mechanical"?C.orb:C.b3,color:sc==="Structural"?"#A78BFA":sc==="Plumbing"?C.bl:sc==="Electrical"?C.rd:sc==="Roofing"?"#FB923C":sc==="Windows & Doors"?C.gr:sc==="Mechanical"?"#FCD34D":C.w2}}>{sc}</span>)}</div>}
@@ -449,9 +456,29 @@ function AppMain({user}){
           </div>
         </>}
 
-        {pg==="projects"&&selP&&(()=>{const p=proj.find(x=>x.id===selP);if(!p)return null;const pi=insp.filter(i=>i.projectId===selP);const addNote=(txt)=>setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:txt,author:user.displayName||user.email,date:td(),time:new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}]}:x));const delNote=(idx)=>{if(!window.confirm("Delete this message?"))return;setP(v=>v.map(x=>x.id===selP?{...x,comments:(x.comments||[]).filter((_,i)=>i!==idx)}:x));};return <>
+        {pg==="projects"&&selP&&(()=>{const p=proj.find(x=>x.id===selP);if(!p)return null;const pi=insp.filter(i=>i.projectId===selP);const addNote=(txt)=>setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:txt,author:user.displayName||user.email,date:td(),time:new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}]}:x));const delNote=(idx)=>{if(!window.confirm("Delete this message?"))return;setP(v=>v.map(x=>x.id===selP?{...x,comments:(x.comments||[]).filter((_,i)=>i!==idx)}:x));};
+          const closeJob=()=>{
+            const open=[];
+            const nRev=(p.revisions||[]).filter(r=>r.status==="Open").length;if(nRev)open.push(`${nRev} open revision${nRev>1?"s":""}`);
+            const nCO=(p.changeOrders||[]).filter(co=>co.status==="Pending").length;if(nCO)open.push(`${nCO} pending change order${nCO>1?"s":""}`);
+            const nIn=pi.filter(i=>!i.completed).length;if(nIn)open.push(`${nIn} uncompleted inspection${nIn>1?"s":""}`);
+            const msg=`Close job for ${p.clientName}?`+(open.length?`\n\nStill open:\n${open.map(x=>"  • "+x).join("\n")}\n\nYou can close anyway and reopen later.`:"");
+            if(!window.confirm(msg))return;
+            setP(v=>v.map(x=>x.id===selP?{...x,closed:true,closedAt:td(),closedBy:user.displayName||user.email}:x));
+            logAct("closed job",p.clientName+(open.length?` (${open.join(", ")})`:""));
+          };
+          const reopenJob=()=>{
+            if(!window.confirm(`Reopen job for ${p.clientName}?`))return;
+            setP(v=>v.map(x=>x.id===selP?{...x,closed:false,closedAt:"",closedBy:"",status:x.status==="CLOSED"?"":x.status}:x));
+            logAct("reopened job",p.clientName);
+          };
+          return <>
           <button style={{...S.bs,marginBottom:14}} onClick={()=>sSP(null)}>← Back</button>
-          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</p></div><div style={{...S.fx,gap:6}}><button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sEP(p)}>Edit</button><button style={{...S.btn,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
+          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</p></div><div style={{...S.fx,gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sEP(p)}>Edit</button><button style={{...S.btn,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Insp</button>{isClosed(p)
+              ?<button style={{...S.bs,color:C.gr,borderColor:C.gr,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={reopenJob}>Reopen</button>
+              :<button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={closeJob}>{mob?"Close":"Close Job"}</button>}
+            <button style={{...S.bs,color:C.rd,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
+          {isClosed(p)&&<div style={{...S.cd,marginBottom:12,padding:"12px 16px",background:C.b3,borderLeft:`3px solid ${C.w3}`,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><span style={{fontSize:16}}>🔒</span><div><div style={{fontSize:13,fontWeight:700,color:C.w2,letterSpacing:1}}>JOB CLOSED</div>{(p.closedAt||p.closedBy)&&<div style={{fontSize:11,color:C.w3,marginTop:2}}>{p.closedAt?fmt(p.closedAt):""}{p.closedAt&&p.closedBy?" · ":""}{p.closedBy||""}</div>}</div></div>}
           <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
           <RevisionSection revisions={p.revisions||[]} onUpdate={revs=>setP(v=>v.map(x=>x.id===selP?{...x,revisions:revs}:x))} logAct={logAct} projectName={p.clientName} mob={mob} inspections={insp.filter(i=>i.projectId===selP)} ct={ct} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
           <COSection changeOrders={p.changeOrders||[]} onUpdate={cos=>setP(v=>v.map(x=>x.id===selP?{...x,changeOrders:cos}:x))} logAct={logAct} projectName={p.clientName} mob={mob} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
@@ -709,7 +736,7 @@ function EF({p,ok}){
 function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
   const[assignCrew,setAssignCrew]=useState(null);
   const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return ymd(d);});
-  const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
+  const active=[...proj].filter(p=>!isClosed(p)).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const getAssign=(crewId,date)=>sched.filter(s=>s.crewId===crewId&&s.date===date);
   const addAssign=(crewId,date,projectId,notes)=>{setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||""}]);const cr=CREWS.find(c=>c.id===crewId);const p=proj.find(x=>x.id===projectId);if(logAct)logAct("scheduled crew",`${cr?.name||crewId} → ${p?.clientName||"?"} on ${fmt(date)}`);};
   const rmAssign=(id)=>{const a=sched.find(s=>s.id===id);const cr=CREWS.find(c=>c.id===a?.crewId);const p=proj.find(x=>x.id===a?.projectId);if(logAct)logAct("removed crew assignment",`${cr?.name||"?"} from ${p?.clientName||"?"}`);setSched(v=>v.filter(s=>s.id!==id));};
@@ -1086,7 +1113,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
   const[addingComment,setAddingComment]=useState(null);
   const[view,setView]=useState("permits");
 
-  const active=[...proj].filter(p=>(p.status||"")!=="CLOSED").sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
+  const active=[...proj].filter(p=>!isClosed(p)).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const projPermits=pid=>permits.filter(p=>p.projectId===pid);
   const unresolvedFor=pid=>{let c=0;projPermits(pid).forEach(pm=>(pm.comments||[]).forEach(cm=>{if(cm.responseStatus==="Not Started"||cm.responseStatus==="In Progress")c++;}));return c;};
 
