@@ -457,29 +457,11 @@ function AppMain({user}){
         </>}
 
         {pg==="projects"&&selP&&(()=>{const p=proj.find(x=>x.id===selP);if(!p)return null;const pi=insp.filter(i=>i.projectId===selP);const addNote=(txt)=>setP(v=>v.map(x=>x.id===selP?{...x,comments:[...(x.comments||[]),{id:uid(),text:txt,author:user.displayName||user.email,date:td(),time:new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}]}:x));const delNote=(idx)=>{if(!window.confirm("Delete this message?"))return;setP(v=>v.map(x=>x.id===selP?{...x,comments:(x.comments||[]).filter((_,i)=>i!==idx)}:x));};
-          const closeJob=()=>{
-            const open=[];
-            const nRev=(p.revisions||[]).filter(r=>r.status==="Open").length;if(nRev)open.push(`${nRev} open revision${nRev>1?"s":""}`);
-            const nCO=(p.changeOrders||[]).filter(co=>co.status==="Pending").length;if(nCO)open.push(`${nCO} pending change order${nCO>1?"s":""}`);
-            const nIn=pi.filter(i=>!i.completed).length;if(nIn)open.push(`${nIn} uncompleted inspection${nIn>1?"s":""}`);
-            const msg=`Close job for ${p.clientName}?`+(open.length?`\n\nStill open:\n${open.map(x=>"  • "+x).join("\n")}\n\nYou can close anyway and reopen later.`:"");
-            if(!window.confirm(msg))return;
-            setP(v=>v.map(x=>x.id===selP?{...x,closed:true,closedAt:td(),closedBy:user.displayName||user.email}:x));
-            logAct("closed job",p.clientName+(open.length?` (${open.join(", ")})`:""));
-          };
-          const reopenJob=()=>{
-            if(!window.confirm(`Reopen job for ${p.clientName}?`))return;
-            setP(v=>v.map(x=>x.id===selP?{...x,closed:false,closedAt:"",closedBy:"",status:x.status==="CLOSED"?"":x.status}:x));
-            logAct("reopened job",p.clientName);
-          };
           return <>
           <button style={{...S.bs,marginBottom:14}} onClick={()=>sSP(null)}>← Back</button>
-          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</p></div><div style={{...S.fx,gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sEP(p)}>Edit</button><button style={{...S.btn,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Insp</button>{isClosed(p)
-              ?<button style={{...S.bs,color:C.gr,borderColor:C.gr,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={reopenJob}>Reopen</button>
-              :<button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={closeJob}>{mob?"Close":"Close Job"}</button>}
-            <button style={{...S.bs,color:C.rd,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
+          <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:20,fontWeight:700,margin:0}}>{p.clientName}</h1><p style={{fontSize:12,color:C.w3,marginTop:3}}>{p.city}{p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</p></div><div style={{...S.fx,gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><button style={{...S.bs,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sEP(p)}>Edit</button><button style={{...S.btn,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Insp</button><button style={{...S.bs,color:C.rd,padding:mob?"10px 14px":"6px 14px",fontSize:mob?13:12}} onClick={()=>{logAct("deleted project",p.clientName);setP(v=>v.filter(x=>x.id!==selP));sSP(null);}}>Del</button></div></div>
           {isClosed(p)&&<div style={{...S.cd,marginBottom:12,padding:"12px 16px",background:C.b3,borderLeft:`3px solid ${C.w3}`,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><span style={{fontSize:16}}>🔒</span><div><div style={{fontSize:13,fontWeight:700,color:C.w2,letterSpacing:1}}>JOB CLOSED</div>{(p.closedAt||p.closedBy)&&<div style={{fontSize:11,color:C.w3,marginTop:2}}>{p.closedAt?fmt(p.closedAt):""}{p.closedAt&&p.closedBy?" · ":""}{p.closedBy||""}</div>}</div></div>}
-          <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
+          <div style={{...S.fx,gap:6,flexWrap:"wrap",marginBottom:12}}>{p.status&&<span style={S.bg(C.b3,C.w2)}>{p.status}</span>}{p.hoa&&<span style={S.bg(C.orb,C.or)}>HOA</span>}{p.permitNum&&<span style={S.bg(C.bll,C.bl)}>{p.permitNum}</span>}{p.permitStatus&&<span style={S.bg(p.permitStatus==="Issued"?C.grl:C.orb,p.permitStatus==="Issued"?C.gr:C.or)}>Permit: {p.permitStatus}</span>}{p.assignee&&<span style={S.bg(C.grl,C.gr)}>👤 {p.assignee}</span>}</div>
           <RevisionSection revisions={p.revisions||[]} onUpdate={revs=>setP(v=>v.map(x=>x.id===selP?{...x,revisions:revs}:x))} logAct={logAct} projectName={p.clientName} mob={mob} inspections={insp.filter(i=>i.projectId===selP)} ct={ct} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
           <COSection changeOrders={p.changeOrders||[]} onUpdate={cos=>setP(v=>v.map(x=>x.id===selP?{...x,changeOrders:cos}:x))} logAct={logAct} projectName={p.clientName} mob={mob} todos={todos} setTodos={setTodos} user={user} projectId={selP}/>
           {p.scopeNotes&&<div style={S.cd}><p style={{margin:0,fontSize:12,color:C.w2,lineHeight:1.5}}>{p.scopeNotes}</p></div>}
@@ -530,7 +512,11 @@ function AppMain({user}){
         </div></div>}
         {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":560,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Edit Project</h2><button onClick={()=>sEP(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
-          <EF p={editP} ok={u=>{setP(v=>v.map(p=>p.id===editP.id?{...p,...u}:p));logAct("updated project",editP.clientName);sEP(null);}}/>
+          <EF p={editP} openInsp={insp.filter(i=>i.projectId===editP.id&&!i.completed).length} ok={u=>{
+            const wasClosed=isClosed(editP);
+            setP(v=>v.map(p=>p.id===editP.id?{...p,...u,closedAt:u.closed?(wasClosed?(p.closedAt||""):td()):"",closedBy:u.closed?(wasClosed?(p.closedBy||""):(user.displayName||user.email)):""}:p));
+            logAct(u.closed===wasClosed?"updated project":(u.closed?"closed job":"reopened job"),editP.clientName);
+            sEP(null);}}/>
         </div></div>}
 
       </div></div>
@@ -713,13 +699,21 @@ function PF({ok}){
     <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>f.clientName&&ok({...f,status:""})}>Create</button></div>
   </div>;
 }
-function EF({p,ok}){
-  const[f,s]=useState({clientName:p.clientName,address:p.address||"",city:p.city||"",hoa:p.hoa||false,permitNum:p.permitNum||"",permitStatus:p.permitStatus||"",status:p.status||"",scopeNotes:p.scopeNotes||"",assignee:p.assignee||"",scopes:p.scopes||[]});
+function EF({p,ok,openInsp=0}){
+  const wasClosed=isClosed(p);
+  const[f,s]=useState({clientName:p.clientName,address:p.address||"",city:p.city||"",hoa:p.hoa||false,permitNum:p.permitNum||"",permitStatus:p.permitStatus||"",status:(p.status||"")==="CLOSED"?"":(p.status||""),closed:wasClosed,scopeNotes:p.scopeNotes||"",assignee:p.assignee||"",scopes:p.scopes||[]});
   const allSc=["Structural","Plumbing","Electrical","Roofing","Windows & Doors","Mechanical"];
   const scC={Structural:"#A78BFA",Plumbing:C.bl,Electrical:C.rd,Roofing:"#FB923C","Windows & Doors":C.gr,Mechanical:"#FCD34D"};
   const togSc=sc=>{s({...f,scopes:f.scopes.includes(sc)?f.scopes.filter(x=>x!==sc):[...f.scopes,sc]});};
   return <div>
-    {[["Client","clientName"],["City","city"],["Address","address"],["Permit #","permitNum"],["Assigned To","assignee"],["Job Status","status"]].map(([l,k])=><div key={k}><div style={S.lb}>{l}</div><input style={S.inp} value={f[k]} onChange={e=>s({...f,[k]:e.target.value})}/></div>)}
+    {[["Client","clientName"],["City","city"],["Address","address"],["Permit #","permitNum"],["Assigned To","assignee"]].map(([l,k])=><div key={k}><div style={S.lb}>{l}</div><input style={S.inp} value={f[k]} onChange={e=>s({...f,[k]:e.target.value})}/></div>)}
+    <div style={S.lb}>Job Status</div>
+    <select style={{...S.inp,color:f.closed?C.w2:C.w,borderColor:f.closed?C.w3:C.bd}} value={f.closed?"closed":"active"} onChange={e=>s({...f,closed:e.target.value==="closed"})}>
+      <option value="active">Active</option>
+      <option value="closed">Closed</option>
+    </select>
+    <div style={S.lb}>Status Note</div>
+    <input style={S.inp} value={f.status} onChange={e=>s({...f,status:e.target.value})} placeholder="e.g. Pending finals - job done"/>
     <div style={S.lb}>Disciplines</div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>{allSc.map(sc=><button key={sc} onClick={()=>togSc(sc)} style={{padding:"5px 12px",borderRadius:12,border:`1px solid ${f.scopes.includes(sc)?scC[sc]:C.bd}`,background:f.scopes.includes(sc)?scC[sc]+"22":"transparent",color:f.scopes.includes(sc)?scC[sc]:C.w3,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{sc}</button>)}</div>
     <div style={S.lb}>Permit Status</div>
@@ -730,7 +724,16 @@ function EF({p,ok}){
     </select>
     <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:C.w2,marginBottom:10}}><input type="checkbox" checked={f.hoa} onChange={e=>s({...f,hoa:e.target.checked})}/> HOA</label>
     <div style={S.lb}>Scope Notes</div><textarea style={{...S.inp,minHeight:60,resize:"vertical"}} value={f.scopeNotes} onChange={e=>s({...f,scopeNotes:e.target.value})}/>
-    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>ok(f)}>Save</button></div>
+    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={S.btn} onClick={()=>{
+      if(f.closed&&!wasClosed){
+        const open=[];
+        const nRev=(p.revisions||[]).filter(r=>r.status==="Open").length;if(nRev)open.push(`${nRev} open revision${nRev>1?"s":""}`);
+        const nCO=(p.changeOrders||[]).filter(co=>co.status==="Pending").length;if(nCO)open.push(`${nCO} pending change order${nCO>1?"s":""}`);
+        if(openInsp)open.push(`${openInsp} uncompleted inspection${openInsp>1?"s":""}`);
+        if(open.length&&!window.confirm(`Close job for ${p.clientName}?\n\nStill open:\n${open.map(x=>"  • "+x).join("\n")}\n\nYou can close anyway and reopen later.`))return;
+      }
+      ok(f);
+    }}>Save</button></div>
   </div>;
 }
 function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
