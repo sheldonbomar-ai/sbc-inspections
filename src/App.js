@@ -5,7 +5,7 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebas
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 
-const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#4ADE80",grl:"#1A3A2A",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
+const C={bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#84C778",grl:"#22361F",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C"};
 const PRINT_CSS=`*,*::before,*::after{box-sizing:border-box;}
 @media print{
   @page{size:portrait;margin:0.4in;}
@@ -36,7 +36,7 @@ const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
 const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing",M:"Mechanical"};
 const CREWS=[
-{id:"robin",name:"Robin",color:"#4ADE80"},{id:"robinjr",name:"Robin Jr",color:"#3B8BF5"},{id:"onel",name:"Onel",color:"#2DD4BF"},{id:"alfredo",name:"Alfredo",color:"#818CF8"},{id:"renee",name:"Rene",color:"#C084FC"},
+{id:"robin",name:"Robin",color:"#84C778"},{id:"robinjr",name:"Robin Jr",color:"#3B8BF5"},{id:"onel",name:"Onel",color:"#2DD4BF"},{id:"alfredo",name:"Alfredo",color:"#818CF8"},{id:"renee",name:"Rene",color:"#C084FC"},
 {id:"marcos",name:"Marcos Roofing",color:"#FB923C"},{id:"jose",name:"Jose Roofing",color:"#FBBF24"},
 {id:"bob",name:"Bob Windows",color:"#A78BFA"},
 {id:"manny",name:"Manny",color:"#F472B6"},{id:"roger",name:"Roger",color:"#38BDF8"},{id:"rudy",name:"Rudy",color:"#34D399"},{id:"john",name:"John (Gutters)",color:"#E879F9"},{id:"mary",name:"Marbely",color:"#FB7185"},
