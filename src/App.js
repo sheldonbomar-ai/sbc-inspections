@@ -141,7 +141,7 @@ export default function App(){
   if(!user)return(
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:C.bg,fontFamily:"system-ui,sans-serif"}}>
       <div style={{background:C.b2,borderRadius:16,padding:36,border:`1px solid ${C.bd}`,width:340,textAlign:"center"}}>
-        <svg width="48" height="48" viewBox="0 0 40 40" style={{marginBottom:12}}><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
+        <img src="/sbc-logo.png" alt="Stacy Bomar Construction" style={{height:72,marginBottom:12}}/>
         <div style={{fontSize:18,fontWeight:700,color:C.bl,marginBottom:2}}>Stacy Bomar</div>
         <div style={{fontSize:10,fontWeight:700,color:C.gr,letterSpacing:2,marginBottom:24}}>CONSTRUCTION</div>
         <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")document.getElementById("sbc-pw")?.focus();}} type="text" autoCapitalize="none" autoCorrect="off" placeholder="Username" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:10}}/>
@@ -250,7 +250,7 @@ function AppMain({user}){
       <style dangerouslySetInnerHTML={{__html:PRINT_CSS}}/>
       {!mob&&<div data-sidebar="" style={S.side}>
         <div style={{...S.fxc,gap:10,padding:"4px 16px 18px",borderBottom:`1px solid ${C.bd}`,marginBottom:10}}>
-          <svg width="32" height="32" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
+          <img src="/sbc-logo.png" alt="SBC" style={{height:38}}/>
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
@@ -281,7 +281,7 @@ function AppMain({user}){
 
       {mob&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:C.b2,borderBottom:`1px solid ${C.bd}`}}>
         <div style={{...S.fxc,gap:8}}>
-          <svg width="24" height="24" viewBox="0 0 40 40"><path d="M20 4L6 18h5v14h18V18h5L20 4z" fill={C.bl}/><path d="M8 28c4-2 8-6 12-6s8 2 14 0" fill="none" stroke={C.gr} strokeWidth="3" strokeLinecap="round"/></svg>
+          <img src="/sbc-logo.png" alt="SBC" style={{height:28}}/>
           <span style={{fontSize:13,fontWeight:700,color:C.bl}}>SBC</span>
           <span style={{fontSize:11,color:C.w2,fontWeight:500}}>{user.displayName||"User"}</span>
         </div>
@@ -394,7 +394,7 @@ function AppMain({user}){
           const iDrop=(e,date)=>{e.preventDefault();setInspDropDay(null);const id=inspDragRef.current||e.dataTransfer.getData("text/plain");if(id){setI(v=>v.map(x=>x.id===id?{...x,date:date}:x));inspDragRef.current=null;setInspDragId(null);}};
           const iDragOver=(e,date)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setInspDropDay(date);};
           return <>
-            <div data-print-header="" style={{display:"none",justifyContent:"center",alignItems:"center",marginBottom:14,paddingBottom:10,borderBottom:"3px solid #000",textAlign:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,letterSpacing:1}}>Stacy Bomar Construction</div><div style={{fontSize:12,fontWeight:600,letterSpacing:2,marginTop:4,textTransform:"uppercase"}}>Inspection List — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
+            <div data-print-header="" style={{display:"none",justifyContent:"center",alignItems:"center",marginBottom:14,paddingBottom:10,borderBottom:"3px solid #000",textAlign:"center"}}><img src="/sbc-logo.png" alt="" style={{height:56,marginRight:14}}/><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,letterSpacing:1}}>Stacy Bomar Construction</div><div style={{fontSize:12,fontWeight:600,letterSpacing:2,marginTop:4,textTransform:"uppercase"}}>Inspection List — {fmt(days[0])} to {fmt(days[4])}</div></div></div>
             <div style={{...S.fxsb,marginBottom:20,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>INSPECTION LIST</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>{fmt(days[0])} — {fmt(days[4])}</p></div><div data-noprint="" style={{display:"flex",gap:6}}>{!mob&&<button style={S.bs} onClick={()=>window.print()}>Print</button>}<button style={{...S.btn,padding:mob?"10px 16px":"6px 14px",fontSize:mob?13:12}} onClick={()=>sM("insp")}>+ Schedule</button></div></div>
             <div data-noprint="" style={{...S.fx,gap:6,marginBottom:12}}><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(ymd(d));}}>←</button><button style={{...S.bs,color:C.bl,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(ymd(d));}}>This Week</button><button style={{...S.bs,padding:mob?"10px 16px":"6px 14px"}} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(ymd(d));}}>→</button></div>
             {!mob&&<div data-col-header="" data-noprint="" style={{...S.hdr,background:C.bl,borderRadius:"8px 8px 0 0"}}>{["NAME","CITY","PERMIT","TYPE","ADDRESS"].map(h=><div key={h} style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:1}}>{h}</div>)}</div>}
