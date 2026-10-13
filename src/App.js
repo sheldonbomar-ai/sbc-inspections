@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage, auth, functions } from "./firebase";
-import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction, updateDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -167,6 +167,10 @@ function AppMain({user}){
   const[inspDragId,setInspDragId]=useState(null);const[inspDropDay,setInspDropDay]=useState(null);const inspDragRef=useRef(null);
   const mob=useMobile();
   const lastFs=useRef({});
+  const[leads,setLeads]=useState([]);const[convLead,setConvLead]=useState(null);
+
+  // Website leads live in their own collection (one doc per lead), written by the submitLead function.
+  useEffect(()=>onSnapshot(query(collection(db,"leads"),orderBy("receivedAt","desc")),snap=>setLeads(snap.docs.map(d=>({id:d.id,...d.data()}))),err=>console.error("Leads listen error:",err)),[]);
 
   useEffect(()=>{
     const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos],["sYcd",setCompanyDocs],["sYpc",setPermitCards]];
@@ -240,9 +244,11 @@ function AppMain({user}){
   const pendTotal=pendCO+pendRev;
   const projWithIssues=proj.filter(p=>!isClosed(p)&&((p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open")));
 
-  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  const newLeads=leads.filter(l=>l.status==="New").length;
+
+  const navBase=[["dashboard","Dashboard"],["leads","Leads"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"],["backups","Backups"]]:navBase;
-  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  const mobBase=[["dashboard","Dashboard"],["leads","Leads"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const mobNavItems=isAdmin?[...mobBase,["activity","Log"],["backups","Backups"]]:mobBase;
 
   return(
@@ -254,11 +260,12 @@ function AppMain({user}){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>,backups:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,permitcards:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M14 9h4"/><path d="M14 13h4"/></svg>};return(
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>,backups:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,permitcards:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M14 9h4"/><path d="M14 13h4"/></svg>,leads:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
               {id==="projects"&&pendTotal>0&&<span style={{...S.bg(C.rd,"#fff"),marginLeft:"auto"}}>{pendTotal}</span>}
+              {id==="leads"&&newLeads>0&&<span style={{...S.bg(C.gr,C.bg),marginLeft:"auto"}}>{newLeads}</span>}
               {id==="todos"&&todos.filter(t=>!t.done).length>0&&<span style={{...S.bg(C.orb,C.or),marginLeft:"auto"}}>{todos.filter(t=>!t.done).length}</span>}
             </button>);})}
         </div>
@@ -483,6 +490,7 @@ function AppMain({user}){
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} setP={setP} mob={mob} logAct={logAct} user={user}/>}
+        {pg==="leads"&&<LeadsTab leads={leads} proj={proj} mob={mob} logAct={logAct} onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
           if(!actLog.length)loadLog();
@@ -505,10 +513,17 @@ function AppMain({user}){
 
         {pg==="backups"&&isAdmin&&<BackupsPanel mob={mob}/>}
 
-        {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sM(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":560,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
-          <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":"New Project"}</h2><button onClick={()=>sM(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
+        {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>{sM(null);setConvLead(null);}}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":560,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
+          <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>{modal==="insp"?"Schedule Inspections":convLead?"Convert Lead to Project":"New Project"}</h2><button onClick={()=>{sM(null);setConvLead(null);}} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
           {modal==="insp"&&<InspF pr={proj} ok={items=>{setI(v=>[...v,...items.map(i=>({...i,id:uid(),createdAt:td(),completed:false}))]);const pName=proj.find(x=>x.id===items[0]?.projectId)?.clientName;logAct("scheduled "+items.length+" inspection"+(items.length>1?"s":""),pName?`for ${pName}`:"");sM(null);}} ct={ct} aC={t=>setCt(v=>[...v,t])} pre={selP}/>}
-          {modal==="proj"&&<PF ok={p=>{setP(v=>[...v,{...p,id:uid(),comments:[],createdAt:td()}]);logAct("added project",p.clientName);sM(null);}}/>}
+          {modal==="proj"&&<PF init={convLead?leadToProj(convLead):null} ok={p=>{
+            const id=uid();
+            setP(v=>[...v,{...p,id,comments:[],createdAt:td(),...(convLead?{leadId:convLead.id}:{})}]);
+            if(convLead){
+              updateDoc(doc(db,"leads",convLead.id),{status:"Converted",projectId:id,convertedAt:new Date().toISOString(),convertedBy:user.displayName||user.email}).catch(e=>console.error("Lead convert error:",e));
+              logAct("converted lead",p.clientName);
+            }else logAct("added project",p.clientName);
+            sM(null);setConvLead(null);}}/>}
         </div></div>}
         {editP&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:mob?"flex-end":"center",justifyContent:"center",zIndex:1000}} onClick={()=>sEP(null)}><div style={{background:C.b2,borderRadius:mob?"14px 14px 0 0":14,padding:mob?"20px 16px":28,width:"100%",maxWidth:mob?"100%":560,maxHeight:mob?"90vh":"80vh",overflow:"auto",border:`1px solid ${C.bd}`}} onClick={e=>e.stopPropagation()}>
           <div style={{...S.fxsb,marginBottom:16}}><h2 style={{fontSize:16,fontWeight:700,margin:0}}>Edit Project</h2><button onClick={()=>sEP(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.w3,fontSize:16}}>✕</button></div>
@@ -522,10 +537,11 @@ function AppMain({user}){
       </div></div>
       {mob&&<div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {mobNavItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":"📅"}</span>
+          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":id==="leads"?"📥":"📅"}</span>
           <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
           {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
           {id==="projects"&&pendTotal>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.rd,color:"#fff",borderRadius:8,padding:"1px 4px"}}>{pendTotal}</span>}
+          {id==="leads"&&newLeads>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.gr,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{newLeads}</span>}
         </button>;})}
       </div>}
     </div>
@@ -683,8 +699,59 @@ function InspF({pr,ok,ct=[],aC,pre}){
     </div>
   </div>;
 }
-function PF({ok}){
-  const[f,s]=useState({clientName:"",address:"",city:"",hoa:false,permitNum:"",permitStatus:"",scopeNotes:"",assignee:"",scopes:[]});
+// Prefill a New Project form from a website lead. The form asks for "Job address or city" in one field.
+function leadToProj(l){
+  const loc=(l.address||"").trim();
+  const parts=loc.split(",").map(x=>x.trim()).filter(Boolean);
+  const hasStreet=/^\d/.test(loc);
+  const city=parts.length>1?parts[1].replace(/\b(FL|Florida)\b.*$/i,"").trim():(hasStreet?"":loc);
+  const t=(l.ptype||"").toLowerCase();
+  const scopes=/roof|storm|leak/.test(t)?["Roofing"]:/window|door/.test(t)?["Windows & Doors"]:[];
+  return{clientName:l.name||"",address:hasStreet?parts[0]:"",city,scopes,scopeNotes:[l.ptype,l.msg].filter(Boolean).join(". ")};
+}
+
+const LEAD_STATUSES=["New","Contacted","Estimate Sent","Not a fit"];
+const leadColor=s=>s==="New"?C.gr:s==="Contacted"?C.bl:s==="Estimate Sent"?C.or:s==="Converted"?"#A78BFA":C.w3;
+
+function LeadsTab({leads,proj,mob,logAct,onConvert,openProject}){
+  const[view,setView]=useState("open");
+  const isOpen=l=>l.status!=="Converted"&&l.status!=="Not a fit";
+  const shown=leads.filter(l=>view==="all"||(view==="open"?isOpen(l):!isOpen(l)));
+  const save=(l,u)=>updateDoc(doc(db,"leads",l.id),u).catch(e=>console.error("Lead update error:",e));
+  const fmt=ts=>{if(!ts)return"";const d=new Date(ts);return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
+  return <>
+    <div style={{...S.fxsb,marginBottom:20,alignItems:"center"}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Leads</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>Estimate requests from stacybomarconstruction.com · {leads.filter(isOpen).length} open</p></div></div>
+    <div style={{...S.fx,gap:2,marginBottom:14,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[["open","Open"],["closed","Converted / Not a fit"],["all","All"]].map(([k,lb])=><button key={k} onClick={()=>setView(k)} style={{padding:"6px 14px",borderRadius:7,border:"none",background:view===k?C.bll:"transparent",color:view===k?C.bl:C.w3,fontSize:12,fontWeight:view===k?700:500,cursor:"pointer",fontFamily:"inherit"}}>{lb}</button>)}</div>
+    {!shown.length&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>{leads.length?"Nothing here.":"No website leads yet. New estimate requests will show up here."}</p></div>}
+    {shown.map(l=>{const conv=l.status==="Converted";const pj=conv&&proj.find(p=>p.id===l.projectId);return <div key={l.id} style={{...S.cd,borderLeft:`3px solid ${leadColor(l.status)}`,opacity:isOpen(l)?1:0.7}}>
+      <div style={{...S.fxsb,gap:8,flexWrap:"wrap",marginBottom:8}}>
+        <div><span style={{fontSize:15,fontWeight:700}}>{l.name}</span><span style={{fontSize:11,color:C.w3,marginLeft:8}}>{fmt(l.receivedAt)}</span></div>
+        <span style={S.bg(leadColor(l.status)+"22",leadColor(l.status))}>{l.status}</span>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:"4px 16px",fontSize:13,marginBottom:8}}>
+        <div><span style={{color:C.w3}}>Phone </span><a href={`tel:${l.phone}`} style={{color:C.bl}}>{l.phone}</a></div>
+        {l.email&&<div><span style={{color:C.w3}}>Email </span><a href={`mailto:${l.email}`} style={{color:C.bl}}>{l.email}</a></div>}
+        <div><span style={{color:C.w3}}>Location </span>{l.address}</div>
+        {l.ptype&&<div><span style={{color:C.w3}}>Job </span>{l.ptype}</div>}
+      </div>
+      {l.msg&&<div style={{fontSize:13,color:C.w2,background:C.b3,borderRadius:7,padding:"8px 12px",marginBottom:10,whiteSpace:"pre-wrap"}}>{l.msg}</div>}
+      <div style={S.lb}>Notes</div>
+      <textarea key={l.id+(l.notes||"")} defaultValue={l.notes||""} onBlur={e=>{if(e.target.value!==(l.notes||""))save(l,{notes:e.target.value});}} placeholder="Call notes, site visit, estimate amount..." style={{...S.inp,minHeight:44,resize:"vertical"}}/>
+      <div style={{...S.fx,gap:8,flexWrap:"wrap",alignItems:"center"}}>
+        {conv?<>
+          <span style={{fontSize:12,color:C.w3}}>Converted{l.convertedBy?` by ${l.convertedBy}`:""}{l.convertedAt?` on ${fmt(l.convertedAt)}`:""}</span>
+          {pj&&<button style={{...S.bs,fontSize:12,padding:"6px 12px"}} onClick={()=>openProject(pj.id)}>Open project</button>}
+        </>:<>
+          <select value={l.status} onChange={e=>{save(l,{status:e.target.value});logAct("updated lead",`${l.name} → ${e.target.value}`);}} style={{...S.inp,width:"auto",marginBottom:0,padding:"6px 10px",fontSize:12}}>{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
+          <button style={{...S.btn,fontSize:12,padding:"6px 14px",background:C.gr,color:C.bg,marginLeft:"auto"}} onClick={()=>onConvert(l)}>Signed? Convert to Project</button>
+        </>}
+      </div>
+    </div>;})}
+  </>;
+}
+
+function PF({ok,init}){
+  const[f,s]=useState({clientName:"",address:"",city:"",hoa:false,permitNum:"",permitStatus:"",scopeNotes:"",assignee:"",scopes:[],...init});
   const allSc=["Structural","Plumbing","Electrical","Roofing","Windows & Doors","Mechanical"];
   const scC={Structural:"#A78BFA",Plumbing:C.bl,Electrical:C.rd,Roofing:"#FB923C","Windows & Doors":C.gr,Mechanical:"#FCD34D"};
   const togSc=sc=>{s({...f,scopes:f.scopes.includes(sc)?f.scopes.filter(x=>x!==sc):[...f.scopes,sc]});};

@@ -49,6 +49,9 @@ exports.listBackups = backups.listBackups;
 exports.restoreBackup = backups.restoreBackup;
 exports.previewBackup = backups.previewBackup;
 
+// Website lead capture
+exports.submitLead = require("./leads").submitLead;
+
 // Todo email notifications
 exports.onTodoAdded = onDocumentWritten(
   { document: "data/sYtd", secrets: [gmailPassword] },
