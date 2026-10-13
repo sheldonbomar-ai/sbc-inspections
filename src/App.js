@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage, auth, functions } from "./firebase";
-import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction, updateDoc, arrayUnion } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -167,7 +167,7 @@ function AppMain({user}){
   const[inspDragId,setInspDragId]=useState(null);const[inspDropDay,setInspDropDay]=useState(null);const inspDragRef=useRef(null);
   const mob=useMobile();
   const lastFs=useRef({});
-  const[leads,setLeads]=useState([]);const[convLead,setConvLead]=useState(null);
+  const[leads,setLeads]=useState([]);const[convLead,setConvLead]=useState(null);const[leadView,setLeadView]=useState("New");
 
   // Website leads live in their own collection (one doc per lead), written by the submitLead function.
   useEffect(()=>onSnapshot(query(collection(db,"leads"),orderBy("receivedAt","desc")),snap=>setLeads(snap.docs.map(d=>({id:d.id,...d.data()}))),err=>console.error("Leads listen error:",err)),[]);
@@ -246,10 +246,10 @@ function AppMain({user}){
 
   const newLeads=leads.filter(l=>l.status==="New").length;
 
-  const navBase=[["dashboard","Dashboard"],["leads","Leads"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
-  const navItems=isAdmin?[...navBase,["activity","Activity Log"],["backups","Backups"]]:navBase;
-  const mobBase=[["dashboard","Dashboard"],["leads","Leads"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
-  const mobNavItems=isAdmin?[...mobBase,["activity","Log"],["backups","Backups"]]:mobBase;
+  const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  const navItems=isAdmin?[...navBase,["activity","Activity Log"],["leads","Leads"],["backups","Backups"]]:[...navBase,["leads","Leads"]];
+  const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  const mobNavItems=isAdmin?[...mobBase,["activity","Log"],["leads","Leads"],["backups","Backups"]]:[...mobBase,["leads","Leads"]];
 
   return(
     <div data-app="" style={{...S.app,flexDirection:mob?"column":"row"}}>
@@ -305,7 +305,36 @@ function AppMain({user}){
           const closed=sorted.filter(p=>isClosed(p));
           const isRev=s=>(s||"").includes("REVISION");
           const revCount=active.filter(p=>isRev(p.status)).length;
+          // Company snapshot: sales pipeline + this week's field work.
+          const now=new Date(),mStart=new Date(now.getFullYear(),now.getMonth(),1),lmStart=new Date(now.getFullYear(),now.getMonth()-1,1);
+          const inRange=(ts,a,b)=>{if(!ts)return false;const d=new Date(ts);return d>=a&&(!b||d<b);};
+          const leadsThisMonth=leads.filter(l=>inRange(l.receivedAt,mStart)).length,leadsLastMonth=leads.filter(l=>inRange(l.receivedAt,lmStart,mStart)).length;
+          const wonThisMonth=leads.filter(l=>l.status==="Converted"&&inRange(l.convertedAt,mStart)).length;
+          const won=leads.filter(l=>l.status==="Converted").length,lost=leads.filter(l=>l.status==="Not a fit").length;
+          const staleLeads=leads.filter(l=>LEAD_STALE[l.status]!==undefined&&leadDaysInStage(l)>=LEAD_STALE[l.status]);
+          const wkStart=new Date(now);wkStart.setDate(now.getDate()-((now.getDay()+6)%7));const wkEnd=new Date(wkStart);wkEnd.setDate(wkStart.getDate()+6);
+          const wkInsp=insp.filter(i=>i.date&&i.date>=ymd(wkStart)&&i.date<=ymd(wkEnd));
+          const openTodos=todos.filter(t=>!t.done).length;
+          const goLeads=k=>{setLeadView(k);setPg("leads");};
+          const tile=(v,l,sub,c,onClick,key)=><div key={key} onClick={onClick} style={{...S.cd,marginBottom:0,borderLeft:`3px solid ${c}`,padding:mob?14:18,cursor:onClick?"pointer":"default"}}><div style={{fontSize:mob?24:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w2,marginTop:2}}>{l}</div>{sub&&<div style={{fontSize:11,color:C.w3,marginTop:4}}>{sub}</div>}</div>;
           return <>
+            <div style={{...S.fxsb,alignItems:"baseline",marginBottom:10}}><h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:0}}>COMPANY SNAPSHOT</h2><span style={{fontSize:11,color:C.w3}}>{now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</span></div>
+            <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?8:14,marginBottom:mob?8:14}}>
+              {LEAD_STAGES.slice(0,4).map(([k,lb])=>{const n=leads.filter(l=>l.status===k);const st=n.filter(l=>staleLeads.includes(l)).length;
+                const sub=k==="Estimate Sent"?`${money(n.reduce((a,l)=>a+(l.estimate||0),0))} out`:k==="Converted"?`${wonThisMonth} this month`:st?`⚠ ${st} need follow up`:"Up to date";
+                return tile(n.length,lb==="Won"?"Won":lb,sub,leadColor(k),()=>goLeads(k),k);})}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?8:14,marginBottom:20}}>
+              {tile(leadsThisMonth,"Website leads this month",`${leadsLastMonth} last month`,C.bl,()=>goLeads("all"),"wl")}
+              {tile(won+lost?Math.round(won/(won+lost)*100)+"%":"—","Win rate",`${won} won · ${lost} not a fit`,"#A78BFA",null,"wr")}
+              {tile(wkInsp.length,"Inspections this week",`${wkInsp.filter(i=>i.result==="pass").length} passed · ${wkInsp.filter(i=>i.result==="fail").length} failed`,C.gr,()=>setPg("sheet"),"wi")}
+              {tile(openTodos,"Open to dos",null,openTodos?C.or:C.w3,()=>setPg("todos"),"td")}
+            </div>
+            {staleLeads.length>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.or}`,background:C.orb,marginBottom:20,padding:mob?14:18}}>
+              <div style={{fontSize:mob?13:14,fontWeight:700,color:C.or,marginBottom:6}}>⚠ {staleLeads.length} lead{staleLeads.length>1?"s":""} waiting on follow up</div>
+              {staleLeads.map(l=><div key={l.id} onClick={()=>goLeads(l.status)} style={{...S.fxsb,padding:"6px 0",borderTop:`1px solid ${C.bd}`,cursor:"pointer",fontSize:13}}><span><b>{l.name}</b> <span style={{color:C.w3}}>· {l.ptype||"Project"}</span></span><span style={{color:leadColor(l.status),fontSize:12}}>{leadLabel(l.status)} {leadDaysInStage(l)}d</span></div>)}
+            </div>}
+            <h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:"0 0 10px"}}>JOBS & PERMITS</h2>
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
                 <div key={i} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
@@ -490,7 +519,7 @@ function AppMain({user}){
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} setP={setP} mob={mob} logAct={logAct} user={user}/>}
-        {pg==="leads"&&<LeadsTab leads={leads} proj={proj} mob={mob} logAct={logAct} onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
+        {pg==="leads"&&<LeadsTab leads={leads} proj={proj} mob={mob} logAct={logAct} user={user} view={leadView} setView={setLeadView}onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
           if(!actLog.length)loadLog();
@@ -520,7 +549,8 @@ function AppMain({user}){
             const id=uid();
             setP(v=>[...v,{...p,id,comments:[],createdAt:td(),...(convLead?{leadId:convLead.id}:{})}]);
             if(convLead){
-              updateDoc(doc(db,"leads",convLead.id),{status:"Converted",projectId:id,convertedAt:new Date().toISOString(),convertedBy:user.displayName||user.email}).catch(e=>console.error("Lead convert error:",e));
+              const by=user.displayName||user.email,at=new Date().toISOString();
+              updateDoc(doc(db,"leads",convLead.id),{status:"Converted",projectId:id,convertedAt:at,convertedBy:by,history:arrayUnion({status:"Converted",at,by})}).catch(e=>console.error("Lead convert error:",e));
               logAct("converted lead",p.clientName);
             }else logAct("added project",p.clientName);
             sM(null);setConvLead(null);}}/>}
@@ -711,23 +741,34 @@ function leadToProj(l){
 }
 
 const LEAD_STATUSES=["New","Contacted","Estimate Sent","Not a fit"];
+// Pipeline stages in order; "Converted" is shown as Won.
+const LEAD_STAGES=[["New","New"],["Contacted","Contacted"],["Estimate Sent","Estimate Sent"],["Converted","Won"],["Not a fit","Not a fit"]];
 const leadColor=s=>s==="New"?C.gr:s==="Contacted"?C.bl:s==="Estimate Sent"?C.or:s==="Converted"?"#A78BFA":C.w3;
+const leadLabel=s=>s==="Converted"?"Won":s;
+// Days a lead can sit in a stage before it is flagged for follow-up.
+const LEAD_STALE={New:1,Contacted:3,"Estimate Sent":7};
+const leadChain=l=>[{status:"New",at:l.receivedAt},...(l.history||[])];
+const leadDaysInStage=l=>{const last=leadChain(l).slice(-1)[0];return last?.at?Math.floor((Date.now()-new Date(last.at))/864e5):0;};
+const money=n=>"$"+Math.round(n||0).toLocaleString("en-US");
 
-function LeadsTab({leads,proj,mob,logAct,onConvert,openProject}){
-  const[view,setView]=useState("open");
-  const isOpen=l=>l.status!=="Converted"&&l.status!=="Not a fit";
-  const shown=leads.filter(l=>view==="all"||(view==="open"?isOpen(l):!isOpen(l)));
+function LeadsTab({leads,proj,mob,logAct,user,view,setView,onConvert,openProject}){
+  const shown=view==="all"?leads:leads.filter(l=>l.status===view);
   const save=(l,u)=>updateDoc(doc(db,"leads",l.id),u).catch(e=>console.error("Lead update error:",e));
+  const move=(l,status)=>{const at=new Date().toISOString(),by=user.displayName||user.email;save(l,{status,history:arrayUnion({status,at,by})});logAct("updated lead",`${l.name} → ${leadLabel(status)}`);};
   const fmt=ts=>{if(!ts)return"";const d=new Date(ts);return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
+  const fmtD=ts=>ts?new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
+  const nextStep={New:["Contacted","Mark Contacted"],Contacted:["Estimate Sent","Mark Estimate Sent"]};
+  const open=leads.filter(l=>LEAD_STALE[l.status]!==undefined);
   return <>
-    <div style={{...S.fxsb,marginBottom:20,alignItems:"center"}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Leads</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>Estimate requests from stacybomarconstruction.com · {leads.filter(isOpen).length} open</p></div></div>
-    <div style={{...S.fx,gap:2,marginBottom:14,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[["open","Open"],["closed","Converted / Not a fit"],["all","All"]].map(([k,lb])=><button key={k} onClick={()=>setView(k)} style={{padding:"6px 14px",borderRadius:7,border:"none",background:view===k?C.bll:"transparent",color:view===k?C.bl:C.w3,fontSize:12,fontWeight:view===k?700:500,cursor:"pointer",fontFamily:"inherit"}}>{lb}</button>)}</div>
-    {!shown.length&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>{leads.length?"Nothing here.":"No website leads yet. New estimate requests will show up here."}</p></div>}
-    {shown.map(l=>{const conv=l.status==="Converted";const pj=conv&&proj.find(p=>p.id===l.projectId);return <div key={l.id} style={{...S.cd,borderLeft:`3px solid ${leadColor(l.status)}`,opacity:isOpen(l)?1:0.7}}>
+    <div style={{...S.fxsb,marginBottom:20,alignItems:"center"}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,margin:0}}>Leads</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>Estimate requests from stacybomarconstruction.com · {open.length} open · {money(leads.filter(l=>l.status==="Estimate Sent").reduce((n,l)=>n+(l.estimate||0),0))} in estimates out</p></div></div>
+    <div style={{overflowX:"auto",marginBottom:14}}><div style={{...S.fx,gap:2,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[...LEAD_STAGES,["all","All"]].map(([k,lb],i)=>{const on=view===k;const n=k==="all"?leads.length:leads.filter(l=>l.status===k).length;return <button key={k} onClick={()=>setView(k)} style={{padding:"6px 14px",borderRadius:7,border:"none",background:on?(k==="all"?C.bl:leadColor(k)):"transparent",color:on?C.bg:C.w2,fontSize:12,fontWeight:on?700:500,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{i>0&&i<4&&<span style={{opacity:0.5,marginRight:6}}>→</span>}{lb} <span style={{opacity:0.7,fontWeight:500}}>{n}</span></button>;})}</div></div>
+    {!shown.length&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>{leads.length?`No leads in ${leadLabel(view)}.`:"No website leads yet. New estimate requests will show up here."}</p></div>}
+    {shown.map(l=>{const conv=l.status==="Converted";const pj=conv&&proj.find(p=>p.id===l.projectId);const days=leadDaysInStage(l);const stale=LEAD_STALE[l.status]!==undefined&&days>=LEAD_STALE[l.status];const isOpen=LEAD_STALE[l.status]!==undefined;return <div key={l.id} style={{...S.cd,borderLeft:`3px solid ${leadColor(l.status)}`,opacity:isOpen||conv?1:0.7}}>
       <div style={{...S.fxsb,gap:8,flexWrap:"wrap",marginBottom:8}}>
         <div><span style={{fontSize:15,fontWeight:700}}>{l.name}</span><span style={{fontSize:11,color:C.w3,marginLeft:8}}>{fmt(l.receivedAt)}</span></div>
-        <span style={S.bg(leadColor(l.status)+"22",leadColor(l.status))}>{l.status}</span>
+        <div style={{...S.fxc,gap:6}}>{isOpen&&<span style={{fontSize:11,color:stale?C.or:C.w3,fontWeight:stale?700:400}}>{stale?"⚠ ":""}{days}d in stage</span>}<span style={S.bg(leadColor(l.status)+"22",leadColor(l.status))}>{leadLabel(l.status)}</span></div>
       </div>
+      <div style={{fontSize:11,color:C.w3,marginBottom:8,display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>{leadChain(l).map((h,i)=><span key={i}>{i>0&&<span style={{margin:"0 4px"}}>→</span>}<span style={{color:leadColor(h.status),fontWeight:600}}>{leadLabel(h.status)}</span> {fmtD(h.at)}</span>)}</div>
       <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:"4px 16px",fontSize:13,marginBottom:8}}>
         <div><span style={{color:C.w3}}>Phone </span><a href={`tel:${l.phone}`} style={{color:C.bl}}>{l.phone}</a></div>
         {l.email&&<div><span style={{color:C.w3}}>Email </span><a href={`mailto:${l.email}`} style={{color:C.bl}}>{l.email}</a></div>}
@@ -736,14 +777,16 @@ function LeadsTab({leads,proj,mob,logAct,onConvert,openProject}){
       </div>
       {l.msg&&<div style={{fontSize:13,color:C.w2,background:C.b3,borderRadius:7,padding:"8px 12px",marginBottom:10,whiteSpace:"pre-wrap"}}>{l.msg}</div>}
       <div style={S.lb}>Notes</div>
-      <textarea key={l.id+(l.notes||"")} defaultValue={l.notes||""} onBlur={e=>{if(e.target.value!==(l.notes||""))save(l,{notes:e.target.value});}} placeholder="Call notes, site visit, estimate amount..." style={{...S.inp,minHeight:44,resize:"vertical"}}/>
+      <textarea key={l.id+(l.notes||"")} defaultValue={l.notes||""} onBlur={e=>{if(e.target.value!==(l.notes||""))save(l,{notes:e.target.value});}} placeholder="Call notes, site visit, follow up..." style={{...S.inp,minHeight:44,resize:"vertical"}}/>
+      {(l.status==="Estimate Sent"||conv||l.estimate)&&<div style={{...S.fxc,gap:8,marginBottom:10}}><div style={{...S.lb,marginBottom:0}}>Estimate $</div><input key={l.id+"e"+(l.estimate||"")} type="number" min="0" step="100" defaultValue={l.estimate||""} onBlur={e=>{const v=e.target.value===""?0:Number(e.target.value);if(v!==(l.estimate||0))save(l,{estimate:v});}} placeholder="0" style={{...S.inp,width:140,marginBottom:0,padding:"6px 10px"}}/></div>}
       <div style={{...S.fx,gap:8,flexWrap:"wrap",alignItems:"center"}}>
         {conv?<>
-          <span style={{fontSize:12,color:C.w3}}>Converted{l.convertedBy?` by ${l.convertedBy}`:""}{l.convertedAt?` on ${fmt(l.convertedAt)}`:""}</span>
+          <span style={{fontSize:12,color:C.w3}}>Won{l.convertedBy?` by ${l.convertedBy}`:""}{l.convertedAt?` on ${fmt(l.convertedAt)}`:""}</span>
           {pj&&<button style={{...S.bs,fontSize:12,padding:"6px 12px"}} onClick={()=>openProject(pj.id)}>Open project</button>}
         </>:<>
-          <select value={l.status} onChange={e=>{save(l,{status:e.target.value});logAct("updated lead",`${l.name} → ${e.target.value}`);}} style={{...S.inp,width:"auto",marginBottom:0,padding:"6px 10px",fontSize:12}}>{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
-          <button style={{...S.btn,fontSize:12,padding:"6px 14px",background:C.gr,color:C.bg,marginLeft:"auto"}} onClick={()=>onConvert(l)}>Signed? Convert to Project</button>
+          <select value={l.status} onChange={e=>move(l,e.target.value)} style={{...S.inp,width:"auto",marginBottom:0,padding:"6px 10px",fontSize:12}}>{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
+          {nextStep[l.status]&&<button style={{...S.bs,fontSize:12,padding:"6px 12px",color:leadColor(nextStep[l.status][0])}} onClick={()=>move(l,nextStep[l.status][0])}>{nextStep[l.status][1]} →</button>}
+          {l.status!=="Not a fit"&&<button style={{...S.btn,fontSize:12,padding:"6px 14px",background:C.gr,color:C.bg,marginLeft:"auto"}} onClick={()=>onConvert(l)}>Signed? Convert to Project</button>}
         </>}
       </div>
     </div>;})}
