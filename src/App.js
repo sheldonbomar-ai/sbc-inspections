@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage, auth, functions } from "./firebase";
-import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -523,7 +523,7 @@ function AppMain({user}){
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} setP={setP} mob={mob} logAct={logAct} user={user}/>}
-        {pg==="leads"&&<LeadsTab leads={leads} proj={proj} mob={mob} logAct={logAct} user={user} view={leadView} setView={setLeadView}onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
+        {pg==="leads"&&<LeadsTab leads={leads} proj={proj} mob={mob} logAct={logAct} user={user} isAdmin={isAdmin} view={leadView} setView={setLeadView}onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
           if(!actLog.length)loadLog();
@@ -755,10 +755,13 @@ const leadChain=l=>[{status:"New",at:l.receivedAt},...(l.history||[])];
 const leadDaysInStage=l=>{const last=leadChain(l).slice(-1)[0];return last?.at?Math.floor((Date.now()-new Date(last.at))/864e5):0;};
 const money=n=>"$"+Math.round(n||0).toLocaleString("en-US");
 
-function LeadsTab({leads,proj,mob,logAct,user,view,setView,onConvert,openProject}){
+function LeadsTab({leads,proj,mob,logAct,user,isAdmin,view,setView,onConvert,openProject}){
   const shown=view==="all"?leads:leads.filter(l=>l.status===view);
   const save=(l,u)=>updateDoc(doc(db,"leads",l.id),u).catch(e=>console.error("Lead update error:",e));
   const move=(l,status)=>{const at=new Date().toISOString(),by=user.displayName||user.email;save(l,{status,history:arrayUnion({status,at,by})});logAct("updated lead",`${l.name} → ${leadLabel(status)}`);};
+  const del=l=>{if(!window.confirm(`Delete lead from ${l.name}?
+
+This removes it for good.${l.status==="Converted"?" The project it became stays.":""}`))return;deleteDoc(doc(db,"leads",l.id)).then(()=>logAct("deleted lead",l.name)).catch(e=>{console.error("Lead delete error:",e);alert("Could not delete lead: "+e.message);});};
   const fmt=ts=>{if(!ts)return"";const d=new Date(ts);return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
   const fmtD=ts=>ts?new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
   const nextStep={New:["Contacted","Mark Contacted"],Contacted:["Estimate Sent","Mark Estimate Sent"]};
@@ -787,10 +790,12 @@ function LeadsTab({leads,proj,mob,logAct,user,view,setView,onConvert,openProject
         {conv?<>
           <span style={{fontSize:12,color:C.w3}}>Won{l.convertedBy?` by ${l.convertedBy}`:""}{l.convertedAt?` on ${fmt(l.convertedAt)}`:""}</span>
           {pj&&<button style={{...S.bs,fontSize:12,padding:"6px 12px"}} onClick={()=>openProject(pj.id)}>Open project</button>}
+          <span style={{marginLeft:"auto"}}>{isAdmin&&<button title="Delete lead" style={{...S.bs,fontSize:12,padding:"6px 10px",color:C.rd}} onClick={()=>del(l)}>Delete</button>}</span>
         </>:<>
           <select value={l.status} onChange={e=>move(l,e.target.value)} style={{...S.inp,width:"auto",marginBottom:0,padding:"6px 10px",fontSize:12}}>{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
           {nextStep[l.status]&&<button style={{...S.bs,fontSize:12,padding:"6px 12px",color:leadColor(nextStep[l.status][0])}} onClick={()=>move(l,nextStep[l.status][0])}>{nextStep[l.status][1]} →</button>}
           {l.status!=="Not a fit"&&<button style={{...S.btn,fontSize:12,padding:"6px 14px",background:C.gr,color:C.bg,marginLeft:"auto"}} onClick={()=>onConvert(l)}>Signed? Convert to Project</button>}
+          <span style={{marginLeft:l.status==="Not a fit"?"auto":0}}>{isAdmin&&<button title="Delete lead" style={{...S.bs,fontSize:12,padding:"6px 10px",color:C.rd}} onClick={()=>del(l)}>Delete</button>}</span>
         </>}
       </div>
     </div>;})}
