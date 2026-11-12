@@ -26,8 +26,8 @@
     -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- One font per skin. See SKINS in src/App.js. SBC Classic uses the system font. -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" />
+    <!-- One font per skin. See SKINS in src/App.js. SBC Classic uses the system font. Loaded without blocking the page, so a slow or blocked font request cannot hold up the app. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" media="print" onload="this.media='all'" />
     <title>Stacy Bomar Construction</title>
   </head>
   <body>
