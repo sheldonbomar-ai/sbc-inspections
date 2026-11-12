@@ -216,6 +216,7 @@ function AppMain({user}){
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);const[projSort,setProjSort]=useState("alpha");const[reassignId,setReassignId]=useState(null);const[scopeFilter,setScopeFilter]=useState("All");const[projView,setProjView]=useState("active");
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return ymd(d);});
   const[resetting,setResetting]=useState(false);
+  const[todayAll,setTodayAll]=useState(false);
   const[skin,setSkin]=useState(savedSkin); // the look picker; saved per browser
   const skinDots=sz=>Object.entries(SKINS).map(([k,sk])=>
     <button key={k} title={sk.name+": "+sk.note} aria-label={"Use the "+sk.name+" look"} aria-pressed={skin===k} onClick={()=>{applySkin(k);setSkin(k);}}
@@ -378,12 +379,33 @@ function AppMain({user}){
           const wkInsp=insp.filter(i=>i.date&&i.date>=ymd(wkStart)&&i.date<=ymd(wkEnd));
           const openTodos=todos.filter(t=>!t.done).length;
           const goLeads=k=>{setLeadView(k);setPg("leads");};
-          const tile=(v,l,sub,c,onClick,key)=><div key={key} onClick={onClick} style={{...S.cd,marginBottom:0,borderLeft:`3px solid ${c}`,padding:mob?14:18,cursor:onClick?"pointer":"default"}}><div style={{fontSize:mob?24:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w2,marginTop:2}}>{l}</div>{sub&&<div style={{fontSize:11,color:C.w3,marginTop:4}}>{sub}</div>}</div>;
+          // Today: everything waiting on someone, worst first.
+          const daysLate=d=>Math.round((new Date(td()+"T00:00:00")-new Date(d+"T00:00:00"))/864e5);
+          const todayItems=[
+            ...insp.filter(i=>!i.completed&&i.date&&i.date<td()).map(i=>{const p=proj.find(x=>x.id===i.projectId);const n=daysLate(i.date);return{k:"i"+i.id,what:"Inspection overdue",name:p?.clientName||"No project",detail:fT(i.type,ct),wait:n+(n===1?" day late":" days late"),c:C.rd,b:C.rdb,sev:1000+n,go:()=>{sSI(i.id);setPg("detail");}};}),
+            ...permits.filter(pm=>{const a=permitAge(pm);return a!==null&&a>=60;}).map(pm=>{const p=proj.find(x=>x.id===pm.projectId);const a=permitAge(pm);return{k:"p"+pm.id,what:"Permit pending",name:p?.clientName||pm.clientName||"",detail:pm.permitType||"",wait:a+" days",c:C.rd,b:C.rdb,sev:500+a,go:()=>setPg("permits")};}),
+            ...permits.filter(pm=>pm.status==="Comments Received"&&(pm.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).map(pm=>{const p=proj.find(x=>x.id===pm.projectId);return{k:"c"+pm.id,what:"City comments",name:p?.clientName||pm.clientName||"",detail:pm.permitType||"",wait:"Reply needed",c:C.or,b:C.orb,sev:400,go:()=>setPg("permits")};}),
+            ...active.flatMap(p=>[
+              ...(p.revisions||[]).filter(r=>r.status==="Open").map(r=>({k:"r"+r.id,what:"Revision open",name:p.clientName,detail:r.description||"",wait:r.createdAt?"Since "+fmt(r.createdAt):"Open",c:C.or,b:C.orb,sev:300,go:()=>{sSP(p.id);setPg("projects");}})),
+              ...(p.changeOrders||[]).filter(co=>co.status==="Pending").map(co=>({k:"o"+co.id,what:"Change order pending",name:p.clientName,detail:co.description||"",wait:co.createdAt?"Since "+fmt(co.createdAt):"Pending",c:C.or,b:C.orb,sev:200,go:()=>{sSP(p.id);setPg("projects");}}))])
+          ].sort((a,b)=>b.sev-a.sev);
+          const todayShown=todayAll?todayItems:todayItems.slice(0,6);
+          const tile=(v,l,sub,c,onClick,key)=><div key={key} onClick={onClick} style={{...S.cd,marginBottom:0,padding:mob?14:18,cursor:onClick?"pointer":"default"}}><div style={{fontSize:mob?24:28,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w2,marginTop:2}}>{l}</div>{sub&&<div style={{fontSize:11,color:C.w3,marginTop:4}}>{sub}</div>}</div>;
           return <>
+            <div style={{...S.fxsb,alignItems:"baseline",marginBottom:10}}><h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:0}}>TODAY</h2><span style={{fontSize:11,color:C.w3}}>{todayItems.length?`${todayItems.length} ${todayItems.length===1?"thing needs":"things need"} attention`:"All clear"}</span></div>
+            <div style={{...S.cd,padding:0,overflow:"hidden",marginBottom:20}}>
+              {!todayItems.length&&<div style={{padding:mob?14:16,fontSize:13,color:C.w3}}>Nothing is overdue or waiting on you right now.</div>}
+              {todayShown.map((t,i)=><div key={t.k} onClick={t.go} style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:mob?"4px 10px":"4px 16px",padding:mob?"12px 14px":"10px 16px",borderTop:i?`1px solid ${C.bd}`:"none",cursor:"pointer"}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,color:C.w,flex:mob?"1 1 100%":"0 0 190px"}}><span style={{width:8,height:8,borderRadius:8,background:t.c,flexShrink:0}}/>{t.what}</span>
+                <span style={{flex:"1 1 200px",minWidth:0,fontSize:13,color:C.w,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><span style={{fontWeight:600}}>{t.name}</span>{t.detail&&<span style={{color:C.w3}}> · {t.detail}</span>}</span>
+                <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,background:t.b,color:t.c,whiteSpace:"nowrap"}}>{t.wait}</span>
+              </div>)}
+              {todayItems.length>6&&<button onClick={()=>setTodayAll(v=>!v)} style={{display:"block",width:"100%",padding:mob?"12px 14px":"9px 16px",background:"none",border:"none",borderTop:`1px solid ${C.bd}`,color:C.bl,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit",textAlign:"left"}}>{todayAll?"Show fewer":`Show all ${todayItems.length}`}</button>}
+            </div>
             <div style={{...S.fxsb,alignItems:"baseline",marginBottom:10}}><h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:0}}>COMPANY SNAPSHOT</h2><span style={{fontSize:11,color:C.w3}}>{now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</span></div>
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?8:14,marginBottom:mob?8:14}}>
               {LEAD_STAGES.slice(0,4).map(([k,lb])=>{const n=leads.filter(l=>l.status===k);const st=n.filter(l=>staleLeads.includes(l)).length;
-                const sub=k==="Estimate Sent"?`${money(n.reduce((a,l)=>a+(l.estimate||0),0))} out`:k==="Converted"?`${wonThisMonth} this month`:st?`⚠ ${st} need follow up`:"Up to date";
+                const sub=k==="Estimate Sent"?`${money(n.reduce((a,l)=>a+(l.estimate||0),0))} out`:k==="Converted"?`${wonThisMonth} this month`:st?`${st} need follow up`:"Up to date";
                 return tile(n.length,lb==="Won"?"Won":lb,sub,leadColor(k),()=>goLeads(k),k);})}
             </div>
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?8:14,marginBottom:20}}>
@@ -399,15 +421,15 @@ function AppMain({user}){
             <h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:"0 0 10px"}}>JOBS & PERMITS</h2>
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
               {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
-                <div key={i} data-alert={l==="Revision Required"&&v>0?"":undefined} style={{...S.cd,borderLeft:`3px solid ${c}`,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
+                <div key={i} data-alert={l==="Revision Required"&&v>0?"":undefined} style={{...S.cd,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
             </div>
             {(()=>{const activeP=permits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=permits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>{const a=permitAge(p);return a!==null&&a>=30&&a<60;}).length;const pend60=activeP.filter(p=>{const a=permitAge(p);return a!==null&&a>=60;}).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:14,marginBottom:20}}>
               {[[activeP.length,"Active Permits",C.cy],[needResp,"Need Response",needResp?C.or:C.w3],[pend30,"30-60 Days",pend30?C.or:C.w3],[pend60,"60+ Days",pend60?C.rd:C.w3]].map(([v,l,c],i)=>
-                <div key={"pm"+i} data-alert={i>0&&v>0?"":undefined} style={{...S.cd,borderLeft:`3px solid ${c}`,cursor:"pointer",padding:mob?14:20}} onClick={()=>setPg("permits")}><div style={{fontSize:mob?26:32,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
+                <div key={"pm"+i} data-alert={i>0&&v>0?"":undefined} style={{...S.cd,cursor:"pointer",padding:mob?14:20}} onClick={()=>setPg("permits")}><div style={{fontSize:mob?26:32,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
             </div>;})()}
 
-            {(()=>{const aging=permits.filter(p=>{const a=permitAge(p);return a!==null&&a>=30;}).sort((a,b)=>(permitAge(b)||0)-(permitAge(a)||0));if(!aging.length)return null;return <div data-alert="" style={{...S.cd,borderLeft:`3px solid ${C.or}`,marginBottom:20,padding:mob?16:20}}>
-              <div style={{...S.fxsb,marginBottom:10}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:18}}>⏱</span><span style={{fontSize:mob?14:16,fontWeight:700,color:C.or}}>PERMIT AGE TRACKER</span></div><span style={{fontSize:12,color:C.w3}}>{aging.length} pending 30+ days</span></div>
+            {(()=>{const aging=permits.filter(p=>{const a=permitAge(p);return a!==null&&a>=30;}).sort((a,b)=>(permitAge(b)||0)-(permitAge(a)||0));if(!aging.length)return null;return <div data-alert="" style={{...S.cd,marginBottom:20,padding:mob?16:20}}>
+              <div style={{...S.fxsb,marginBottom:10}}><div style={{...S.fxc,gap:8}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><span style={{fontSize:mob?14:16,fontWeight:700,color:C.or}}>PERMIT AGE TRACKER</span></div><span style={{fontSize:12,color:C.w3}}>{aging.length} pending 30+ days</span></div>
               {aging.map(pm=>{const age=permitAge(pm);const ac=ageColor(age);const p=proj.find(x=>x.id===pm.projectId);return <div key={pm.id} style={{...S.fxsb,padding:"8px 0",borderTop:`1px solid ${C.bd}`,alignItems:"center",cursor:"pointer"}} onClick={()=>setPg("permits")}>
                 <div><span style={{fontSize:13,fontWeight:600,color:C.w}}>{p?.clientName||pm.clientName}</span><span style={{fontSize:11,color:C.w3,marginLeft:6}}>{pm.permitType}</span>{pm.permitNumber&&<span style={{fontSize:10,color:C.bl,marginLeft:6}}>{pm.permitNumber}</span>}</div>
                 <div style={{...S.fxc,gap:6}}><span style={{fontSize:10,color:C.w3}}>{pm.status}</span><span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,background:ageBg(age),color:ac}}>{age}d</span></div>
