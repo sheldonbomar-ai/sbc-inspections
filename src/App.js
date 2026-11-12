@@ -217,6 +217,7 @@ function AppMain({user}){
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return ymd(d);});
   const[resetting,setResetting]=useState(false);
   const[todayAll,setTodayAll]=useState(false);
+  const[mobMore,setMobMore]=useState(false);
   const[skin,setSkin]=useState(savedSkin); // the look picker; saved per browser
   const skinDots=sz=>Object.entries(SKINS).map(([k,sk])=>
     <button key={k} title={sk.name+": "+sk.note} aria-label={"Use the "+sk.name+" look"} aria-pressed={skin===k} onClick={()=>{applySkin(k);setSkin(k);}}
@@ -651,15 +652,41 @@ function AppMain({user}){
         </div></div>}
 
       </div></div>
-      {mob&&<div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,display:"flex",zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
-        {mobNavItems.map(([id,lb])=>{const act=pg===id||(pg==="detail"&&id==="sheet");return <button key={id} onClick={()=>{setPg(id);sSI(null);sSP(null);if(id==="leads")setLeadView(firstLeadStage());}} style={{flex:1,padding:"10px 0 8px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",fontFamily:"inherit"}}>
-          <span style={{fontSize:16}}>{id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":id==="leads"?"📥":"📅"}</span>
-          <span style={{fontSize:9,fontWeight:act?700:500,color:act?C.bl:C.w3}}>{lb}</span>
-          {id==="sheet"&&ovd>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.or,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{ovd}</span>}
-          {id==="projects"&&pendTotal>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.rd,color:C.on,borderRadius:8,padding:"1px 4px"}}>{pendTotal}</span>}
-          {id==="leads"&&newLeads>0&&<span style={{position:"absolute",top:4,marginLeft:24,fontSize:8,fontWeight:700,background:C.gr,color:C.bg,borderRadius:8,padding:"1px 4px"}}>{newLeads}</span>}
-        </button>;})}
-      </div>}
+      {mob&&(()=>{
+        const mainIds=["dashboard","projects","sheet","permits","leads"];
+        const icon=id=>id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":id==="leads"?"📥":id==="backups"?"💾":"📅";
+        const full={activity:"Activity Log"};
+        const mainItems=mobNavItems.filter(([id])=>mainIds.includes(id));
+        const moreItems=mobNavItems.filter(([id])=>!mainIds.includes(id));
+        const go=id=>{setPg(id);sSI(null);sSP(null);setMobMore(false);if(id==="leads")setLeadView(firstLeadStage());};
+        const moreAct=mobMore||moreItems.some(([id])=>id===pg);
+        const tab={flex:1,minWidth:0,minHeight:52,padding:"8px 0 6px",border:"none",background:"transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,cursor:"pointer",fontFamily:"inherit",position:"relative"};
+        const badge=(n,bg,fg)=><span style={{position:"absolute",top:3,left:"50%",marginLeft:8,fontSize:9,fontWeight:700,background:bg,color:fg,borderRadius:8,padding:"1px 5px"}}>{n}</span>;
+        return <>
+          {mobMore&&<div onClick={()=>setMobMore(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:899}}/>}
+          <div data-mobnav="" style={{position:"fixed",bottom:0,left:0,right:0,background:C.b2,borderTop:`1px solid ${C.bd}`,zIndex:900,paddingBottom:"env(safe-area-inset-bottom)"}}>
+            {mobMore&&<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,padding:12,borderBottom:`1px solid ${C.bd}`}}>
+              {moreItems.map(([id,lb])=>{const act=pg===id;return <button key={id} onClick={()=>go(id)} style={{minHeight:60,padding:"10px 4px",border:`1px solid ${act?C.bl:C.bd}`,borderRadius:10,background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",fontFamily:"inherit"}}>
+                <span style={{fontSize:20}}>{icon(id)}</span>
+                <span style={{fontSize:12,fontWeight:act?700:500,color:act?C.bl:C.w2}}>{full[id]||lb}</span>
+              </button>;})}
+            </div>}
+            <div style={{display:"flex"}}>
+              {mainItems.map(([id,lb])=>{const act=!mobMore&&(pg===id||(pg==="detail"&&id==="sheet"));return <button key={id} onClick={()=>go(id)} style={tab}>
+                <span style={{fontSize:18}}>{icon(id)}</span>
+                <span style={{fontSize:11,fontWeight:act?700:500,color:act?C.bl:C.w3,whiteSpace:"nowrap"}}>{lb}</span>
+                {id==="sheet"&&ovd>0&&badge(ovd,C.or,C.bg)}
+                {id==="projects"&&pendTotal>0&&badge(pendTotal,C.rd,C.on)}
+                {id==="leads"&&newLeads>0&&badge(newLeads,C.gr,C.bg)}
+              </button>;})}
+              <button onClick={()=>setMobMore(v=>!v)} aria-expanded={mobMore} style={tab}>
+                <span style={{fontSize:18,color:moreAct?C.bl:C.w3}}>☰</span>
+                <span style={{fontSize:11,fontWeight:moreAct?700:500,color:moreAct?C.bl:C.w3}}>More</span>
+              </button>
+            </div>
+          </div>
+        </>;
+      })()}
     </div>
   );
 }
