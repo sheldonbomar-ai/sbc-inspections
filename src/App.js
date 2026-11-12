@@ -181,7 +181,8 @@ export default function App(){
     if(!nameInput.trim()||!pwInput)return;
     setSigningIn(true);setLoginErr("");
     try{
-      await signInWithEmailAndPassword(auth,nameInput.trim().toLowerCase()+"@sbc.app",pwInput);
+      const nm=nameInput.trim().toLowerCase().replace(/s+/g,"");
+      await signInWithEmailAndPassword(auth,nm.includes("@")?nm:nm+"@sbc.app",pwInput);
     }catch(e){
       setLoginErr(e.code==="auth/invalid-credential"?"Wrong username or password":e.code==="auth/user-not-found"?"User not found":e.code==="auth/too-many-requests"?"Too many attempts — try again later":"Login failed");
     }
