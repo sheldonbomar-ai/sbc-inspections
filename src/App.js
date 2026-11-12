@@ -170,7 +170,7 @@ const S={
 
 export default function App(){
   const[user,setUser]=useState(null);const[loading,setLoading]=useState(true);
-  const[nameInput,setNameInput]=useState("");const[pwInput,setPwInput]=useState("");const[loginErr,setLoginErr]=useState("");const[signingIn,setSigningIn]=useState(false);
+  const[nameInput,setNameInput]=useState("");const[pwInput,setPwInput]=useState("");const[loginErr,setLoginErr]=useState("");const[signingIn,setSigningIn]=useState(false);const[showPw,setShowPw]=useState(false);
 
   useEffect(()=>{const unsub=onAuthStateChanged(auth,async(u)=>{
     // Accounts created in the Firebase console have no display name; name them from the username once so the Activity Log never shows "Unknown".
@@ -197,7 +197,7 @@ export default function App(){
         <div style={{fontSize:18,fontWeight:700,color:C.bl,marginBottom:2}}>Stacy Bomar</div>
         <div style={{fontSize:10,fontWeight:700,color:C.gr,letterSpacing:2,marginBottom:24}}>CONSTRUCTION</div>
         <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")document.getElementById("sbc-pw")?.focus();}} type="text" autoCapitalize="none" autoCorrect="off" placeholder="Username" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:10}}/>
-        <input id="sbc-pw" value={pwInput} onChange={e=>{setPwInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")doLogin();}} type="password" placeholder="Password" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",marginBottom:12}}/>
+        <div style={{position:"relative",marginBottom:12}}><input id="sbc-pw" value={pwInput} onChange={e=>{setPwInput(e.target.value);setLoginErr("");}} onKeyDown={e=>{if(e.key==="Enter")doLogin();}} type={showPw?"text":"password"} autoCapitalize="none" autoCorrect="off" placeholder="Password" style={{width:"100%",padding:"12px 56px",borderRadius:8,border:`1px solid ${loginErr?C.rd:C.bd}`,background:C.bg,color:C.w,fontSize:14,outline:"none",textAlign:"center",}}/><button type="button" onClick={()=>setShowPw(v=>!v)} aria-pressed={showPw} aria-label={showPw?"Hide password":"Show password"} style={{position:"absolute",right:4,top:0,bottom:0,minWidth:48,padding:"0 10px",background:"none",border:"none",color:C.bl,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{showPw?"Hide":"Show"}</button></div>
         {loginErr&&<div style={{fontSize:12,color:C.rd,marginBottom:8}}>{loginErr}</div>}
         <button disabled={signingIn} onClick={doLogin} style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:C.bl,color:C.on,fontSize:14,fontWeight:600,cursor:signingIn?"default":"pointer",opacity:signingIn?0.7:1}}>
           {signingIn?"Signing in...":"Sign In"}
