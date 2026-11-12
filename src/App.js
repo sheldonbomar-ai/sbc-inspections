@@ -1311,13 +1311,13 @@ const ageColor=days=>{if(days===null)return null;if(days>=60)return C.rd;if(days
 const ageBg=days=>{if(days===null)return null;if(days>=60)return C.rdb;if(days>=30)return C.orb;return C.grl;};
 
 function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,setCompanyDocs,user}){
-  const[selProj,setSelProj]=useState(null);
+  const[selProj,setSelProj]=useState(null);const[permView,setPermView]=useState("active");
   const[modal,sM]=useState(null);
   const[search,sSr]=useState("");
   const[addingComment,setAddingComment]=useState(null);
   const[view,setView]=useState("permits");
 
-  const active=[...proj].filter(p=>!isClosed(p)).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
+  const inView=p=>permView==="all"||(permView==="closed"?isClosed(p):!isClosed(p));const active=[...proj].filter(inView).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const projPermits=pid=>permits.filter(p=>p.projectId===pid);
   const unresolvedFor=pid=>{let c=0;projPermits(pid).forEach(pm=>(pm.comments||[]).forEach(cm=>{if(cm.responseStatus==="Not Started"||cm.responseStatus==="In Progress")c++;}));return c;};
 
@@ -1450,7 +1450,7 @@ function PermitsTab({proj,permits,setPermits,pg,setPg,mob,logAct,companyDocs,set
 
     {view==="permits"&&<>
       <div style={{...S.fxsb,marginBottom:12,flexWrap:"wrap",gap:8,alignItems:"center"}}>
-        <p style={{fontSize:12,color:C.w3,margin:0}}>{permits.length} permits across {projsWithPermits.length} projects</p>
+        <div style={{...S.fx,gap:2,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[["active","Active"],["closed","Closed"],["all","All"]].map(([k,l])=>{const on=permView===k;const n=permits.filter(pm=>{const p=proj.find(x=>x.id===pm.projectId);return p&&(k==="all"||(k==="closed"?isClosed(p):!isClosed(p)));}).length;return <button key={k} onClick={()=>setPermView(k)} style={{border:"none",background:on?C.bl:"transparent",color:on?C.on:C.w2,fontFamily:"inherit",fontSize:mob?13:12,fontWeight:600,padding:mob?"9px 16px":"7px 15px",borderRadius:7,cursor:"pointer"}}>{l} <span style={{opacity:0.7,fontWeight:500}}>{n}</span></button>;})}</div><p style={{fontSize:12,color:C.w3,margin:0,flex:1}}>{projsWithPermits.reduce((n,p)=>n+projPermits(p.id).length,0)} permits across {projsWithPermits.length} {permView==="all"?"":permView+" "}projects</p>
         <input style={{...S.inp,maxWidth:mob?"100%":280,fontSize:mob?16:12,padding:mob?"10px 14px":"8px 12px",marginBottom:0}} value={search} onChange={e=>sSr(e.target.value)} placeholder="Search projects..."/>
       </div>
 
