@@ -42,8 +42,8 @@ function textResult(id, obj) {
   };
 }
 
-async function callTool(name, args) {
-  const db = getDb();
+async function callTool(name, args, req) {
+  const db = getDb(req);
   args = args || {};
   if (name === "get_summary") {
     const all = await readAll(db);
@@ -118,7 +118,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ jsonrpc: "2.0", id: msg.id, result: { tools: TOOLS } });
     }
     if (msg.method === "tools/call") {
-      const out = await callTool(msg.params?.name, msg.params?.arguments);
+      const out = await callTool(msg.params?.name, msg.params?.arguments, req);
       return res.status(200).json(textResult(msg.id, out));
     }
     return res.status(200).json({

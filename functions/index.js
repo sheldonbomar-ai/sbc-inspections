@@ -52,6 +52,9 @@ exports.previewBackup = backups.previewBackup;
 // Website lead capture
 exports.submitLead = require("./leads").submitLead;
 
+// Read-only data door for the Vercel API (export + Claude connector)
+exports.crmRead = require("./crmRead").crmRead;
+
 // Todo email notifications
 exports.onTodoAdded = onDocumentWritten(
   { document: "data/sYtd", secrets: [gmailPassword] },

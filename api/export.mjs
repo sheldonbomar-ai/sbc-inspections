@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = getDb();
+    const db = getDb(req);
     const one = req.query?.key;
     if (one) {
       const fsKey = KEYS[one];

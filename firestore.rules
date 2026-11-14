@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only signed-in tracker users can read or change anything.
+    // Cloud Functions (website leads, backups, connector) are not affected.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

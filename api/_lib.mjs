@@ -1,21 +1,28 @@
 // Shared helpers for the SBC Inspections read API (export + MCP).
-// Reads Firestore exactly like the React app does: each key lives at
-// data/<key> as a document whose `value` field is a JSON string.
-import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+// Each key lives at data/<key> as a document whose `value` field is a JSON string.
+// The database now requires a signed-in user, so this API reads through the
+// crmRead Cloud Function, passing along the caller's access token.
+const READ_URL = "https://us-east1-stacy-bomar-tracker.cloudfunctions.net/crmRead";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDFnNEBCo-B1k0RiB4Dg0Y1Ei_ZMiXb6-Q",
-  authDomain: "stacy-bomar-tracker.firebaseapp.com",
-  projectId: "stacy-bomar-tracker",
-  storageBucket: "stacy-bomar-tracker.firebasestorage.app",
-  messagingSenderId: "937797571947",
-  appId: "1:937797571947:web:db3cc79651e62bbb46282e",
-};
+// Pulls the caller's token off the request. Named getDb for the callers' sake.
+export function getDb(req) {
+  let qp = "";
+  try {
+    qp = new URL(req.url, "http://localhost").searchParams.get("token") || "";
+  } catch {
+    /* ignore */
+  }
+  const header = req.headers?.authorization || "";
+  const bearer = header.startsWith("Bearer ") ? header.slice(7) : "";
+  return { token: bearer || qp };
+}
 
-export function getDb() {
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  return getFirestore(app);
+async function fetchKeys(db, keys) {
+  const r = await fetch(`${READ_URL}?keys=${keys.join(",")}`, {
+    headers: { authorization: `Bearer ${db.token}` },
+  });
+  if (!r.ok) throw new Error(`Data read failed (${r.status})`);
+  return (await r.json()).data || {};
 }
 
 // Friendly name -> Firestore key
@@ -31,23 +38,14 @@ export const KEYS = {
 };
 
 export async function readKey(db, key) {
-  const snap = await getDoc(doc(db, "data", key));
-  const d = snap.data();
-  if (!d || !d.value) return [];
-  try {
-    return JSON.parse(d.value);
-  } catch {
-    return [];
-  }
+  const data = await fetchKeys(db, [key]);
+  return Array.isArray(data[key]) ? data[key] : [];
 }
 
 export async function readAll(db) {
+  const data = await fetchKeys(db, Object.values(KEYS));
   const out = {};
-  await Promise.all(
-    Object.entries(KEYS).map(async ([name, key]) => {
-      out[name] = await readKey(db, key);
-    })
-  );
+  for (const [name, key] of Object.entries(KEYS)) out[name] = Array.isArray(data[key]) ? data[key] : [];
   return out;
 }
 
