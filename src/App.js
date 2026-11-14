@@ -217,7 +217,7 @@ function AppMain({user}){
   const[modal,sM]=useState(null);const[search,sSr]=useState("");const[editP,sEP]=useState(null);const[projSort,setProjSort]=useState("alpha");const[reassignId,setReassignId]=useState(null);const[scopeFilter,setScopeFilter]=useState("All");const[projView,setProjView]=useState("active");
   const[week,sWk]=useState(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return ymd(d);});
   const[resetting,setResetting]=useState(false);
-  const[todayAll,setTodayAll]=useState(false);
+  const[todayAll,setTodayAll]=useState(false);const[dashView,setDashViewRaw]=useState(()=>{try{const v=localStorage.getItem("sbc-dash-view");return["field","permits","sales"].includes(v)?v:"field";}catch(e){return"field";}});const setDashView=v=>{setDashViewRaw(v);setTodayAll(false);try{localStorage.setItem("sbc-dash-view",v);}catch(e){}};
   const[mobMore,setMobMore]=useState(false);
   const[skin,setSkin]=useState(savedSkin); // the look picker; saved per browser
   const skinDots=sz=>Object.entries(SKINS).map(([k,sk])=>
@@ -301,7 +301,6 @@ function AppMain({user}){
   const pendCO=proj.reduce((n,p)=>n+(isClosed(p)?0:(p.changeOrders||[]).filter(co=>co.status==="Pending").length),0);
   const pendRev=proj.reduce((n,p)=>n+(isClosed(p)?0:(p.revisions||[]).filter(r=>r.status==="Open").length),0);
   const pendTotal=pendCO+pendRev;
-  const projWithIssues=proj.filter(p=>!isClosed(p)&&((p.changeOrders||[]).some(co=>co.status==="Pending")||(p.revisions||[]).some(r=>r.status==="Open")));
 
   const newLeads=leads.filter(l=>l.status==="New").length;
   const firstLeadStage=()=>["New","Contacted","Estimate Sent"].find(s=>leads.some(l=>l.status===s))||"all";
@@ -369,7 +368,7 @@ function AppMain({user}){
           const active=sorted.filter(p=>!isClosed(p));
           const closed=sorted.filter(p=>isClosed(p));
           const isRev=s=>(s||"").includes("REVISION");
-          const revCount=active.filter(p=>isRev(p.status)).length;
+
           // Company snapshot: sales pipeline + this week's field work.
           const now=new Date(),mStart=new Date(now.getFullYear(),now.getMonth(),1),lmStart=new Date(now.getFullYear(),now.getMonth()-1,1);
           const inRange=(ts,a,b)=>{if(!ts)return false;const d=new Date(ts);return d>=a&&(!b||d<b);};
@@ -386,27 +385,53 @@ function AppMain({user}){
           // Today: everything waiting on someone, worst first.
           const daysLate=d=>Math.round((new Date(td()+"T00:00:00")-new Date(d+"T00:00:00"))/864e5);
           const todayItems=[
-            ...insp.filter(i=>!i.completed&&i.date&&i.date<td()).map(i=>{const p=proj.find(x=>x.id===i.projectId);const n=daysLate(i.date);return{k:"i"+i.id,what:"Inspection overdue",name:p?.clientName||"No project",detail:fT(i.type,ct),wait:n+(n===1?" day late":" days late"),c:C.rd,b:C.rdb,sev:1000+n,go:()=>{sSI(i.id);setPg("detail");}};}),
-            ...livePermits.filter(pm=>{const a=permitAge(pm);return a!==null&&a>=60;}).map(pm=>{const p=proj.find(x=>x.id===pm.projectId);const a=permitAge(pm);return{k:"p"+pm.id,what:"Permit pending",name:p?.clientName||pm.clientName||"",detail:pm.permitType||"",wait:a+" days",c:C.rd,b:C.rdb,sev:500+a,go:()=>setPg("permits")};}),
-            ...livePermits.filter(pm=>pm.status==="Comments Received"&&(pm.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).map(pm=>{const p=proj.find(x=>x.id===pm.projectId);return{k:"c"+pm.id,what:"City comments",name:p?.clientName||pm.clientName||"",detail:pm.permitType||"",wait:"Reply needed",c:C.or,b:C.orb,sev:400,go:()=>setPg("permits")};}),
+            ...insp.filter(i=>!i.completed&&i.date&&i.date<td()).map(i=>{const p=proj.find(x=>x.id===i.projectId);const n=daysLate(i.date);return{k:"i"+i.id,what:"Inspection overdue",name:p?.clientName||"No project",detail:fT(i.type,ct),wait:n+(n===1?" day late":" days late"),c:C.rd,b:C.rdb,sev:1000+n,g:"field",go:()=>{sSI(i.id);setPg("detail");}};}),
+            ...livePermits.filter(pm=>{const a=permitAge(pm);return a!==null&&a>=60;}).map(pm=>{const p=proj.find(x=>x.id===pm.projectId);const a=permitAge(pm);return{k:"p"+pm.id,what:"Permit pending",name:p?.clientName||pm.clientName||"",detail:pm.permitType||"",wait:a+" days",c:C.rd,b:C.rdb,sev:500+a,g:"permits",go:()=>setPg("permits")};}),
+            ...livePermits.filter(pm=>pm.status==="Comments Received"&&(pm.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).map(pm=>{const p=proj.find(x=>x.id===pm.projectId);return{k:"c"+pm.id,what:"City comments",name:p?.clientName||pm.clientName||"",detail:pm.permitType||"",wait:"Reply needed",c:C.or,b:C.orb,sev:400,g:"permits",go:()=>setPg("permits")};}),
             ...active.flatMap(p=>[
-              ...(p.revisions||[]).filter(r=>r.status==="Open").map(r=>({k:"r"+r.id,what:"Revision open",name:p.clientName,detail:r.description||"",wait:r.createdAt?"Since "+fmt(r.createdAt):"Open",c:C.or,b:C.orb,sev:300,go:()=>{sSP(p.id);setPg("projects");}})),
-              ...(p.changeOrders||[]).filter(co=>co.status==="Pending").map(co=>({k:"o"+co.id,what:"Change order pending",name:p.clientName,detail:co.description||"",wait:co.createdAt?"Since "+fmt(co.createdAt):"Pending",c:C.or,b:C.orb,sev:200,go:()=>{sSP(p.id);setPg("projects");}}))])
+              ...(p.revisions||[]).filter(r=>r.status==="Open").map(r=>({k:"r"+r.id,what:"Revision open",name:p.clientName,detail:r.description||"",wait:r.createdAt?"Since "+fmt(r.createdAt):"Open",c:C.or,b:C.orb,sev:300,g:"field",go:()=>{sSP(p.id);setPg("projects");}})),
+              ...(p.changeOrders||[]).filter(co=>co.status==="Pending").map(co=>({k:"o"+co.id,what:"Change order pending",name:p.clientName,detail:co.description||"",wait:co.createdAt?"Since "+fmt(co.createdAt):"Pending",c:C.or,b:C.orb,sev:200,g:"field",go:()=>{sSP(p.id);setPg("projects");}}))])
           ].sort((a,b)=>b.sev-a.sev);
-          const todayShown=todayAll?todayItems:todayItems.slice(0,6);
+          const viewItems=todayItems.filter(t=>t.g===dashView);
+          const todayShown=todayAll?viewItems:viewItems.slice(0,6);
+          const wk7=new Date(now);wk7.setDate(now.getDate()+6);
+          const upcoming=insp.filter(i=>!i.completed&&i.date&&i.date>=td()&&i.date<=ymd(wk7)).sort((a,b)=>a.date.localeCompare(b.date));
+          const overdueInsp=insp.filter(i=>!i.completed&&i.date&&i.date<td()).length;
+          const segCount={field:todayItems.filter(t=>t.g==="field").length,permits:todayItems.filter(t=>t.g==="permits").length,sales:staleLeads.length};
+          const secH=(l,r)=><div style={{...S.fxsb,alignItems:"baseline",marginBottom:10}}><h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:0}}>{l}</h2><span style={{fontSize:11,color:C.w3}}>{r}</span></div>;
+          const strip=cells=><div style={{...S.cd,padding:0,overflow:"hidden",marginBottom:20,display:"grid",gridTemplateColumns:`repeat(${cells.length},1fr)`}}>{cells.map(([v,l,c,go],i)=><div key={l} onClick={go} style={{padding:mob?"12px 4px":"16px 8px",textAlign:"center",borderLeft:i?`1px solid ${C.bd}`:"none",cursor:go?"pointer":"default"}}><div style={{fontSize:mob?22:28,fontWeight:700,fontFamily:"var(--sbc-display)",color:c,lineHeight:1.1}}>{v}</div><div style={{fontSize:mob?11:12,color:C.w3,marginTop:3}}>{l}</div></div>)}</div>;
           const tile=(v,l,sub,c,onClick,key)=><div key={key} onClick={onClick} style={{...S.cd,marginBottom:0,padding:mob?14:18,cursor:onClick?"pointer":"default"}}><div style={{fontSize:mob?24:28,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w2,marginTop:2}}>{l}</div>{sub&&<div style={{fontSize:11,color:C.w3,marginTop:4}}>{sub}</div>}</div>;
           return <>
-            <div style={{...S.fxsb,alignItems:"baseline",marginBottom:10}}><h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:0}}>TODAY</h2><span style={{fontSize:11,color:C.w3}}>{todayItems.length?`${todayItems.length} ${todayItems.length===1?"thing needs":"things need"} attention`:"All clear"}</span></div>
+            <div style={{...S.fxsb,alignItems:"baseline",marginBottom:10}}><h2 style={{fontSize:mob?18:20,fontWeight:700,fontFamily:"var(--sbc-display)",color:C.w,margin:0}}>Dashboard</h2><span style={{fontSize:12,color:C.w3}}>{now.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</span></div>
+            <div role="tablist" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:3,padding:3,background:C.b2,border:`1px solid ${C.bd}`,borderRadius:10,marginBottom:18,maxWidth:mob?"100%":460}}>
+              {[["field","Field"],["permits","Permits"],["sales","Sales"]].map(([k,l])=><button key={k} role="tab" aria-selected={dashView===k} onClick={()=>setDashView(k)} style={{padding:mob?"10px 0":"8px 0",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600,background:dashView===k?C.bl:"transparent",color:dashView===k?C.on:C.w2,display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}>{l}{segCount[k]>0&&<span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:9,background:dashView===k?C.on:C.rdb,color:dashView===k?C.bl:C.rd}}>{segCount[k]}</span>}</button>)}
+            </div>
+            {dashView==="field"&&<>
+              {secH("TODAY AND NEXT 7 DAYS",<span onClick={()=>setPg("sheet")} style={{color:C.bl,fontWeight:600,cursor:"pointer",fontSize:12}}>See all</span>)}
+              <div style={{...S.cd,padding:0,overflow:"hidden",marginBottom:20}}>
+                {!upcoming.length&&<div style={{padding:mob?14:16,fontSize:13,color:C.w3}}>No inspections scheduled in the next 7 days.</div>}
+                {upcoming.slice(0,8).map((i,n)=>{const p=proj.find(x=>x.id===i.projectId);const isT=i.date===td();return <div key={i.id} onClick={()=>{sSI(i.id);setPg("detail");}} style={{display:"flex",alignItems:"center",gap:10,padding:mob?"12px 14px":"10px 16px",borderTop:n?`1px solid ${C.bd}`:"none",cursor:"pointer"}}>
+                  <span style={{width:38,flexShrink:0,fontSize:11,fontWeight:700,textTransform:"uppercase",color:isT?C.bl:C.w3}}>{new Date(i.date+"T00:00:00").toLocaleDateString("en-US",{weekday:"short"})}</span>
+                  <span style={{flex:1,minWidth:0,fontSize:13,color:C.w,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><span style={{fontWeight:600}}>{p?.clientName||"No project"}</span><span style={{color:C.w3}}> · {fT(i.type,ct)}</span></span>
+                  {isT&&<span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,background:C.b3,color:C.bl,whiteSpace:"nowrap"}}>Today</span>}
+                </div>;})}
+                {upcoming.length>8&&<button onClick={()=>setPg("sheet")} style={{display:"block",width:"100%",padding:mob?"12px 14px":"9px 16px",background:"none",border:"none",borderTop:`1px solid ${C.bd}`,color:C.bl,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit",textAlign:"left"}}>{`See all ${upcoming.length}`}</button>}
+              </div>
+            </>}
+            {dashView!=="sales"&&<>
+            {secH(dashView==="field"?"FIELD ISSUES":"PERMIT ISSUES",viewItems.length?`${viewItems.length} ${viewItems.length===1?"thing needs":"things need"} attention`:"All clear")}
             <div style={{...S.cd,padding:0,overflow:"hidden",marginBottom:20}}>
-              {!todayItems.length&&<div style={{padding:mob?14:16,fontSize:13,color:C.w3}}>Nothing is overdue or waiting on you right now.</div>}
+              {!viewItems.length&&<div style={{padding:mob?14:16,fontSize:13,color:C.w3}}>Nothing is overdue or waiting on you right now.</div>}
               {todayShown.map((t,i)=><div key={t.k} onClick={t.go} style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:mob?"4px 10px":"4px 16px",padding:mob?"12px 14px":"10px 16px",borderTop:i?`1px solid ${C.bd}`:"none",cursor:"pointer"}}>
                 <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,color:C.w,flex:mob?"1 1 100%":"0 0 190px"}}><span style={{width:8,height:8,borderRadius:8,background:t.c,flexShrink:0}}/>{t.what}</span>
                 <span style={{flex:"1 1 200px",minWidth:0,fontSize:13,color:C.w,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><span style={{fontWeight:600}}>{t.name}</span>{t.detail&&<span style={{color:C.w3}}> · {t.detail}</span>}</span>
                 <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,background:t.b,color:t.c,whiteSpace:"nowrap"}}>{t.wait}</span>
               </div>)}
-              {todayItems.length>6&&<button onClick={()=>setTodayAll(v=>!v)} style={{display:"block",width:"100%",padding:mob?"12px 14px":"9px 16px",background:"none",border:"none",borderTop:`1px solid ${C.bd}`,color:C.bl,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit",textAlign:"left"}}>{todayAll?"Show fewer":`Show all ${todayItems.length}`}</button>}
+              {viewItems.length>6&&<button onClick={()=>setTodayAll(v=>!v)} style={{display:"block",width:"100%",padding:mob?"12px 14px":"9px 16px",background:"none",border:"none",borderTop:`1px solid ${C.bd}`,color:C.bl,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit",textAlign:"left"}}>{todayAll?"Show fewer":`Show all ${viewItems.length}`}</button>}
             </div>
-            <div style={{...S.fxsb,alignItems:"baseline",marginBottom:10}}><h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:0}}>COMPANY SNAPSHOT</h2><span style={{fontSize:11,color:C.w3}}>{now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</span></div>
+            </>}
+            {dashView==="sales"&&<>
+            {secH("LEADS",`${leads.length} total`)}
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?8:14,marginBottom:mob?8:14}}>
               {LEAD_STAGES.slice(0,4).map(([k,lb])=>{const n=leads.filter(l=>l.status===k);const st=n.filter(l=>staleLeads.includes(l)).length;
                 const sub=k==="Estimate Sent"?`${money(n.reduce((a,l)=>a+(l.estimate||0),0))} out`:k==="Converted"?`${wonThisMonth} this month`:st?`${st} need follow up`:"Up to date";
@@ -415,18 +440,14 @@ function AppMain({user}){
             <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?8:14,marginBottom:20}}>
               {tile(leadsThisMonth,"Website leads this month",`${leadsLastMonth} last month`,C.bl,()=>goLeads("all"),"wl")}
               {tile(won+lost?Math.round(won/(won+lost)*100)+"%":"—","Win rate",`${won} won · ${lost} not a fit`,C.t3,null,"wr")}
-              {tile(wkInsp.length,"Inspections this week",`${wkInsp.filter(i=>i.result==="pass").length} passed · ${wkInsp.filter(i=>i.result==="fail").length} failed`,C.gr,()=>setPg("sheet"),"wi")}
-              {tile(openTodos,"Open to dos",null,openTodos?C.or:C.w3,()=>setPg("todos"),"td")}
             </div>
             {staleLeads.length>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.or}`,background:C.orb,marginBottom:20,padding:mob?14:18}}>
               <div style={{fontSize:mob?13:14,fontWeight:700,color:C.or,marginBottom:6}}>⚠ {staleLeads.length} lead{staleLeads.length>1?"s":""} waiting on follow up</div>
               {staleLeads.map(l=><div key={l.id} onClick={()=>goLeads(l.status)} style={{...S.fxsb,padding:"6px 0",borderTop:`1px solid ${C.bd}`,cursor:"pointer",fontSize:13}}><span><b>{l.name}</b> <span style={{color:C.w3}}>· {l.ptype||"Project"}</span></span><span style={{color:leadColor(l.status),fontSize:12}}>{leadLabel(l.status)} {leadDaysInStage(l)}d</span></div>)}
             </div>}
-            <h2 style={{fontSize:mob?13:14,fontWeight:700,letterSpacing:1.5,color:C.w2,margin:"0 0 10px"}}>JOBS & PERMITS</h2>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
-              {[[active.length,"Active Jobs",C.bl],[closed.length,"Closed Jobs",C.w3],[revCount,"Revision Required",revCount?C.or:C.w3]].map(([v,l,c],i)=>
-                <div key={i} data-alert={l==="Revision Required"&&v>0?"":undefined} style={{...S.cd,padding:mob?16:20}}><div style={{fontSize:32,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
-            </div>
+            </>}
+            {dashView==="field"&&strip([[active.length,"Active jobs",C.bl,()=>setPg("projects")],[wkInsp.length,"This week",C.gr,()=>setPg("sheet")],[overdueInsp,"Overdue",overdueInsp?C.rd:C.w3,()=>setPg("sheet")],[openTodos,"To dos",openTodos?C.or:C.w3,()=>setPg("todos")]])}
+            {dashView==="permits"&&<>
             {(()=>{const activeP=livePermits.filter(p=>!["Closed","Issued"].includes(p.status));const needResp=livePermits.filter(p=>p.status==="Comments Received"&&(p.comments||[]).some(c=>c.responseStatus==="Not Started"||c.responseStatus==="In Progress")).length;const pend30=activeP.filter(p=>{const a=permitAge(p);return a!==null&&a>=30&&a<60;}).length;const pend60=activeP.filter(p=>{const a=permitAge(p);return a!==null&&a>=60;}).length;return <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:14,marginBottom:20}}>
               {[[activeP.length,"Active Permits",C.cy],[needResp,"Need Response",needResp?C.or:C.w3],[pend30,"30-60 Days",pend30?C.or:C.w3],[pend60,"60+ Days",pend60?C.rd:C.w3]].map(([v,l,c],i)=>
                 <div key={"pm"+i} data-alert={i>0&&v>0?"":undefined} style={{...S.cd,cursor:"pointer",padding:mob?14:20}} onClick={()=>setPg("permits")}><div style={{fontSize:mob?26:32,fontWeight:700,fontFamily:"var(--sbc-display)",color:c}}>{v}</div><div style={{fontSize:mob?11:13,color:C.w3,marginTop:2}}>{l}</div></div>)}
@@ -440,17 +461,8 @@ function AppMain({user}){
               </div>;})}
             </div>;})()}
 
-            {pendTotal>0&&<div style={{...S.cd,borderLeft:`3px solid ${C.rd}`,marginBottom:20,background:C.rdb,padding:mob?16:20}}>
-              <div style={{...S.fxsb,marginBottom:10}}><div style={{...S.fxc,gap:8}}><span style={{fontSize:22}}>⚠</span><span style={{fontSize:16,fontWeight:700,color:C.rd}}>REVISIONS & CHANGE ORDERS</span></div><span style={{fontSize:28,fontWeight:700,color:C.rd}}>{pendTotal}</span></div>
-              {projWithIssues.map(p=>{const pco=(p.changeOrders||[]).filter(co=>co.status==="Pending");const prev=(p.revisions||[]).filter(r=>r.status==="Open");return <div key={p.id} style={{padding:"8px 0",borderTop:`1px solid ${C.bd}`}}>
-                <span style={{fontSize:13,fontWeight:600,color:C.w,cursor:"pointer",textDecoration:"underline"}} onClick={()=>{sSP(p.id);setPg("projects");}}>{p.clientName}</span>
-                {prev.length>0&&<span style={{fontSize:12,color:C.or,marginLeft:8}}>{prev.length} revision{prev.length>1?"s":""}</span>}
-                {pco.length>0&&<span style={{fontSize:12,color:C.rd,marginLeft:8}}>{pco.length} CO</span>}
-                {prev.map(r=><div key={r.id} style={{fontSize:11,color:C.or,marginLeft:16,marginTop:3}}>↺ {r.description}{r.inspection?` (${r.inspection})`:""}</div>)}
-                {pco.map(co=><div key={co.id} style={{fontSize:11,color:C.w3,marginLeft:16,marginTop:3}}>$ {co.description}{co.cost?` ($${co.cost})`:""}</div>)}
-              </div>;})}
-            </div>}
-
+            </>}
+            {dashView==="field"&&<>
             {/* SPREADSHEET TABLE / MOBILE CARDS */}
             <div style={{...S.cd,padding:0,overflow:"auto",marginBottom:16,maxWidth:"100%"}}>
               <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}><h3 style={{fontSize:14,fontWeight:700,margin:0}}>Job Scope Matrix</h3><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{display:"flex",gap:4}}>{[["alpha","A-Z"],["newest","Newest"]].map(([k,l])=><button key={k} style={{...S.bs,padding:"4px 10px",fontSize:11,background:projSort===k?C.bl:C.b3,color:projSort===k?C.on:C.w2,border:projSort===k?"none":`1px solid ${C.bd}`}} onClick={()=>setProjSort(k)}>{l}</button>)}</div><span style={{fontSize:11,color:C.w3}}>{active.length} active · {closed.length} closed</span></div></div>
@@ -507,6 +519,7 @@ function AppMain({user}){
                 </div>
               </div>;
             })()}
+            </>}
           </>;
         })()}
 
