@@ -226,10 +226,11 @@ function AppMain({user}){
   const[inspDragId,setInspDragId]=useState(null);const[inspDropDay,setInspDropDay]=useState(null);const inspDragRef=useRef(null);
   const mob=useMobile();
   const lastFs=useRef({});
-  const[leads,setLeads]=useState([]);const[convLead,setConvLead]=useState(null);const[leadView,setLeadView]=useState("New");
+  const[leads,setLeads]=useState([]);const[convLead,setConvLead]=useState(null);const[leadView,setLeadView]=useState("New");const[opps,setOpps]=useState([]);
 
   // Website leads live in their own collection (one doc per lead), written by the submitLead function.
   useEffect(()=>onSnapshot(query(collection(db,"leads"),orderBy("receivedAt","desc")),snap=>setLeads(snap.docs.map(d=>({id:d.id,...d.data()}))),err=>console.error("Leads listen error:",err)),[]);
+  useEffect(()=>onSnapshot(query(collection(db,"opportunities"),orderBy("foundAt","desc")),snap=>setOpps(snap.docs.map(d=>({id:d.id,...d.data()}))),err=>console.error("Opportunities listen error:",err)),[]);
 
   useEffect(()=>{
     const keys=[["sYp",setP],["sYi",setI],["sYc",setCt],["sYs",setSched],["sYpm",setPermits],["sYtd",setTodos],["sYcd",setCompanyDocs],["sYpc",setPermitCards]];
@@ -302,8 +303,8 @@ function AppMain({user}){
   const pendRev=proj.reduce((n,p)=>n+(isClosed(p)?0:(p.revisions||[]).filter(r=>r.status==="Open").length),0);
   const pendTotal=pendCO+pendRev;
 
-  const newLeads=leads.filter(l=>l.status==="New").length;
-  const firstLeadStage=()=>["New","Contacted","Estimate Sent"].find(s=>leads.some(l=>l.status===s))||"all";
+  const newLeads=leads.filter(l=>l.status==="New").length+opps.filter(o=>o.status==="New").length;
+  const firstLeadStage=()=>["New","Contacted","Estimate Sent"].find(s=>leads.some(l=>l.status===s))||(opps.some(o=>o.status==="New")?"opps":"all");
 
   const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
   const navItems=isAdmin?[...navBase,["activity","Activity Log"],["leads","Leads"],["backups","Backups"]]:[...navBase,["leads","Leads"]];
@@ -620,7 +621,7 @@ function AppMain({user}){
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} setP={setP} mob={mob} logAct={logAct} user={user}/>}
-        {pg==="leads"&&<LeadsTab leads={leads} proj={proj} mob={mob} logAct={logAct} user={user} isAdmin={isAdmin} view={leadView} setView={setLeadView}onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
+        {pg==="leads"&&<LeadsTab leads={leads} opps={opps} proj={proj} mob={mob} logAct={logAct} user={user} isAdmin={isAdmin} view={leadView} setView={setLeadView}onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
 
         {pg==="activity"&&isAdmin&&(()=>{
           if(!actLog.length)loadLog();
@@ -878,8 +879,44 @@ const leadChain=l=>[{status:"New",at:l.receivedAt},...(l.history||[])];
 const leadDaysInStage=l=>{const last=leadChain(l).slice(-1)[0];return last?.at?Math.floor((Date.now()-new Date(last.at))/864e5):0;};
 const money=n=>"$"+Math.round(n||0).toLocaleString("en-US");
 
-function LeadsTab({leads,proj,mob,logAct,user,isAdmin,view,setView,onConvert,openProject}){
-  const shown=view==="all"?leads:leads.filter(l=>l.status===view);
+// Opportunities found on Facebook, Nextdoor, Google and the quote inbox by the lead check.
+function OppsList({opps,mob,user,isAdmin,logAct}){
+  const[showDone,setShowDone]=useState(false);const[copied,setCopied]=useState(null);
+  const save=(o,u)=>updateDoc(doc(db,"opportunities",o.id),u).catch(e=>console.error("Opportunity update error:",e));
+  const mark=(o,status)=>{save(o,{status,handledAt:new Date().toISOString(),handledBy:user.displayName||user.email});logAct("updated opportunity",`${o.who||o.source} → ${status}`);};
+  const del=o=>{if(!window.confirm("Delete this opportunity? This removes it for good."))return;deleteDoc(doc(db,"opportunities",o.id)).catch(e=>console.error("Opportunity delete error:",e));};
+  const copy=o=>{try{navigator.clipboard.writeText(o.suggestedReply||"").then(()=>{setCopied(o.id);setTimeout(()=>setCopied(null),1500);}).catch(()=>{});}catch(e){}};
+  const fmt=ts=>{if(!ts)return"";const d=new Date(ts);return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});};
+  const srcC=x=>x==="Facebook"?C.bl:x==="Nextdoor"?C.gr:x==="Google"?C.or:C.t3;
+  const fresh=opps.filter(o=>o.status==="New"),done=opps.filter(o=>o.status!=="New");
+  const last=opps.reduce((m,o)=>o.foundAt>m?o.foundAt:m,"");
+  const card=o=><div key={o.id} style={{...S.cd,borderLeft:`3px solid ${srcC(o.source)}`,opacity:o.status==="New"?1:0.7}}>
+    <div style={{...S.fxsb,gap:8,flexWrap:"wrap",marginBottom:6}}>
+      <div><span style={{fontSize:15,fontWeight:700}}>{o.who||"Unknown"}</span><span style={{fontSize:11,color:C.w3,marginLeft:8}}>{fmt(o.foundAt)}</span></div>
+      <div style={{...S.fxc,gap:6}}>{o.kind&&<span style={{fontSize:11,color:C.w3}}>{o.kind}</span>}<span style={S.bg(srcC(o.source)+"22",srcC(o.source))}>{o.source}</span>{o.status!=="New"&&<span style={S.bg(C.b3,C.w2)}>{o.status}</span>}</div>
+    </div>
+    {o.area&&<div style={{fontSize:12,color:C.w3,marginBottom:6}}>{o.area}</div>}
+    <div style={{fontSize:13,color:C.w,marginBottom:8,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{o.summary}</div>
+    {o.suggestedReply&&<div style={{background:C.b3,border:`1px solid ${C.bd}`,borderRadius:8,padding:"8px 10px",marginBottom:8}}><div style={{fontSize:10,fontWeight:700,letterSpacing:1,color:C.w3,marginBottom:4}}>SUGGESTED REPLY</div><div style={{fontSize:13,color:C.w2,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{o.suggestedReply}</div></div>}
+    <div style={{...S.fx,gap:6,flexWrap:"wrap"}}>
+      {o.url&&<a href={o.url} target="_blank" rel="noreferrer" style={{...S.bs,padding:"6px 12px",fontSize:12,background:C.bl,color:C.on,textDecoration:"none"}}>Open</a>}
+      {o.suggestedReply&&<button style={{...S.bs,padding:"6px 12px",fontSize:12}} onClick={()=>copy(o)}>{copied===o.id?"Copied":"Copy reply"}</button>}
+      {o.status==="New"&&<button style={{...S.bs,padding:"6px 12px",fontSize:12}} onClick={()=>mark(o,"Handled")}>Mark handled</button>}
+      {o.status==="New"&&<button style={{...S.bs,padding:"6px 12px",fontSize:12}} onClick={()=>mark(o,"Not a fit")}>Not a fit</button>}
+      {o.status!=="New"&&<button style={{...S.bs,padding:"6px 12px",fontSize:12}} onClick={()=>save(o,{status:"New"})}>Reopen</button>}
+      {isAdmin&&<button style={{...S.bs,padding:"6px 12px",fontSize:12,color:C.rd}} onClick={()=>del(o)}>Delete</button>}
+    </div>
+  </div>;
+  return <>
+    <p style={{fontSize:12,color:C.w3,margin:"0 0 12px"}}>Found on Facebook, Nextdoor, Google and the quote inbox. Nothing is sent for you. Open the post and reply yourself.{last?` Last found ${fmt(last)}.`:""}</p>
+    {!fresh.length&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>No new online opportunities right now.</p></div>}
+    {fresh.map(card)}
+    {done.length>0&&<button onClick={()=>setShowDone(v=>!v)} style={{background:"none",border:"none",color:C.bl,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit",padding:"8px 0"}}>{showDone?"Hide":"Show"} {done.length} handled</button>}
+    {showDone&&done.map(card)}
+  </>;
+}
+function LeadsTab({leads,opps,proj,mob,logAct,user,isAdmin,view,setView,onConvert,openProject}){
+  const shown=view==="opps"?[]:view==="all"?leads:leads.filter(l=>l.status===view);
   const save=(l,u)=>updateDoc(doc(db,"leads",l.id),u).catch(e=>console.error("Lead update error:",e));
   const move=(l,status)=>{const at=new Date().toISOString(),by=user.displayName||user.email;save(l,{status,history:arrayUnion({status,at,by})});logAct("updated lead",`${l.name} → ${leadLabel(status)}`);};
   const del=l=>{if(!window.confirm(`Delete lead from ${l.name}?
@@ -891,8 +928,9 @@ This removes it for good.${l.status==="Converted"?" The project it became stays.
   const open=leads.filter(l=>LEAD_STALE[l.status]!==undefined);
   return <>
     <div style={{...S.fxsb,marginBottom:20,alignItems:"center"}}><div><h1 style={{fontSize:mob?16:24,fontWeight:700,fontFamily:"var(--sbc-display)",margin:0}}>Leads</h1><p style={{fontSize:12,color:C.w3,marginTop:4}}>Estimate requests from stacybomarconstruction.com · {open.length} open · {money(leads.filter(l=>l.status==="Estimate Sent").reduce((n,l)=>n+(l.estimate||0),0))} in estimates out</p></div></div>
-    <div style={{overflowX:"auto",marginBottom:14}}><div style={{...S.fx,gap:2,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[...LEAD_STAGES,["all","All"]].map(([k,lb],i)=>{const on=view===k;const n=k==="all"?leads.length:leads.filter(l=>l.status===k).length;return <button key={k} onClick={()=>setView(k)} style={{padding:"6px 14px",borderRadius:7,border:"none",background:on?(k==="all"?C.bl:leadColor(k)):"transparent",color:on?C.bg:C.w2,fontSize:12,fontWeight:on?700:500,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{i>0&&i<4&&<span style={{opacity:0.5,marginRight:6}}>→</span>}{lb} <span style={{opacity:0.7,fontWeight:500}}>{n}</span></button>;})}</div></div>
-    {!shown.length&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>{leads.length?`No leads in ${leadLabel(view)}.`:"No website leads yet. New estimate requests will show up here."}</p></div>}
+    <div style={{overflowX:"auto",marginBottom:14}}><div style={{...S.fx,gap:2,background:C.b3,border:`1px solid ${C.bd}`,borderRadius:9,padding:3,width:"fit-content"}}>{[...LEAD_STAGES,["all","All"],["opps","Online"]].map(([k,lb],i)=>{const on=view===k;const n=k==="opps"?opps.filter(o=>o.status==="New").length:k==="all"?leads.length:leads.filter(l=>l.status===k).length;return <button key={k} onClick={()=>setView(k)} style={{padding:"6px 14px",borderRadius:7,border:"none",background:on?(k==="all"||k==="opps"?C.bl:leadColor(k)):"transparent",marginLeft:k==="opps"?10:0,color:on?C.bg:C.w2,fontSize:12,fontWeight:on?700:500,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{i>0&&i<4&&<span style={{opacity:0.5,marginRight:6}}>→</span>}{lb} <span style={{opacity:0.7,fontWeight:500}}>{n}</span></button>;})}</div></div>
+    {view==="opps"&&<OppsList opps={opps} mob={mob} user={user} isAdmin={isAdmin} logAct={logAct}/>}
+    {view!=="opps"&&!shown.length&&<div style={{...S.cd,textAlign:"center",padding:30}}><p style={{color:C.w3,fontSize:13,margin:0}}>{leads.length?`No leads in ${leadLabel(view)}.`:"No website leads yet. New estimate requests will show up here."}</p></div>}
     {shown.map(l=>{const conv=l.status==="Converted";const pj=conv&&proj.find(p=>p.id===l.projectId);const days=leadDaysInStage(l);const stale=LEAD_STALE[l.status]!==undefined&&days>=LEAD_STALE[l.status];const isOpen=LEAD_STALE[l.status]!==undefined;return <div key={l.id} style={{...S.cd,borderLeft:`3px solid ${leadColor(l.status)}`,opacity:isOpen||conv?1:0.7}}>
       <div style={{...S.fxsb,gap:8,flexWrap:"wrap",marginBottom:8}}>
         <div><span style={{fontSize:15,fontWeight:700}}>{l.name}</span><span style={{fontSize:11,color:C.w3,marginLeft:8}}>{fmt(l.receivedAt)}</span></div>
