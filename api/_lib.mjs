@@ -4,17 +4,10 @@
 // crmRead Cloud Function, passing along the caller's access token.
 const READ_URL = "https://us-east1-stacy-bomar-tracker.cloudfunctions.net/crmRead";
 
-// Pulls the caller's token off the request. Named getDb for the callers' sake.
-export function getDb(req) {
-  let qp = "";
-  try {
-    qp = new URL(req.url, "http://localhost").searchParams.get("token") || "";
-  } catch {
-    /* ignore */
-  }
-  const header = req.headers?.authorization || "";
-  const bearer = header.startsWith("Bearer ") ? header.slice(7) : "";
-  return { token: bearer || qp };
+// Callers are already checked by authorized(), so pass the configured token along.
+// (A caller may send the token in the URL and something else in the header.)
+export function getDb() {
+  return { token: process.env.ACCESS_TOKEN || "" };
 }
 
 async function fetchKeys(db, keys) {
