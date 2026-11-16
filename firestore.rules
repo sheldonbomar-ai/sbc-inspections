@@ -3,8 +3,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Only signed-in tracker users can read or change anything.
     // Cloud Functions (website leads, backups, connector) are not affected.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // userTodos is left out here because it has its own, tighter rule below.
+    match /{coll}/{document=**} {
+      allow read, write: if request.auth != null && coll != 'userTodos';
+    }
+    // Private "My List" to-dos: one document per user, named by their sign-in email.
+    // Only that user can read or change it.
+    match /userTodos/{email} {
+      allow read, write: if request.auth != null && request.auth.token.email == email;
     }
   }
 }

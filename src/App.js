@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { db, storage, auth, functions } from "./firebase";
-import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc, query, orderBy, limit, getDocs, runTransaction, updateDoc, deleteDoc, arrayUnion, setDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -331,8 +331,10 @@ function AppMain({user}){
   const firstLeadStage=()=>["New","Contacted","Estimate Sent"].find(s=>leads.some(l=>l.status===s))||(opps.some(o=>o.status==="New")?"opps":"all");
 
   const navBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  const hasMyList=user.email===MY_LIST_USER;if(hasMyList)navBase.push(["mine","My List"]);
   const navItems=isAdmin?[...navBase,["activity","Activity Log"],["leads","Leads"],["backups","Backups"]]:[...navBase,["leads","Leads"]];
   const mobBase=[["dashboard","Dashboard"],["projects","Projects"],["sheet","Inspections"],["permits","Permits"],["scheduling","Scheduling"],["todos","To Do"]];
+  if(hasMyList)mobBase.push(["mine","My List"]);
   const mobNavItems=isAdmin?[...mobBase,["activity","Log"],["leads","Leads"],["backups","Backups"]]:[...mobBase,["leads","Leads"]];
 
   return(
@@ -344,7 +346,7 @@ function AppMain({user}){
           <div><div style={{fontSize:15,fontWeight:700,color:C.bl,fontFamily:"var(--sbc-display)"}}>Stacy Bomar</div><div style={{fontSize:9,fontWeight:700,color:C.gr,letterSpacing:2}}>CONSTRUCTION</div></div>
         </div>
         <div style={{flex:1,padding:"6px 10px"}}>
-          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>,backups:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,permitcards:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M14 9h4"/><path d="M14 13h4"/></svg>,leads:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>};return(
+          {navItems.map(([id,lb])=>{const ico={dashboard:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,sheet:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>,projects:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,permits:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>,scheduling:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>,mine:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg>,todos:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>,activity:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>,backups:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,permitcards:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M14 9h4"/><path d="M14 13h4"/></svg>,leads:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>};return(
             <button key={id} style={S.nav(pg===id||(pg==="detail"&&id==="sheet"))} onClick={()=>{setPg(id);sSI(null);sSP(null);if(id==="leads")setLeadView(firstLeadStage());}}>
               {ico[id]}{lb}
               {id==="sheet"&&ovd>0&&<span style={{...S.bg(C.or,C.bg),marginLeft:"auto"}}>{ovd}</span>}
@@ -647,6 +649,7 @@ function AppMain({user}){
 
         {pg==="scheduling"&&<SchedTab proj={proj} sched={sched} setSched={setSched} week={week} sWk={sWk} mob={mob} logAct={logAct}/>}
         {pg==="permits"&&<PermitsTab proj={proj} permits={permits} setPermits={setPermits} pg={pg} setPg={setPg} mob={mob} logAct={logAct} companyDocs={companyDocs} setCompanyDocs={setCompanyDocs} user={user}/>}
+        {pg==="mine"&&hasMyList&&<MyList user={user} proj={proj} mob={mob} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
         {pg==="todos"&&<TodoTab todos={todos} setTodos={setTodos} proj={proj} setP={setP} mob={mob} logAct={logAct} user={user}/>}
         {pg==="leads"&&<LeadsTab leads={leads} opps={opps} proj={proj} mob={mob} logAct={logAct} user={user} isAdmin={isAdmin} view={leadView} setView={setLeadView}onConvert={l=>{setConvLead(l);sM("proj");}} openProject={id=>{if(proj.some(x=>x.id===id)){setPg("projects");sSP(id);}}}/>}
 
@@ -695,8 +698,8 @@ function AppMain({user}){
 
       </div></div>
       {mob&&(()=>{
-        const mainIds=["dashboard","projects","sheet","permits","leads"];
-        const icon=id=>id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="activity"?"📝":id==="leads"?"📥":id==="backups"?"💾":"📅";
+        const mainIds=hasMyList?["dashboard","mine","projects","sheet","leads"]:["dashboard","projects","sheet","permits","leads"];
+        const icon=id=>id==="dashboard"?"📊":id==="projects"?"🏗":id==="sheet"?"📋":id==="permits"?"📜":id==="todos"?"✅":id==="mine"?"⭐":id==="activity"?"📝":id==="leads"?"📥":id==="backups"?"💾":"📅";
         const full={activity:"Activity Log"};
         const mainItems=mobNavItems.filter(([id])=>mainIds.includes(id));
         const moreItems=mobNavItems.filter(([id])=>!mainIds.includes(id));
@@ -893,6 +896,177 @@ function leadToProj(l){
   const t=(l.ptype||"").toLowerCase();
   const scopes=/roof|storm|leak/.test(t)?["Roofing"]:/window|door/.test(t)?["Windows & Doors"]:[];
   return{clientName:l.name||"",address:hasStreet?parts[0]:"",city,scopes,scopeNotes:[l.ptype,l.msg].filter(Boolean).join(". ")};
+}
+
+// "My List": a private to-do tab for one user (see MY_LIST_USER). Separate from the shared To Do tab.
+// Saved in its own document, userTodos/<email>, as one JSON string like the data/* documents.
+const MY_LIST_USER="sheldon@sbc.app";
+const ML_WHEN=[["today","Today"],["week","This week"],["later","Later"]];
+const ML_REPEAT=[["","Does not repeat"],["daily","Every day"],["weekly","Every week"],["monthly","Every month"]];
+const mlWeek=d=>{const x=new Date(d+"T12:00:00");x.setDate(x.getDate()-((x.getDay()+6)%7));return ymd(x);};
+// A finished repeating to-do comes back when its day, week (Monday start) or month rolls over.
+const mlDue=(k,today)=>!k.doneAt||(k.repeat==="daily"?k.doneAt!==today:k.repeat==="weekly"?mlWeek(k.doneAt)!==mlWeek(today):k.repeat==="monthly"?k.doneAt.slice(0,7)!==today.slice(0,7):false);
+function MyList({user,proj,mob,openProject}){
+  const ref0=doc(db,"userTodos",user.email);
+  const[items,setItems]=useState(null);const[log,setLog]=useState({});
+  const[text,setText]=useState("");const[when,setWhen]=useState("today");const[hot,setHot]=useState(false);const[job,setJob]=useState("");const[rep,setRep]=useState("");
+  const[menu,setMenu]=useState(null);const[edit,setEdit]=useState(null);const[showDone,setShowDone]=useState(false);const[toast,setToast]=useState(null);
+  const cv=useRef(null),parts=useRef([]),raf=useRef(0),toastT=useRef(0);
+  const write=(its,lg)=>setDoc(ref0,{value:JSON.stringify({items:its,log:lg}),updatedAt:new Date().toISOString()}).catch(e=>console.error("My List save error:",e));
+  const commit=(its,lg=log)=>{setItems(its);setLog(lg);write(its,lg);};
+  useEffect(()=>onSnapshot(ref0,snap=>{
+    let v={};try{if(snap.exists())v=JSON.parse(snap.data().value||"{}");}catch(e){console.error("My List read error:",e);}
+    let its=Array.isArray(v.items)?v.items:[];const lg=v.log||{};const today=td();let back=false;
+    its=its.map(k=>{if(k.done&&k.repeat&&mlDue(k,today)){back=true;return{...k,done:false,doneAt:""};}return k;});
+    setItems(its);setLog(lg);if(back)write(its,lg);
+  },err=>{console.error("My List listen error:",err);setItems([]);}),[]);// eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>()=>{cancelAnimationFrame(raf.current);clearTimeout(toastT.current);},[]);
+
+  const say=(msg,undo)=>{setToast({msg,undo});clearTimeout(toastT.current);toastT.current=setTimeout(()=>setToast(null),5000);};
+  const calm=typeof window!=="undefined"&&window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const burst=(x,y,n)=>{
+    const c=cv.current;if(!c||calm)return;c.width=window.innerWidth;c.height=window.innerHeight;
+    const cs=getComputedStyle(document.documentElement),col=["bl","gr","or","t3","w"].map(t=>cs.getPropertyValue("--sbc-"+t).trim()||"#fff");
+    for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*6;parts.current.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-3,r:2+Math.random()*3,c:col[i%col.length],life:60+Math.random()*25,rot:Math.random()*6});}
+    const tick=()=>{const g=c.getContext("2d");g.clearRect(0,0,c.width,c.height);parts.current=parts.current.filter(p=>p.life>0);
+      parts.current.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.22;p.life--;p.rot+=0.2;g.save();g.globalAlpha=Math.min(1,p.life/30);g.translate(p.x,p.y);g.rotate(p.rot);g.fillStyle=p.c;g.fillRect(-p.r,-p.r/2,p.r*2,p.r);g.restore();});
+      raf.current=parts.current.length?requestAnimationFrame(tick):0;};
+    if(!raf.current)raf.current=requestAnimationFrame(tick);
+  };
+
+  if(items===null)return <p style={{color:C.w3,fontSize:13}}>Loading your list...</p>;
+  const today=td();
+  const upd=(id,u)=>commit(items.map(k=>k.id===id?{...k,...u}:k));
+  const add=e=>{e.preventDefault();const t=text.trim();if(!t)return;
+    commit([{id:uid(),t,w:when,hot,star:false,done:false,doneAt:"",projectId:job,repeat:rep,createdAt:today},...items]);
+    setText("");setHot(false);setJob("");setRep("");};
+  const toggle=(k,e)=>{
+    if(k.done){const lg={...log};if(k.doneAt&&lg[k.doneAt])lg[k.doneAt]=Math.max(0,lg[k.doneAt]-1);commit(items.map(x=>x.id===k.id?{...x,done:false,doneAt:""}:x),lg);return;}
+    const r=e.currentTarget.getBoundingClientRect();
+    const next=items.map(x=>x.id===k.id?{...x,done:true,doneAt:today,star:false}:x),lg={...log,[today]:(log[today]||0)+1};
+    const cleared=k.w==="today"&&!next.some(x=>x.w==="today"&&!x.done);
+    burst(r.left+r.width/2,r.top+r.height/2,cleared?110:28);setMenu(null);
+    const before=items,beforeLog=log;commit(next,lg);
+    say(k.repeat?`Done. It comes back ${k.repeat==="daily"?"tomorrow":k.repeat==="weekly"?"next week":"next month"}.`:"Done.",()=>commit(before,beforeLog));
+  };
+  const star=k=>{if(!k.star&&items.filter(x=>x.star&&!x.done).length>=3){say("The Big 3 is full. Unstar one first.");return;}upd(k.id,{star:!k.star});};
+  const del=k=>{const before=items;commit(items.filter(x=>x.id!==k.id));setMenu(null);say("Deleted.",()=>commit(before));};
+  const clearDone=()=>{const before=items;commit(items.filter(x=>!x.done||x.repeat));say("Finished to-dos cleared.",()=>commit(before));};
+
+  const open=items.filter(k=>!k.done),done=items.filter(k=>k.done);
+  const big=open.filter(k=>k.star);
+  const tAll=items.filter(k=>k.w==="today"),tDone=tAll.filter(k=>k.done).length,left=tAll.length-tDone;
+  const frac=tAll.length?tDone/tAll.length:0,CIRC=2*Math.PI*36;
+  const days=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));const k=ymd(d);return{k,n:log[k]||0,lb:d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,2)};});
+  const maxN=Math.max(1,...days.map(d=>d.n)),weekN=days.reduce((n,d)=>n+d.n,0);
+  const head=!tAll.length?"Your list":left===0?"Today is cleared":left===1?"One left for today":`${left} left for today`;
+  const pj=id=>proj.find(p=>p.id===id);
+  const chip=(on,danger)=>({height:36,padding:"0 12px",borderRadius:18,border:`1px solid ${on?(danger?C.rd:C.bl):C.bd}`,background:on?(danger?C.rd:C.bl):"transparent",color:on?C.on:C.w2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"});
+  const sel={...S.inp,marginBottom:0,width:"auto",flex:"1 1 150px",minWidth:0,height:38,padding:"0 10px"};
+  const ib={width:40,height:44,border:"none",background:"transparent",display:"grid",placeItems:"center",cursor:"pointer",color:C.w3,padding:0};
+  const mb={height:36,padding:"0 12px",borderRadius:8,border:`1px solid ${C.bd}`,background:C.b3,color:C.w,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"};
+
+  const row=k=>{const p=k.projectId&&pj(k.projectId);return <div key={k.id} style={{display:"grid",gridTemplateColumns:"44px minmax(0,1fr) auto",alignItems:"center",gap:4,background:C.b2,border:`1px solid ${C.bd}`,borderRadius:12,padding:"4px 6px 4px 2px"}}>
+    <button onClick={e=>toggle(k,e)} aria-label={(k.done?"Mark not done: ":"Mark done: ")+k.t} style={{width:44,height:44,border:"none",background:"transparent",display:"grid",placeItems:"center",cursor:"pointer",padding:0}}>
+      <span className={k.done?"ml-pop":""} style={{width:24,height:24,borderRadius:"50%",border:`2px solid ${k.done?C.gr:C.w3}`,background:k.done?C.gr:"transparent",display:"grid",placeItems:"center"}}>
+        {k.done&&<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke={C.bg} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>}
+      </span></button>
+    <div style={{minWidth:0,padding:"6px 0"}}>
+      {edit===k.id?<input autoFocus defaultValue={k.t} maxLength={140} aria-label="Edit to-do" onBlur={e=>{const v=e.target.value.trim();if(v&&v!==k.t)upd(k.id,{t:v});setEdit(null);}} onKeyDown={e=>{if(e.key==="Enter")e.target.blur();if(e.key==="Escape")setEdit(null);}} style={{...S.inp,marginBottom:0,fontSize:15}}/>
+      :<div style={{fontSize:15,fontWeight:k.done?500:600,color:k.done?C.w3:C.w,textDecoration:k.done?"line-through":"none",overflowWrap:"anywhere"}}>{k.t}</div>}
+      {(k.hot||p||k.repeat)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:3,alignItems:"center"}}>
+        {k.hot&&<span style={S.bg(C.rdb,C.rd)}>Urgent</span>}
+        {p&&<button onClick={()=>openProject(p.id)} style={{...S.bg(C.bll,C.bl),border:"none",cursor:"pointer",fontFamily:"inherit"}}>{p.clientName} ›</button>}
+        {k.repeat&&<span style={S.bg(C.b3,C.w2)}>↻ {k.repeat==="daily"?"Daily":k.repeat==="weekly"?"Weekly":"Monthly"}</span>}
+      </div>}
+    </div>
+    <div style={{display:"flex"}}>
+      {!k.done&&<button onClick={()=>star(k)} aria-pressed={!!k.star} aria-label={"Big 3: "+k.t} style={{...ib,color:k.star?C.or:C.w3}}>
+        <svg viewBox="0 0 24 24" width="19" height="19" fill={k.star?C.or:"none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg></button>}
+      <button onClick={()=>setMenu(menu===k.id?null:k.id)} aria-expanded={menu===k.id} aria-label={"More for: "+k.t} style={ib}>
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+    </div>
+    {menu===k.id&&<div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap",padding:"4px 8px 8px 46px"}}>
+      {!k.done&&ML_WHEN.filter(([w])=>w!==k.w).map(([w,lb])=><button key={w} style={mb} onClick={()=>{upd(k.id,{w});setMenu(null);}}>Move to {lb}</button>)}
+      {!k.done&&<button style={mb} onClick={()=>{upd(k.id,{hot:!k.hot});setMenu(null);}}>{k.hot?"Not urgent":"Mark urgent"}</button>}
+      <button style={mb} onClick={()=>{setEdit(k.id);setMenu(null);}}>Edit</button>
+      <select aria-label="Repeats" value={k.repeat||""} onChange={e=>{upd(k.id,{repeat:e.target.value});setMenu(null);}} style={{...mb,fontWeight:600}}>{ML_REPEAT.map(([v,lb])=><option key={v} value={v}>{lb}</option>)}</select>
+      <button style={{...mb,color:C.rd}} onClick={()=>del(k)}>Delete</button>
+    </div>}
+  </div>;};
+  const h2={fontSize:15,fontWeight:700,fontFamily:"var(--sbc-display)",margin:0,display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8};
+  const sub={fontSize:12,color:C.w3,fontWeight:500,fontFamily:"var(--sbc-font)"};
+  const col={display:"flex",flexDirection:"column",gap:8};
+
+  return <div style={{maxWidth:640,display:"flex",flexDirection:"column",gap:20,paddingBottom:mob?90:30}}>
+    <style>{"@keyframes mlpop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}.ml-pop{animation:mlpop .35s ease}@keyframes mlspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.ml-pop,.ml-spin{animation:none!important}}"}</style>
+    <canvas ref={cv} aria-hidden="true" style={{position:"fixed",inset:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:950}}/>
+
+    <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+      <div role="img" aria-label={`${tDone} of ${tAll.length} of today's to-dos done`} style={{position:"relative",width:84,height:84,flex:"none"}}>
+        <svg viewBox="0 0 84 84" width="84" height="84" style={{transform:"rotate(-90deg)"}}>
+          <circle cx="42" cy="42" r="36" fill="none" stroke={C.b3} strokeWidth="9"/>
+          <circle cx="42" cy="42" r="36" fill="none" stroke={C.gr} strokeWidth="9" strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={CIRC*(1-frac)} style={{transition:"stroke-dashoffset .5s ease"}}/>
+        </svg>
+        <b style={{position:"absolute",inset:0,display:"grid",placeItems:"center",fontFamily:"var(--sbc-display)",fontSize:19}}>{tDone}/{tAll.length}</b>
+      </div>
+      <div style={{flex:"1 1 180px",minWidth:0}}>
+        <h1 style={{fontSize:mob?22:26,fontWeight:700,fontFamily:"var(--sbc-display)",margin:0,lineHeight:1.1}}>{head}</h1>
+        <p style={{margin:"3px 0 0",color:C.w3,fontSize:13}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · {open.length} open in all · only you can see this tab</p>
+      </div>
+      <div role="img" aria-label={`${weekN} finished in the last 7 days`} style={{flex:"none",display:"flex",flexDirection:"column",gap:4}}>
+        <div style={{display:"flex",alignItems:"flex-end",gap:5,height:44}}>
+          {days.map(d=><div key={d.k} title={`${d.n} finished`} style={{width:14,height:Math.max(4,Math.round(44*d.n/maxN)),borderRadius:4,background:d.k===today?C.bl:d.n?C.gr:C.b3}}/>)}
+        </div>
+        <div style={{display:"flex",gap:5}}>{days.map(d=><span key={d.k} style={{width:14,fontSize:9,textAlign:"center",color:d.k===today?C.bl:C.w3,fontWeight:d.k===today?700:500}}>{d.lb}</span>)}</div>
+        <div style={{fontSize:11,color:C.w3}}>{weekN} done in 7 days</div>
+      </div>
+    </div>
+
+    {tAll.length>0&&left===0&&<div style={{display:"flex",alignItems:"center",gap:14,background:C.grl,border:`1px solid ${C.gr}`,borderRadius:14,padding:"12px 16px"}}>
+      <svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true" style={{flex:"none"}}>
+        <g className="ml-spin" style={{transformOrigin:"32px 32px",animation:"mlspin 14s linear infinite"}}>{[...Array(12)].map((_,i)=><rect key={i} x="30.5" y="1" width="3" height="9" rx="1.5" fill={C.gr} opacity={i%2?0.45:0.9} transform={`rotate(${i*30} 32 32)`}/>)}</g>
+        <circle cx="32" cy="32" r="18" fill={C.gr}/>
+        <path d="M23 32.5l6 6 12-13" fill="none" stroke={C.bg} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      <div><div style={{fontSize:16,fontWeight:700,fontFamily:"var(--sbc-display)"}}>Everything for today is done.</div><div style={{fontSize:13,color:C.w2}}>Pull something up from This week, or call it a day.</div></div>
+    </div>}
+
+    <form onSubmit={add} autoComplete="off" style={{background:C.b2,border:`1px solid ${C.bd}`,borderRadius:14,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{display:"flex",gap:8}}>
+        <input value={text} onChange={e=>setText(e.target.value)} maxLength={140} aria-label="New to-do" placeholder="Add a to-do" style={{...S.inp,marginBottom:0,flex:1,minWidth:0,height:46,fontSize:16}}/>
+        <button type="submit" style={{...S.btn,height:46,padding:"0 18px",fontSize:15,borderRadius:8,opacity:text.trim()?1:0.6}}>Add</button>
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}} role="group" aria-label="When and how urgent">
+        {ML_WHEN.map(([w,lb])=><button type="button" key={w} aria-pressed={when===w} onClick={()=>setWhen(w)} style={chip(when===w)}>{lb}</button>)}
+        <button type="button" aria-pressed={hot} onClick={()=>setHot(v=>!v)} style={chip(hot,true)}>Urgent</button>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <select aria-label="Job" value={job} onChange={e=>setJob(e.target.value)} style={sel}><option value="">No job</option>{proj.filter(p=>!p.closed).slice().sort((a,b)=>String(a.clientName).localeCompare(String(b.clientName))).map(p=><option key={p.id} value={p.id}>{p.clientName}</option>)}</select>
+        <select aria-label="Repeats" value={rep} onChange={e=>setRep(e.target.value)} style={sel}>{ML_REPEAT.map(([v,lb])=><option key={v} value={v}>{lb}</option>)}</select>
+      </div>
+    </form>
+
+    <section style={{...col,background:C.bll,border:`1px solid ${C.bl}`,borderRadius:14,padding:14}}>
+      <h2 style={h2}>The Big 3 <span style={sub}>Star up to three. Do these first.</span></h2>
+      {big.length?big.map(row):<div style={{color:C.w2,fontSize:13}}>Tap the star on up to three to-dos to pin them here.</div>}
+    </section>
+    {ML_WHEN.map(([w,lb])=>{const list=open.filter(k=>k.w===w&&!k.star).sort((a,b)=>(b.hot?1:0)-(a.hot?1:0));return <section key={w} style={col}>
+      <h2 style={h2}>{lb} <span style={sub}>{open.filter(k=>k.w===w).length} open</span></h2>
+      {list.length?list.map(row):<div style={{color:C.w3,fontSize:13,padding:"2px 2px 6px"}}>{open.some(k=>k.w===w)?"The rest are in the Big 3.":w==="today"?"Nothing for today yet.":"Nothing here."}</div>}
+    </section>;})}
+    {done.length>0&&<section style={col}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+        <button onClick={()=>setShowDone(v=>!v)} aria-expanded={showDone} style={{background:"none",border:"none",color:C.bl,cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"inherit",padding:"8px 2px"}}>{showDone?"Hide":"Show"} finished ({done.length})</button>
+        {showDone&&done.some(k=>!k.repeat)&&<button onClick={clearDone} style={{...S.bs,fontSize:12,padding:"6px 12px"}}>Clear finished</button>}
+      </div>
+      {showDone&&done.map(row)}
+    </section>}
+
+    {toast&&<div role="status" style={{position:"fixed",left:"50%",bottom:mob?84:24,transform:"translateX(-50%)",background:C.w,color:C.bg,borderRadius:12,padding:"10px 12px 10px 16px",display:"flex",gap:12,alignItems:"center",fontWeight:600,fontSize:14,boxShadow:"0 8px 30px rgba(0,0,0,.45)",maxWidth:"calc(100% - 32px)",zIndex:960}}>
+      <span>{toast.msg}</span>{toast.undo&&<button onClick={()=>{toast.undo();setToast(null);}} style={{border:"none",background:C.bg,color:C.w,borderRadius:8,height:36,padding:"0 12px",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Undo</button>}
+    </div>}
+  </div>;
 }
 
 const LEAD_STATUSES=["New","Contacted","Estimate Sent","Not a fit"];
