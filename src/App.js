@@ -46,6 +46,9 @@ const SKINS={
   coast:{name:"Coastal",note:"Light sea glass and teal",
     vars:{bg:"#EAF1F0",b2:"#FCFEFD",b3:"#EEF5F3",bd:"#C4D6D2",bl:"#0C7C7A",bll:"#D6EEEB",gr:"#2E7D4A",grl:"#DDF0E3",w:"#12262A",w2:"#3A5156",w3:"#5F777B",rd:"#C63A32",rdb:"#FBE5E2",or:"#9A5B00",orb:"#F8ECD6",on:"#FFFFFF",cy:"#0B7285",t1:"#2E7D4A",t2:"#C25E10",t3:"#6850B5",t4:"#C63A32",t5:"#1F5FA8",t6:"#8A7000",t2b:"#F9E8D6",t3b:"#EAE4F6",ont6:"#FFFFFF",warn:"#FBECEA",chip:"#DFEAE8"},
     font:"'Archivo',system-ui,sans-serif",display:"'Sora',system-ui,sans-serif"},
+  pink:{name:"Pink",note:"Soft blush with a strong pink",
+    vars:{bg:"#FBEFF3",b2:"#FFFFFF",b3:"#FDF3F6",bd:"#EBC9D5",bl:"#C2185B",bll:"#FBDCE7",gr:"#1F8A4C",grl:"#DEF3E6",w:"#2A1620",w2:"#583846",w3:"#80606D",rd:"#C8322B",rdb:"#FDE7E5",or:"#9A5B00",orb:"#FBEED6",on:"#FFFFFF",cy:"#0E7490",t1:"#1F8A4C",t2:"#C2570A",t3:"#7B3FC4",t4:"#C8322B",t5:"#2563EB",t6:"#8A6D00",t2b:"#FBE9D7",t3b:"#EFE5FB",ont6:"#FFFFFF",warn:"#FDEEEC",chip:"#F6DFE7"},
+    font:"'Plus Jakarta Sans',system-ui,sans-serif",display:"'Sora',system-ui,sans-serif"},
 };
 const DEFAULT_SKIN="sbc";
 const applySkin=k=>{
