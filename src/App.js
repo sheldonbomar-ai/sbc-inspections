@@ -101,10 +101,12 @@ const DT=[{p:"S",l:"Final Structural"},{p:"S",l:"Insulation"},{p:"S",l:"Framing"
 const PN={S:"Structural",P:"Plumbing",E:"Electrical",M:"Mechanical",R:"Roofing",W:"Windows/Doors"};
 const SM={W:"Windows & Doors",R:"Roofing",S:"Structural",E:"Electrical",P:"Plumbing",M:"Mechanical"};
 const CREWS=[
-{id:"robin",name:"Robin",color:"#84C778"},{id:"robinjr",name:"Robin Jr",color:"#3B8BF5"},{id:"onel",name:"Onel",color:"#2DD4BF"},{id:"alfredo",name:"Alfredo",color:"#818CF8"},{id:"renee",name:"Rene",color:"#C084FC"},
+// Main crew first, in the order the owner wants them listed.
+{id:"alfredo",name:"Alfredo",color:"#818CF8"},{id:"robin",name:"Robin",color:"#84C778"},{id:"renee",name:"Rene",color:"#C084FC"},{id:"mary",name:"Marbely",color:"#FB7185"},
+{id:"robinjr",name:"Robin Jr",color:"#3B8BF5"},{id:"onel",name:"Onel",color:"#2DD4BF"},
 {id:"marcos",name:"Marcos Roofing",color:"#FB923C"},{id:"jose",name:"Jose Roofing",color:"#FBBF24"},
 {id:"bob",name:"Bob Windows",color:"#A78BFA"},
-{id:"manny",name:"Manny",color:"#F472B6"},{id:"roger",name:"Roger",color:"#38BDF8"},{id:"rudy",name:"Rudy",color:"#34D399"},{id:"john",name:"John (Gutters)",color:"#E879F9"},{id:"mary",name:"Marbely",color:"#FB7185"},
+{id:"manny",name:"Manny",color:"#F472B6"},{id:"roger",name:"Roger",color:"#38BDF8"},{id:"rudy",name:"Rudy",color:"#34D399"},{id:"john",name:"John (Gutters)",color:"#E879F9"},
 {id:"pete",name:"Pete Plumbing",color:"#22D3EE"},{id:"lashawn",name:"Lashawn Electrical",color:"#F87171"},{id:"richard",name:"Richard Barba Mechanical",color:"#FCD34D"}
 ];
 const fT=(t,ct=[])=>{const f=[...DT,...ct].find(x=>x.l===t);return f?`${f.p}- ${f.l}`:t;};
@@ -1222,8 +1224,10 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
   const ws=new Date(week+"T00:00:00");const days=Array.from({length:5},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return ymd(d);});
   const active=[...proj].filter(p=>!isClosed(p)).sort((a,b)=>a.clientName.localeCompare(b.clientName,undefined,{sensitivity:"base"}));
   const getAssign=(crewId,date)=>sched.filter(s=>s.crewId===crewId&&s.date===date);
-  const addAssign=(crewId,date,projectId,notes)=>{setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||""}]);const cr=CREWS.find(c=>c.id===crewId);const p=proj.find(x=>x.id===projectId);if(logAct)logAct("scheduled crew",`${cr?.name||crewId} → ${p?.clientName||"?"} on ${fmt(date)}`);};
-  const rmAssign=(id)=>{const a=sched.find(s=>s.id===id);const cr=CREWS.find(c=>c.id===a?.crewId);const p=proj.find(x=>x.id===a?.projectId);if(logAct)logAct("removed crew assignment",`${cr?.name||"?"} from ${p?.clientName||"?"}`);setSched(v=>v.filter(s=>s.id!==id));};
+  // An old or finished job that is not in the tracker (a service call, a fix) is saved with projectId "OTHER" and its name in job.
+  const jobName=a=>a.projectId==="OTHER"?(a.job||"Old job"):(proj.find(x=>x.id===a.projectId)?.clientName||"?");
+  const addAssign=(crewId,date,projectId,notes,job)=>{setSched(v=>[...v,{id:uid(),crewId,date,projectId,notes:notes||"",...(projectId==="OTHER"?{job:job||""}:{})}]);const cr=CREWS.find(c=>c.id===crewId);if(logAct)logAct("scheduled crew",`${cr?.name||crewId} → ${jobName({projectId,job})} on ${fmt(date)}`);};
+  const rmAssign=(id)=>{const a=sched.find(s=>s.id===id);const cr=CREWS.find(c=>c.id===a?.crewId);if(logAct)logAct("removed crew assignment",`${cr?.name||"?"} from ${a?jobName(a):"?"}`);setSched(v=>v.filter(s=>s.id!==id));};
   return <>
     <div style={{...S.fxsb,marginBottom:16,flexWrap:"wrap",gap:8}}><div><h1 style={{fontSize:20,fontWeight:700,fontFamily:"var(--sbc-display)",margin:0}}>CREW SCHEDULING</h1><p style={{fontSize:11,color:C.w3,marginTop:3}}>{fmt(days[0])} — {fmt(days[4])}</p></div></div>
     <div style={{...S.fx,gap:6,marginBottom:16}}><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()-7);sWk(ymd(d));}}>←</button><button style={{...S.bs,color:C.bl}} onClick={()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);sWk(ymd(d));}}>This Week</button><button style={S.bs} onClick={()=>{const d=new Date(ws);d.setDate(d.getDate()+7);sWk(ymd(d));}}>→</button></div>
@@ -1239,7 +1243,7 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
             <div style={{...S.fxc,gap:6,marginBottom:6}}><div style={{width:10,height:10,borderRadius:"50%",background:cr.color}}/><span style={{fontSize:13,fontWeight:700,color:cr.color}}>{cr.name}</span></div>
             {assigns.map(a=>{const p=proj.find(x=>x.id===a.projectId);return(
               <div key={a.id} style={{background:A(cr.color,"14"),border:`1px solid ${A(cr.color,"33")}`,borderRadius:8,padding:"8px 12px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:11,color:C.w3,marginTop:2}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>}{a.notes&&<div style={{fontSize:11,color:cr.color,marginTop:3,fontWeight:500}}>{a.notes}</div>}</div>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{jobName(a)}</div>{a.projectId==="OTHER"&&<div style={{fontSize:11,color:C.w3}}>Old job, service call</div>}{p?.city&&<div style={{fontSize:11,color:C.w3,marginTop:2}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>}{a.notes&&<div style={{fontSize:11,color:cr.color,marginTop:3,fontWeight:500}}>{a.notes}</div>}</div>
                 <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:14,padding:"6px",marginLeft:8}} onClick={()=>rmAssign(a.id)}>✕</button>
               </div>);})}
           </div>;})}
@@ -1265,7 +1269,7 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
                     <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
                   </div>:
                   <div key={a.id} style={{background:A(cr.color,"18"),border:`1px solid ${A(cr.color,"44")}`,borderRadius:6,padding:"4px 8px",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{p?.clientName||"?"}</div>{p?.city&&<div style={{fontSize:9,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>}{a.notes&&<div style={{fontSize:9,color:cr.color,marginTop:1}}>{a.notes}</div>}</div>
+                    <div><div style={{fontSize:11,fontWeight:600,color:C.w}}>{jobName(a)}</div>{a.projectId==="OTHER"&&<div style={{fontSize:9,color:C.w3}}>Old job, service call</div>}{p?.city&&<div style={{fontSize:9,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>}{a.notes&&<div style={{fontSize:9,color:cr.color,marginTop:1}}>{a.notes}</div>}</div>
                     <button style={{background:"none",border:"none",color:C.rd,cursor:"pointer",fontSize:10,padding:"2px"}} onClick={()=>rmAssign(a.id)}>✕</button>
                   </div>;})}
                 <div style={{display:"flex",gap:4}}>
@@ -1287,7 +1291,7 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
         <div style={{borderTop:`1px solid ${C.bd}`,paddingTop:10,marginBottom:6}}><div style={S.lb}>Or mark crew as off</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{CREWS.map(cr=><button key={cr.id} onClick={()=>{addAssign(cr.id,assignCrew.date,"OFF","");setAssignCrew(null);}} style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${A(C.w3,"44")}`,background:A(C.w3,"14"),color:C.w3,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{cr.name}</button>)}</div></div></>}
       {assignCrew.crewId&&<><div style={S.lb}>Search Project</div>
-      <AssignPicker projects={active} onPick={(pid,notes)=>{addAssign(assignCrew.crewId,assignCrew.date,pid,notes);setAssignCrew(null);}}/></>}
+      <AssignPicker projects={active} onPick={(pid,notes,job)=>{addAssign(assignCrew.crewId,assignCrew.date,pid,notes,job);setAssignCrew(null);}}/></>}
     </div></div>}
 
     {/* PAYROLL SUMMARY */}
@@ -1335,20 +1339,22 @@ function SchedTab({proj,sched,setSched,week,sWk,mob,logAct}){
   </>;
 }
 function AssignPicker({projects,onPick}){
-  const[sr,sSr]=useState("");const[pid,sPid]=useState("");const[notes,sN]=useState("");
+  const[sr,sSr]=useState("");const[pid,sPid]=useState("");const[notes,sN]=useState("");const[old,sOld]=useState("");
   const fl=projects.filter(p=>(p.clientName+" "+p.city+" "+p.address).toLowerCase().includes(sr.toLowerCase()));
   return <div>
     <input style={S.inp} value={sr} onChange={e=>sSr(e.target.value)} placeholder="Search by name, city, address..."/>
     <div style={{maxHeight:200,overflow:"auto",marginBottom:10}}>
-      {fl.map(p=><div key={p.id} onClick={()=>sPid(p.id)} style={{padding:"8px 12px",cursor:"pointer",background:pid===p.id?C.bll:"transparent",borderBottom:`1px solid ${C.bd}`,borderRadius:pid===p.id?6:0}}>
+      {fl.map(p=><div key={p.id} onClick={()=>{sPid(p.id);sOld("");}} style={{padding:"8px 12px",cursor:"pointer",background:pid===p.id?C.bll:"transparent",borderBottom:`1px solid ${C.bd}`,borderRadius:pid===p.id?6:0}}>
         <div style={{fontSize:12,fontWeight:pid===p.id?700:500,color:pid===p.id?C.bl:C.w}}>{p.clientName}</div>
         <div style={{fontSize:10,color:C.w3}}>{p.city}{p.address&&p.address!=="TBD"?<> · <AddrLink a={p.address} c={p.city}/></>:""}</div>
       </div>)}
       {!fl.length&&<p style={{fontSize:11,color:C.w3,padding:8}}>No matching projects</p>}
     </div>
+    <div style={S.lb}>Or an old job not on this list</div>
+    <input style={S.inp} value={old} onChange={e=>{sOld(e.target.value);if(e.target.value)sPid("");}} maxLength={60} placeholder="Type the name, e.g. Rivera (service call)"/>
     <div style={S.lb}>Notes (optional)</div>
     <input style={S.inp} value={notes} onChange={e=>sN(e.target.value)} placeholder="e.g. framing, drywall, start at 7am"/>
-    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:pid?1:0.5}} onClick={()=>{if(pid)onPick(pid,notes);}}>Assign</button></div>
+    <div style={{...S.fx,justifyContent:"flex-end"}}><button style={{...S.btn,opacity:pid||old.trim()?1:0.5}} onClick={()=>{if(pid)onPick(pid,notes);else if(old.trim())onPick("OTHER",notes,old.trim());}}>Assign</button></div>
   </div>;
 }
 function LinksSection({links,onAdd,onDel,onUpdate,projectId,mob,logAct,projectName,permitCards,setPermitCards,clientName,permitNum}){
