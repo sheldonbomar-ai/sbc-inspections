@@ -38,12 +38,12 @@ const SKINS={
     vars:{bg:"#FBEFF3",b2:"#FFFFFF",b3:"#FDF3F6",bd:"#EBC9D5",bl:"#C2185B",bll:"#FBDCE7",gr:"#1F8A4C",grl:"#DEF3E6",w:"#2A1620",w2:"#583846",w3:"#80606D",rd:"#C8322B",rdb:"#FDE7E5",or:"#9A5B00",orb:"#FBEED6",on:"#FFFFFF",cy:"#0E7490",t1:"#1F8A4C",t2:"#C2570A",t3:"#7B3FC4",t4:"#C8322B",t5:"#2563EB",t6:"#8A6D00",t2b:"#FBE9D7",t3b:"#EFE5FB",ont6:"#FFFFFF",warn:"#FDEEEC",chip:"#F6DFE7"}},
 };
 const DEFAULT_SKIN="sbc";
-// Every look uses the same text font, so only the colors change between them.
-const APP_FONT="system-ui,sans-serif";
+// Every look uses the same fonts (the Night Shift pair), so only the colors change between them.
+const APP_FONT="'Plus Jakarta Sans',system-ui,sans-serif",APP_DISPLAY="'Sora',system-ui,sans-serif";
 const applySkin=k=>{
   const s=SKINS[k]||SKINS[DEFAULT_SKIN],r=document.documentElement.style;
   Object.entries(s.vars).forEach(([t,v])=>r.setProperty("--sbc-"+t,v));
-  r.setProperty("--sbc-font",APP_FONT);r.setProperty("--sbc-display",APP_FONT);
+  r.setProperty("--sbc-font",APP_FONT);r.setProperty("--sbc-display",APP_DISPLAY);
   r.setProperty("background-color",s.vars.bg);
   document.documentElement.dataset.sbcSkin=SKINS[k]?k:DEFAULT_SKIN;
   try{localStorage.setItem("sbc-skin",k);}catch(e){}
