@@ -11,50 +11,39 @@ import { httpsCallable } from "firebase/functions";
 // "sbc" is the original SBC look and stays the default.
 const SKINS={
   sbc:{name:"SBC Classic",note:"The original SBC look",
-    vars:{bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#84C778",grl:"#22361F",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C",on:"#fff",cy:"#22D3EE",t1:"#84C778",t2:"#FB923C",t3:"#A78BFA",t4:"#F87171",t5:"#3B8BF5",t6:"#FCD34D",t2b:"#3B2410",t3b:"#2D1F4E",ont6:"#1A1A1A",warn:"#2A1A1A",chip:"#26313f"},
-    font:"system-ui,sans-serif",display:"system-ui,sans-serif"},
+    vars:{bg:"#0F1419",b2:"#1A2332",b3:"#222E3C",bd:"#2D3B4E",bl:"#3B8BF5",bll:"#1C3A5E",gr:"#84C778",grl:"#22361F",w:"#E8ECF1",w2:"#A0AEBF",w3:"#6B7D92",rd:"#F87171",rdb:"#3B1C1C",or:"#FBBF24",orb:"#3B2E1C",on:"#fff",cy:"#22D3EE",t1:"#84C778",t2:"#FB923C",t3:"#A78BFA",t4:"#F87171",t5:"#3B8BF5",t6:"#FCD34D",t2b:"#3B2410",t3b:"#2D1F4E",ont6:"#1A1A1A",warn:"#2A1A1A",chip:"#26313f"}},
   night:{name:"Night Shift",note:"Deep navy with lime and cyan",
-    vars:{bg:"#0B1020",b2:"#121A30",b3:"#18203A",bd:"#2C3A60",bl:"#4A82FF",bll:"#18285A",gr:"#C6FF3D",grl:"#25310F",w:"#F3F6FF",w2:"#A8B4D4",w3:"#7886AB",rd:"#FF6B7A",rdb:"#36172A",or:"#FFB13D",orb:"#36280F",on:"#06121F",cy:"#22E3D9",t1:"#C6FF3D",t2:"#FF9A4D",t3:"#B98CFF",t4:"#FF6B7A",t5:"#6F9BFF",t6:"#FFD35C",t2b:"#3A2614",t3b:"#2A2148",ont6:"#06121F",warn:"#2A1524",chip:"#1E2947"},
-    font:"'Plus Jakarta Sans',system-ui,sans-serif",display:"'Sora',system-ui,sans-serif"},
+    vars:{bg:"#0B1020",b2:"#121A30",b3:"#18203A",bd:"#2C3A60",bl:"#4A82FF",bll:"#18285A",gr:"#C6FF3D",grl:"#25310F",w:"#F3F6FF",w2:"#A8B4D4",w3:"#7886AB",rd:"#FF6B7A",rdb:"#36172A",or:"#FFB13D",orb:"#36280F",on:"#06121F",cy:"#22E3D9",t1:"#C6FF3D",t2:"#FF9A4D",t3:"#B98CFF",t4:"#FF6B7A",t5:"#6F9BFF",t6:"#FFD35C",t2b:"#3A2614",t3b:"#2A2148",ont6:"#06121F",warn:"#2A1524",chip:"#1E2947"}},
   plan:{name:"Plan Set",note:"Light, reads in sunlight, prints clean",
-    vars:{bg:"#E9EDEB",b2:"#FBFCFB",b3:"#F0F3F1",bd:"#C9D1CD",bl:"#1E4F91",bll:"#DDE7F4",gr:"#2F7D4F",grl:"#E0EFE5",w:"#16202A",w2:"#3F4D5A",w3:"#667380",rd:"#C8352E",rdb:"#FBE6E3",or:"#9C5D00",orb:"#F7ECD9",on:"#FFFFFF",cy:"#0F7C86",t1:"#2F7D4F",t2:"#C0620B",t3:"#6B4FB3",t4:"#C8352E",t5:"#1E4F91",t6:"#8F7200",t2b:"#F8E8D6",t3b:"#E9E3F6",ont6:"#FFFFFF",warn:"#FBEDEB",chip:"#E2E7E4"},
-    font:"'Archivo',system-ui,sans-serif",display:"'Archivo',system-ui,sans-serif"},
+    vars:{bg:"#E9EDEB",b2:"#FBFCFB",b3:"#F0F3F1",bd:"#C9D1CD",bl:"#1E4F91",bll:"#DDE7F4",gr:"#2F7D4F",grl:"#E0EFE5",w:"#16202A",w2:"#3F4D5A",w3:"#667380",rd:"#C8352E",rdb:"#FBE6E3",or:"#9C5D00",orb:"#F7ECD9",on:"#FFFFFF",cy:"#0F7C86",t1:"#2F7D4F",t2:"#C0620B",t3:"#6B4FB3",t4:"#C8352E",t5:"#1E4F91",t6:"#8F7200",t2b:"#F8E8D6",t3b:"#E9E3F6",ont6:"#FFFFFF",warn:"#FBEDEB",chip:"#E2E7E4"}},
   hivis:{name:"Hi-Vis",note:"Built for the truck, big and bright",
-    vars:{bg:"#1B1A18",b2:"#252421",b3:"#2E2D29",bd:"#46443E",bl:"#F2C200",bll:"#3A3113",gr:"#7BC96F",grl:"#1F2D1C",w:"#F2EFE8",w2:"#C2BDB2",w3:"#99948A",rd:"#F0524A",rdb:"#3A1D1A",or:"#FF8A1F",orb:"#3B2614",on:"#1B1A18",cy:"#5ED6E0",t1:"#7BC96F",t2:"#FF8A1F",t3:"#B89CFF",t4:"#F0524A",t5:"#5EA8FF",t6:"#F2C200",t2b:"#3B2614",t3b:"#2C2740",ont6:"#1B1A18",warn:"#33201D",chip:"#33322E"},
-    font:"'Barlow',system-ui,sans-serif",display:"'Barlow Condensed',system-ui,sans-serif"},
+    vars:{bg:"#1B1A18",b2:"#252421",b3:"#2E2D29",bd:"#46443E",bl:"#F2C200",bll:"#3A3113",gr:"#7BC96F",grl:"#1F2D1C",w:"#F2EFE8",w2:"#C2BDB2",w3:"#99948A",rd:"#F0524A",rdb:"#3A1D1A",or:"#FF8A1F",orb:"#3B2614",on:"#1B1A18",cy:"#5ED6E0",t1:"#7BC96F",t2:"#FF8A1F",t3:"#B89CFF",t4:"#F0524A",t5:"#5EA8FF",t6:"#F2C200",t2b:"#3B2614",t3b:"#2C2740",ont6:"#1B1A18",warn:"#33201D",chip:"#33322E"}},
   graphite:{name:"Graphite",note:"Neutral dark gray with teal",
-    vars:{bg:"#121314",b2:"#1C1E20",b3:"#25282B",bd:"#383C41",bl:"#2DD4BF",bll:"#123B37",gr:"#86D17E",grl:"#1F3320",w:"#ECEEF0",w2:"#B0B6BD",w3:"#838A93",rd:"#F87171",rdb:"#3A1D1D",or:"#F5B83D",orb:"#3A2D14",on:"#06201C",cy:"#5CC8F0",t1:"#86D17E",t2:"#FB923C",t3:"#B79CFF",t4:"#F87171",t5:"#5EA8FF",t6:"#F5D04D",t2b:"#3A2412",t3b:"#2B2445",ont6:"#1A1A1A",warn:"#2B1B1B",chip:"#2A2D31"},
-    font:"system-ui,sans-serif",display:"system-ui,sans-serif"},
+    vars:{bg:"#121314",b2:"#1C1E20",b3:"#25282B",bd:"#383C41",bl:"#2DD4BF",bll:"#123B37",gr:"#86D17E",grl:"#1F3320",w:"#ECEEF0",w2:"#B0B6BD",w3:"#838A93",rd:"#F87171",rdb:"#3A1D1D",or:"#F5B83D",orb:"#3A2D14",on:"#06201C",cy:"#5CC8F0",t1:"#86D17E",t2:"#FB923C",t3:"#B79CFF",t4:"#F87171",t5:"#5EA8FF",t6:"#F5D04D",t2b:"#3A2412",t3b:"#2B2445",ont6:"#1A1A1A",warn:"#2B1B1B",chip:"#2A2D31"}},
   blueprint:{name:"Blueprint",note:"Blue drafting paper with white lines",
-    vars:{bg:"#0C2340",b2:"#12305A",b3:"#183A6B",bd:"#3A5F96",bl:"#7FD4FF",bll:"#1D4A80",gr:"#8EE6A0",grl:"#17463F",w:"#F2F7FF",w2:"#BCD0EC",w3:"#8FA9CF",rd:"#FF8A8A",rdb:"#4A2540",or:"#FFC857",orb:"#4A3B2A",on:"#06213D",cy:"#6FE8E0",t1:"#8EE6A0",t2:"#FFA860",t3:"#C9B0FF",t4:"#FF8A8A",t5:"#9CC4FF",t6:"#FFE07A",t2b:"#4A3324",t3b:"#33346E",ont6:"#1A1A1A",warn:"#3B2440",chip:"#1F4175"},
-    font:"'Archivo',system-ui,sans-serif",display:"'IBM Plex Mono',ui-monospace,monospace"},
+    vars:{bg:"#0C2340",b2:"#12305A",b3:"#183A6B",bd:"#3A5F96",bl:"#7FD4FF",bll:"#1D4A80",gr:"#8EE6A0",grl:"#17463F",w:"#F2F7FF",w2:"#BCD0EC",w3:"#8FA9CF",rd:"#FF8A8A",rdb:"#4A2540",or:"#FFC857",orb:"#4A3B2A",on:"#06213D",cy:"#6FE8E0",t1:"#8EE6A0",t2:"#FFA860",t3:"#C9B0FF",t4:"#FF8A8A",t5:"#9CC4FF",t6:"#FFE07A",t2b:"#4A3324",t3b:"#33346E",ont6:"#1A1A1A",warn:"#3B2440",chip:"#1F4175"}},
   paper:{name:"Paper",note:"Warm cream with rust, like a printed estimate",
-    vars:{bg:"#EFE9DD",b2:"#FBF8F1",b3:"#F3EEE2",bd:"#D3C9B5",bl:"#8A3B1F",bll:"#F3E0D6",gr:"#3F7A3A",grl:"#E3EEDD",w:"#24201A",w2:"#4D463B",w3:"#746B5C",rd:"#B8322A",rdb:"#F8E2DE",or:"#8F5A00",orb:"#F5E8CF",on:"#FFFFFF",cy:"#1F7377",t1:"#3F7A3A",t2:"#B5560A",t3:"#6A4BA8",t4:"#B8322A",t5:"#2B5C9E",t6:"#856B00",t2b:"#F6E5D2",t3b:"#EAE2F4",ont6:"#FFFFFF",warn:"#FAEBE7",chip:"#E8E1D2"},
-    font:"'Archivo',system-ui,sans-serif",display:"'Fraunces',Georgia,serif"},
+    vars:{bg:"#EFE9DD",b2:"#FBF8F1",b3:"#F3EEE2",bd:"#D3C9B5",bl:"#8A3B1F",bll:"#F3E0D6",gr:"#3F7A3A",grl:"#E3EEDD",w:"#24201A",w2:"#4D463B",w3:"#746B5C",rd:"#B8322A",rdb:"#F8E2DE",or:"#8F5A00",orb:"#F5E8CF",on:"#FFFFFF",cy:"#1F7377",t1:"#3F7A3A",t2:"#B5560A",t3:"#6A4BA8",t4:"#B8322A",t5:"#2B5C9E",t6:"#856B00",t2b:"#F6E5D2",t3b:"#EAE2F4",ont6:"#FFFFFF",warn:"#FAEBE7",chip:"#E8E1D2"}},
   brick:{name:"Brick",note:"Warm charcoal with terracotta",
-    vars:{bg:"#1A1412",b2:"#251C19",b3:"#2F2420",bd:"#4A3A33",bl:"#E0714A",bll:"#40231A",gr:"#9BC77A",grl:"#263019",w:"#F3EAE4",w2:"#C7B7AD",w3:"#9A897F",rd:"#F26B6B",rdb:"#3D1B1B",or:"#F2B03D",orb:"#3B2B12",on:"#1A0E0A",cy:"#6CCFD6",t1:"#9BC77A",t2:"#F29A4A",t3:"#BFA0F5",t4:"#F26B6B",t5:"#6FA8F0",t6:"#F2CC55",t2b:"#3B2614",t3b:"#2E2542",ont6:"#1A1A1A",warn:"#33201C",chip:"#332823"},
-    font:"'Plus Jakarta Sans',system-ui,sans-serif",display:"'Sora',system-ui,sans-serif"},
+    vars:{bg:"#1A1412",b2:"#251C19",b3:"#2F2420",bd:"#4A3A33",bl:"#E0714A",bll:"#40231A",gr:"#9BC77A",grl:"#263019",w:"#F3EAE4",w2:"#C7B7AD",w3:"#9A897F",rd:"#F26B6B",rdb:"#3D1B1B",or:"#F2B03D",orb:"#3B2B12",on:"#1A0E0A",cy:"#6CCFD6",t1:"#9BC77A",t2:"#F29A4A",t3:"#BFA0F5",t4:"#F26B6B",t5:"#6FA8F0",t6:"#F2CC55",t2b:"#3B2614",t3b:"#2E2542",ont6:"#1A1A1A",warn:"#33201C",chip:"#332823"}},
   pine:{name:"Pine",note:"Deep green with amber",
-    vars:{bg:"#0E1713",b2:"#15221C",b3:"#1C2C25",bd:"#2F463B",bl:"#E8B23A",bll:"#3A3015",gr:"#7FD99A",grl:"#183424",w:"#EAF2EC",w2:"#AFC2B6",w3:"#7F968A",rd:"#F47C7C",rdb:"#3A1E1E",or:"#FF9F45",orb:"#3B2814",on:"#1A1405",cy:"#5ED6C8",t1:"#7FD99A",t2:"#FF9F45",t3:"#B9A0FF",t4:"#F47C7C",t5:"#6CB0FF",t6:"#E8D25A",t2b:"#3B2814",t3b:"#2A2946",ont6:"#1A1A1A",warn:"#2C1F1D",chip:"#22332B"},
-    font:"'Barlow',system-ui,sans-serif",display:"'Barlow',system-ui,sans-serif"},
+    vars:{bg:"#0E1713",b2:"#15221C",b3:"#1C2C25",bd:"#2F463B",bl:"#E8B23A",bll:"#3A3015",gr:"#7FD99A",grl:"#183424",w:"#EAF2EC",w2:"#AFC2B6",w3:"#7F968A",rd:"#F47C7C",rdb:"#3A1E1E",or:"#FF9F45",orb:"#3B2814",on:"#1A1405",cy:"#5ED6C8",t1:"#7FD99A",t2:"#FF9F45",t3:"#B9A0FF",t4:"#F47C7C",t5:"#6CB0FF",t6:"#E8D25A",t2b:"#3B2814",t3b:"#2A2946",ont6:"#1A1A1A",warn:"#2C1F1D",chip:"#22332B"}},
   daylight:{name:"Daylight",note:"Clean white with bright blue",
-    vars:{bg:"#F3F5F8",b2:"#FFFFFF",b3:"#F0F2F6",bd:"#D5DAE2",bl:"#2563EB",bll:"#E0EAFF",gr:"#1F8A4C",grl:"#DEF3E6",w:"#111827",w2:"#3D4757",w3:"#667085",rd:"#D0342C",rdb:"#FDE7E5",or:"#A15C00",orb:"#FBEED6",on:"#FFFFFF",cy:"#0E7490",t1:"#1F8A4C",t2:"#C2570A",t3:"#6D46C9",t4:"#D0342C",t5:"#2563EB",t6:"#8A6D00",t2b:"#FBE9D7",t3b:"#ECE5FB",ont6:"#FFFFFF",warn:"#FDEEEC",chip:"#E6EAF0"},
-    font:"'Plus Jakarta Sans',system-ui,sans-serif",display:"'Plus Jakarta Sans',system-ui,sans-serif"},
+    vars:{bg:"#F3F5F8",b2:"#FFFFFF",b3:"#F0F2F6",bd:"#D5DAE2",bl:"#2563EB",bll:"#E0EAFF",gr:"#1F8A4C",grl:"#DEF3E6",w:"#111827",w2:"#3D4757",w3:"#667085",rd:"#D0342C",rdb:"#FDE7E5",or:"#A15C00",orb:"#FBEED6",on:"#FFFFFF",cy:"#0E7490",t1:"#1F8A4C",t2:"#C2570A",t3:"#6D46C9",t4:"#D0342C",t5:"#2563EB",t6:"#8A6D00",t2b:"#FBE9D7",t3b:"#ECE5FB",ont6:"#FFFFFF",warn:"#FDEEEC",chip:"#E6EAF0"}},
   blackout:{name:"Blackout",note:"True black with orange, easy on the battery",
-    vars:{bg:"#000000",b2:"#0D0D0D",b3:"#161616",bd:"#2A2A2A",bl:"#FF7A1A",bll:"#331A08",gr:"#7EE08A",grl:"#10291A",w:"#F5F5F5",w2:"#B5B5B5",w3:"#858585",rd:"#FF6B6B",rdb:"#330F0F",or:"#FFC233",orb:"#33260A",on:"#140800",cy:"#4DD9F0",t1:"#7EE08A",t2:"#FF9A4D",t3:"#B99CFF",t4:"#FF6B6B",t5:"#5EA8FF",t6:"#FFD84D",t2b:"#33200F",t3b:"#241D40",ont6:"#1A1A1A",warn:"#260F0F",chip:"#1C1C1C"},
-    font:"system-ui,sans-serif",display:"'Sora',system-ui,sans-serif"},
+    vars:{bg:"#000000",b2:"#0D0D0D",b3:"#161616",bd:"#2A2A2A",bl:"#FF7A1A",bll:"#331A08",gr:"#7EE08A",grl:"#10291A",w:"#F5F5F5",w2:"#B5B5B5",w3:"#858585",rd:"#FF6B6B",rdb:"#330F0F",or:"#FFC233",orb:"#33260A",on:"#140800",cy:"#4DD9F0",t1:"#7EE08A",t2:"#FF9A4D",t3:"#B99CFF",t4:"#FF6B6B",t5:"#5EA8FF",t6:"#FFD84D",t2b:"#33200F",t3b:"#241D40",ont6:"#1A1A1A",warn:"#260F0F",chip:"#1C1C1C"}},
   coast:{name:"Coastal",note:"Light sea glass and teal",
-    vars:{bg:"#EAF1F0",b2:"#FCFEFD",b3:"#EEF5F3",bd:"#C4D6D2",bl:"#0C7C7A",bll:"#D6EEEB",gr:"#2E7D4A",grl:"#DDF0E3",w:"#12262A",w2:"#3A5156",w3:"#5F777B",rd:"#C63A32",rdb:"#FBE5E2",or:"#9A5B00",orb:"#F8ECD6",on:"#FFFFFF",cy:"#0B7285",t1:"#2E7D4A",t2:"#C25E10",t3:"#6850B5",t4:"#C63A32",t5:"#1F5FA8",t6:"#8A7000",t2b:"#F9E8D6",t3b:"#EAE4F6",ont6:"#FFFFFF",warn:"#FBECEA",chip:"#DFEAE8"},
-    font:"'Archivo',system-ui,sans-serif",display:"'Sora',system-ui,sans-serif"},
+    vars:{bg:"#EAF1F0",b2:"#FCFEFD",b3:"#EEF5F3",bd:"#C4D6D2",bl:"#0C7C7A",bll:"#D6EEEB",gr:"#2E7D4A",grl:"#DDF0E3",w:"#12262A",w2:"#3A5156",w3:"#5F777B",rd:"#C63A32",rdb:"#FBE5E2",or:"#9A5B00",orb:"#F8ECD6",on:"#FFFFFF",cy:"#0B7285",t1:"#2E7D4A",t2:"#C25E10",t3:"#6850B5",t4:"#C63A32",t5:"#1F5FA8",t6:"#8A7000",t2b:"#F9E8D6",t3b:"#EAE4F6",ont6:"#FFFFFF",warn:"#FBECEA",chip:"#DFEAE8"}},
   pink:{name:"Pink",note:"Soft blush with a strong pink",
-    vars:{bg:"#FBEFF3",b2:"#FFFFFF",b3:"#FDF3F6",bd:"#EBC9D5",bl:"#C2185B",bll:"#FBDCE7",gr:"#1F8A4C",grl:"#DEF3E6",w:"#2A1620",w2:"#583846",w3:"#80606D",rd:"#C8322B",rdb:"#FDE7E5",or:"#9A5B00",orb:"#FBEED6",on:"#FFFFFF",cy:"#0E7490",t1:"#1F8A4C",t2:"#C2570A",t3:"#7B3FC4",t4:"#C8322B",t5:"#2563EB",t6:"#8A6D00",t2b:"#FBE9D7",t3b:"#EFE5FB",ont6:"#FFFFFF",warn:"#FDEEEC",chip:"#F6DFE7"},
-    font:"'Plus Jakarta Sans',system-ui,sans-serif",display:"'Sora',system-ui,sans-serif"},
+    vars:{bg:"#FBEFF3",b2:"#FFFFFF",b3:"#FDF3F6",bd:"#EBC9D5",bl:"#C2185B",bll:"#FBDCE7",gr:"#1F8A4C",grl:"#DEF3E6",w:"#2A1620",w2:"#583846",w3:"#80606D",rd:"#C8322B",rdb:"#FDE7E5",or:"#9A5B00",orb:"#FBEED6",on:"#FFFFFF",cy:"#0E7490",t1:"#1F8A4C",t2:"#C2570A",t3:"#7B3FC4",t4:"#C8322B",t5:"#2563EB",t6:"#8A6D00",t2b:"#FBE9D7",t3b:"#EFE5FB",ont6:"#FFFFFF",warn:"#FDEEEC",chip:"#F6DFE7"}},
 };
 const DEFAULT_SKIN="sbc";
+// Every look uses the same text font, so only the colors change between them.
+const APP_FONT="system-ui,sans-serif";
 const applySkin=k=>{
   const s=SKINS[k]||SKINS[DEFAULT_SKIN],r=document.documentElement.style;
   Object.entries(s.vars).forEach(([t,v])=>r.setProperty("--sbc-"+t,v));
-  r.setProperty("--sbc-font",s.font);r.setProperty("--sbc-display",s.display);
+  r.setProperty("--sbc-font",APP_FONT);r.setProperty("--sbc-display",APP_FONT);
   r.setProperty("background-color",s.vars.bg);
   document.documentElement.dataset.sbcSkin=SKINS[k]?k:DEFAULT_SKIN;
   try{localStorage.setItem("sbc-skin",k);}catch(e){}
